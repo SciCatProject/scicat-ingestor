@@ -48,7 +48,11 @@ class UserOffice:
             mutation UserMutations {
                 login(email: "%s", password: "%s") {
                     token,
-                    error
+                    rejection {
+                      reason,
+                      context,
+                      exception
+                    }
                 }
             }
         """ % (
