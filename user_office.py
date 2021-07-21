@@ -84,8 +84,8 @@ class UserOffice:
         headers = {"Authorization": "Bearer " + self.__access_token}
         query = """
             query Proposals {
-                proposal(id: %d) {
-                    id, title, abstract, shortCode,
+                proposal(primaryKey: %d) {
+                    primaryKey, title, abstract, proposalId,
                     users {
                         firstname,
                         lastname,
@@ -99,6 +99,7 @@ class UserOffice:
                         position
                     },
                     instrument {
+                        id,
                         name,
                         shortCode,
                         description
