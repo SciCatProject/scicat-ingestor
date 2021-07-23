@@ -21,6 +21,15 @@ class SciCat:
     -------
     login(username, password):
       Sign in to SciCat and set the access token for this instance.
+
+    get_instrument_by_name(name):
+      Get an instrument by name.
+
+    post_dataset(dataset):
+      Post a dataset to SciCat.
+
+    post_dataset_origdatablock(pid, orig_datablock):
+      Post an origdatablock related to a dataset in SciCat.
     """
 
     def __init__(self, base_url: str):
