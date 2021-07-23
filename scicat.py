@@ -3,6 +3,7 @@
 import json
 import sys
 import requests
+from urllib import parse
 
 
 class SciCat:
@@ -72,6 +73,59 @@ class SciCat:
         url = self.base_url + endpoint + "?" + query
         params = {"access_token": self.access_token}
         res = requests.get(url, params=params)
+
+        if res.status_code != 200:
+            sys.exit(res.text)
+
+        return res.json()
+
+    def post_dataset(self, dataset: dict) -> dict:
+        """
+        Post SciCat Dataset
+
+        Parameters
+        ----------
+        dataset : dict
+            The dataset to create
+
+        Returns
+        -------
+        dict
+            The created dataset with PID
+        """
+
+        endpoint = "/Datasets"
+        url = self.base_url + endpoint
+        params = {"access_token": self.access_token}
+        res = requests.post(url, json=dataset, params=params)
+
+        if res.status_code != 200:
+            sys.exit(res.text)
+
+        return res.json()
+
+    def post_dataset_origdatablock(self, pid: str, orig_datablocks: dict) -> dict:
+        """
+        Post SciCat Dataset OrigDatablock
+
+        Parameters
+        ----------
+        pid : str
+            The PID of the dataset
+        orig_datablocks : dict
+            The OrigDatablock to create
+
+        Returns
+        -------
+        dict
+            The created OrigDatablock with id
+        """
+
+        encoded_pid = parse.quote_plus(pid)
+        endpoint = "/Datasets/" + encoded_pid + "/origdatablocks"
+        url = self.base_url + endpoint
+        params = {"access_token", self.access_token}
+        res = requests.post(url, json=orig_datablocks, params=params)
 
         if res.status_code != 200:
             sys.exit(res.text)
