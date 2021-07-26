@@ -113,7 +113,7 @@ class SciCat:
 
         return res.json()
 
-    def post_dataset_origdatablock(self, pid: str, orig_datablocks: dict) -> dict:
+    def post_dataset_origdatablock(self, pid: str, orig_datablock: dict) -> dict:
         """
         Post SciCat Dataset OrigDatablock
 
@@ -121,7 +121,7 @@ class SciCat:
         ----------
         pid : str
             The PID of the dataset
-        orig_datablocks : dict
+        orig_datablock : dict
             The OrigDatablock to create
 
         Returns
@@ -133,8 +133,8 @@ class SciCat:
         encoded_pid = parse.quote_plus(pid)
         endpoint = "/Datasets/" + encoded_pid + "/origdatablocks"
         url = self.base_url + endpoint
-        params = {"access_token", self.access_token}
-        res = requests.post(url, json=orig_datablocks, params=params)
+        params = {"access_token": self.access_token}
+        res = requests.post(url, json=orig_datablock, params=params)
 
         if res.status_code != 200:
             sys.exit(res.text)
