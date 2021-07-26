@@ -21,9 +21,6 @@ class UserOffice:
 
     get_proposal(id):
         Get a proposal by id.
-
-    get_samples_by_proposal_id(proposal_id):
-        Get samples belonging to a proposal.
     """
 
     __url = "https://useroffice-test.esss.lu.se/graphql"
@@ -106,6 +103,11 @@ class UserOffice:
                         name,
                         shortCode,
                         description
+                    },
+                    samples {
+                      id,
+                      title,
+                      safetyComment
                     }
                 }
             }
@@ -118,35 +120,3 @@ class UserOffice:
             sys.exit(res.text)
 
         return res.json()["data"]["proposal"]
-
-    def get_samples_by_proposal_id(self, proposal_id: int) -> list[dict]:
-        """
-        Get samples by proposal id.
-
-        Parameters
-        ----------
-        proposal_id : int
-            Id of the proposal you want to get samples for
-
-        Returns
-        -------
-        list[dict]
-            List of samples matching the query
-        """
-
-        headers = {"Authorization": "Bearer " + self.__access_token}
-        query = """
-            query Samples {
-                samples(filter: {proposal_id: %d}) {
-                    id, title
-                }
-            }
-        """ % (
-            proposal_id
-        )
-        res = requests.post(self.__url, json={"query": query}, headers=headers)
-
-        if res.status_code != 200:
-            sys.exit(res.text)
-
-        return res.json()["data"]["samples"]
