@@ -78,7 +78,7 @@ class SciCat:
         """
 
         endpoint = "/Instruments/findOne"
-        query = json.dumps({"where": {"name": name}})
+        query = json.dumps({"where": {"name": {"like": name}}})
         url = self.base_url + endpoint + "?" + query
         params = {"access_token": self.access_token}
         res = requests.get(url, params=params)
