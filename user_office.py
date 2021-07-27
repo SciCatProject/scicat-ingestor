@@ -84,13 +84,8 @@ class UserOffice:
         query = """
             query Proposals {
                 proposal(primaryKey: %d) {
-                    primaryKey, title, abstract, proposalId,
-                    users {
-                        firstname,
-                        lastname,
-                        organisation,
-                        position
-                    },
+                    primaryKey,
+                    proposalId,
                     proposer {
                         firstname,
                         lastname,
@@ -102,11 +97,6 @@ class UserOffice:
                         name,
                         shortCode,
                         description
-                    },
-                    samples {
-                      id,
-                      title,
-                      safetyComment
                     }
                 }
             }
