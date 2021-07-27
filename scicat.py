@@ -80,8 +80,8 @@ class SciCat:
         endpoint = "/Instruments/findOne"
         query = json.dumps({"where": {"name": {"like": name}}})
         url = self.base_url + endpoint + "?" + query
-        params = {"access_token": self.access_token}
-        res = requests.get(url, params=params)
+        headers = {"Authorization": self.access_token}
+        res = requests.get(url, headers=headers)
 
         if res.status_code != 200:
             sys.exit(res.text)
@@ -105,8 +105,8 @@ class SciCat:
 
         endpoint = "/Datasets"
         url = self.base_url + endpoint
-        params = {"access_token": self.access_token}
-        res = requests.post(url, json=dataset, params=params)
+        headers = {"Authorization": self.access_token}
+        res = requests.post(url, json=dataset, headers=headers)
 
         if res.status_code != 200:
             sys.exit(res.text)
@@ -133,8 +133,8 @@ class SciCat:
         encoded_pid = parse.quote_plus(pid)
         endpoint = "/Datasets/" + encoded_pid + "/origdatablocks"
         url = self.base_url + endpoint
-        params = {"access_token": self.access_token}
-        res = requests.post(url, json=orig_datablock, params=params)
+        headers = {"Authorization": self.access_token}
+        res = requests.post(url, json=orig_datablock, headers=headers)
 
         if res.status_code != 200:
             sys.exit(res.text)
