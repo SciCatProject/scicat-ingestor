@@ -25,6 +25,9 @@ class SciCat:
     get_instrument_by_name(name):
       Get an instrument by name.
 
+    get_proposal(id):
+      Get a proposal by id.
+
     post_dataset(dataset):
       Post a dataset to SciCat.
 
@@ -80,6 +83,31 @@ class SciCat:
         endpoint = "/Instruments/findOne"
         query = json.dumps({"where": {"name": {"like": name}}})
         url = self.base_url + endpoint + "?" + query
+        headers = {"Authorization": self.access_token}
+        res = requests.get(url, headers=headers)
+
+        if res.status_code != 200:
+            sys.exit(res.text)
+
+        return res.json()
+
+    def get_proposal(self, id: str) -> dict:
+        """
+        Get proposal by id.
+
+        Parameters
+        ----------
+        id : str
+            The id of the proposal
+
+        Returns
+        -------
+        dict
+            The proposal with the requested id
+        """
+
+        endpoint = "/Proposals/"
+        url = self.base_url + endpoint + id
         headers = {"Authorization": self.access_token}
         res = requests.get(url, headers=headers)
 
