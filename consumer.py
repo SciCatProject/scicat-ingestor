@@ -8,16 +8,17 @@ from user_office import UserOffice
 from scicat import SciCat
 
 from kafka import KafkaConsumer
-import keyring
 from streaming_data_types import deserialise_wrdn
 
 
 def main():
+    config = get_config()
+    kafka_config = config["kafka"]
     consumer = KafkaConsumer(
-        "UTGARD_writerCommand",
-        group_id="group1",
-        bootstrap_servers=["dmsc-kafka01.cslab.esss.lu.se:9092"],
-        auto_offset_reset="earliest",
+        kafka_config["topic"],
+        group_id=kafka_config["group_id"],
+        bootstrap_servers=kafka_config["bootstrap_servers"],
+        auto_offset_reset=kafka_config["auto_offset_reset"],
     )
     try:
         for message in consumer:
@@ -32,21 +33,25 @@ def main():
                     if "proposal_id" in metadata:
                         proposal_id = int(metadata["proposal_id"])
                         # proposalId = 169
-                        userOffice = UserOffice()
-                        uo_username = "scicat@ess.eu"
-                        uo_password = keyring.get_password("useroffice", uo_username)
-                        userOffice.login(uo_username, uo_password)
-                        proposal = userOffice.get_proposal(proposal_id)
-                        print(proposal)
+                        user_office_config = config["user_office"]
+                        user_office = UserOffice(user_office_config["host"])
+                        uo_username = user_office_config["username"]
+                        uo_password = user_office_config["password"]
+                        user_office.login(uo_username, uo_password)
+                        uo_proposal = user_office.get_proposal(proposal_id)
+                        print(uo_proposal)
 
-                        scicat = SciCat("http://localhost:3000")
-                        sc_username = "ingestor"
-                        sc_password = keyring.get_password("scicat", sc_username)
+                        scicat_config = config["scicat"]
+                        scicat = SciCat(scicat_config["host"])
+                        sc_username = scicat_config["username"]
+                        sc_password = scicat_config["password"]
                         scicat.login(sc_username, sc_password)
                         instrument = scicat.get_instrument_by_name(
-                            proposal["instrument"]["name"]
+                            uo_proposal["instrument"]["name"]
                         )
                         print(instrument)
+                        proposal = scicat.get_proposal(uo_proposal["proposalId"])
+                        print(proposal)
 
                         dataset = create_dataset(metadata, proposal, instrument)
                         print(dataset)
@@ -64,23 +69,26 @@ def main():
         sys.exit()
 
 
+def get_config() -> dict:
+    with open("config.json", "r") as config_file:
+        data = config_file.read()
+        return json.loads(data)
+
+
 def create_dataset(metadata: dict, proposal: dict, instrument: dict) -> dict:
-    principalInvestigator = (
-        proposal["proposer"]["firstname"].replace("-user", "")
-        + " "
-        + proposal["proposer"]["lastname"]
-    )
-    email = principalInvestigator.replace(" ", "").lower() + "@ess.eu"
+    principal_investigator = proposal["pi_firstname"] + " " + proposal["pi_lastname"]
+    email = proposal["pi_email"]
     sourceFolder = (
         "/nfs/groups/beamlines/" + instrument["name"] + "/" + proposal["proposalId"]
     )
     dataset = {
         "datasetName": "Dataset from FileWriter",
         "description": "Dataset ingested from FileWriter",
-        "principalInvestigator": principalInvestigator,
+        "principalInvestigator": email,
         "creationLocation": instrument["name"],
         "scientificMetadata": metadata,
-        "owner": principalInvestigator,
+        "owner": principal_investigator,
+        "ownerEmail": email,
         "contactEmail": email,
         "sourceFolder": sourceFolder,
         "creationTime": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.000Z"),
