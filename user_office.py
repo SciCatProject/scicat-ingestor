@@ -23,10 +23,9 @@ class UserOffice:
         Get a proposal by id.
     """
 
-    __url = "https://useroffice-test.esss.lu.se/graphql"
-
-    def __init__(self):
-        self.__access_token = ""
+    def __init__(self, base_url: str):
+        self.access_token = ""
+        self.base_url = base_url + "/graphql"
 
     def login(self, email: str, password: str) -> None:
         """
@@ -59,12 +58,12 @@ class UserOffice:
             email,
             password,
         )
-        res = requests.post(self.__url, json={"query": query})
+        res = requests.post(self.base_url, json={"query": query})
         if res.status_code != 200:
             sys.exit(res.text)
 
         access_token = res.json()["data"]["login"]["token"]
-        self.__access_token = access_token
+        self.access_token = access_token
 
     def get_proposal(self, id: int) -> dict:
         """
@@ -81,7 +80,7 @@ class UserOffice:
             The proposal with requested id
         """
 
-        headers = {"Authorization": "Bearer " + self.__access_token}
+        headers = {"Authorization": "Bearer " + self.access_token}
         query = """
             query Proposals {
                 proposal(primaryKey: %d) {
@@ -114,7 +113,7 @@ class UserOffice:
         """ % (
             id
         )
-        res = requests.post(self.__url, json={"query": query}, headers=headers)
+        res = requests.post(self.base_url, json={"query": query}, headers=headers)
 
         if res.status_code != 200:
             sys.exit(res.text)
