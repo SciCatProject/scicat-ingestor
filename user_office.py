@@ -47,8 +47,7 @@ class UserOffice:
         query = """
             mutation UserMutations {
                 login(email: "%s", password: "%s") {
-                    token,
-                    error
+                    token
                 }
             }
         """ % (

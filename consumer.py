@@ -14,7 +14,8 @@ userOffice.login("scicat@ess.eu", "Test1234!")
 consumer = KafkaConsumer(
     "command_channel",
     group_id="group1",
-    bootstrap_servers=["172.17.0.31:9092"],
+    #bootstrap_servers=["172.17.0.31:9092"],
+    bootstrap_servers=["dmsc-kafka01.cslab.esss.lu.se:9092"],
     auto_offset_reset="earliest",
 )
 try:

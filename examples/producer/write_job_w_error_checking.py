@@ -1,5 +1,8 @@
+#!/usr/bin/env python3
+
 import time
 from datetime import datetime, timedelta
+import json
 
 from file_writer_control.CommandStatus import CommandState
 from file_writer_control.JobHandler import JobHandler
@@ -9,7 +12,8 @@ from file_writer_control.WorkerJobPool import WorkerJobPool
 from file_writer_control.WriteJob import WriteJob
 
 if __name__ == "__main__":
-    kafka_host = "dmsc-kafka01:9092"
+    #kafka_host = "dmsc-kafka01:9092"
+    kafka_host = "dmsc-kafka01.cslab.esss.lu.se:9092"
     command_channel = WorkerCommandChannel(
         "{}/UTGARD_writerCommand".format(kafka_host)
     )
@@ -17,11 +21,19 @@ if __name__ == "__main__":
     start_time = datetime.now()
     with open("nexus_config.json", "r") as f:
         nexus_structure = f.read()
+
+    # define metadata
+    metadata = {
+        "proposal_id" : 421725,
+        "beam_line" : "Ymir"
+    }
+
     write_job = WriteJob(
         nexus_structure,
         "{0:%Y}-{0:%m}-{0:%d}_{0:%H}{0:%M}.nxs".format(start_time),
         kafka_host,
         start_time,
+        metadata=json.dumps(metadata)
     )
 
     print("Starting write job")
