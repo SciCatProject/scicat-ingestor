@@ -25,7 +25,7 @@ if __name__ == "__main__":
     # define metadata
     metadata = {
         "proposal_id" : 421725,
-        "beam_line" : "Ymir"
+        "instrument_name" : "Ymir"
     }
 
     write_job = WriteJob(

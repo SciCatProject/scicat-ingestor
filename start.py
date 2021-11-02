@@ -12,7 +12,9 @@ from streaming_data_types import deserialise_wrdn
 
 
 def main():
+    # get configuration
     config = get_config()
+    # instantiate kafka consumer
     kafka_config = config["kafka"]
     consumer = KafkaConsumer(
         kafka_config["topic"],
@@ -20,32 +22,40 @@ def main():
         bootstrap_servers=kafka_config["bootstrap_servers"],
         auto_offset_reset=kafka_config["auto_offset_reset"],
     )
+
+    # instantiate connector to user office
+    # retrieve relevant configuration
+    user_office_config = config["user_office"]
+    user_office = UserOffice(user_office_config["host"])
+    user_office.login(user_office_config["username"],user_office_config["password"])
+
+    # instantiate connector to scicat
+    # retrieve relevant configuration
+    scicat_config = config["scicat"]
+    scicat = SciCat(scicat_config["host"])
+    scicat.login(scicat_config["username"],scicat_config["password"])
+
+
+    # main loop, waiting for messages
     try:
         for message in consumer:
             data_type = message.value[4:8]
             if data_type == b"wrdn":
+                print("----------------")
+                print("Write Done")
                 entry = deserialise_wrdn(message.value)
                 if entry.error_encountered:
                     continue
                 print(entry)
                 if entry.metadata is not None:
                     metadata = json.loads(entry.metadata)
+                    print(metadata)
                     if "proposal_id" in metadata:
                         proposal_id = int(metadata["proposal_id"])
                         # proposalId = 169
-                        user_office_config = config["user_office"]
-                        user_office = UserOffice(user_office_config["host"])
-                        uo_username = user_office_config["username"]
-                        uo_password = user_office_config["password"]
-                        user_office.login(uo_username, uo_password)
                         uo_proposal = user_office.get_proposal(proposal_id)
                         print(uo_proposal)
 
-                        scicat_config = config["scicat"]
-                        scicat = SciCat(scicat_config["host"])
-                        sc_username = scicat_config["username"]
-                        sc_password = scicat_config["password"]
-                        scicat.login(sc_username, sc_password)
                         instrument = scicat.get_instrument_by_name(
                             uo_proposal["instrument"]["name"]
                         )
@@ -55,16 +65,17 @@ def main():
 
                         dataset = create_dataset(metadata, proposal, instrument)
                         print(dataset)
-                        created_dataset = scicat.post_dataset(dataset)
-                        print(created_dataset)
+                        #created_dataset = scicat.post_dataset(dataset)
+                        #print(created_dataset)
                         orig_datablock = create_origdatablock(
-                            created_dataset["pid"], entry
+                            "test_dataset", entry
+                        #    created_dataset["pid"], entry
                         )
                         print(orig_datablock)
-                        created_origdatablock = scicat.post_dataset_origdatablock(
-                            created_dataset["pid"], orig_datablock
-                        )
-                        print(created_origdatablock)
+                        #created_origdatablock = scicat.post_dataset_origdatablock(
+                        #    created_dataset["pid"], orig_datablock
+                        #)
+                        #print(created_origdatablock)
     except KeyboardInterrupt:
         sys.exit()
 
