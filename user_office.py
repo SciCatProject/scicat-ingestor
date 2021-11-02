@@ -23,12 +23,11 @@ class UserOffice:
         Get a proposal by id.
     """
 
-    __url = "https://useroffice-test.esss.lu.se/graphql"
+    def __init__(self, base_url: str):
+        self.access_token = ""
+        self.base_url = base_url + "/graphql"
 
-    def __init__(self):
-        self.__access_token = ""
-
-    def login(self, email: str, password: str):
+    def login(self, email: str, password: str) -> None:
         """
         Sign in to UserOffice and set the access token for this instance.
 
@@ -47,19 +46,24 @@ class UserOffice:
         query = """
             mutation UserMutations {
                 login(email: "%s", password: "%s") {
-                    token
+                    token,
+                    rejection {
+                      reason,
+                      context,
+                      exception
+                    }
                 }
             }
         """ % (
             email,
             password,
         )
-        res = requests.post(self.__url, json={"query": query})
+        res = requests.post(self.base_url, json={"query": query})
         if res.status_code != 200:
             sys.exit(res.text)
 
         access_token = res.json()["data"]["login"]["token"]
-        self.__access_token = access_token
+        self.access_token = access_token
 
     def get_proposal(self, id: int) -> dict:
         """
@@ -76,17 +80,12 @@ class UserOffice:
             The proposal with requested id
         """
 
-        headers = {"Authorization": "Bearer " + self.__access_token}
+        headers = {"Authorization": "Bearer " + self.access_token}
         query = """
             query Proposals {
-                proposal(id: %d) {
-                    id, title, abstract, shortCode,
-                    users {
-                        firstname,
-                        lastname,
-                        organisation,
-                        position
-                    },
+                proposal(primaryKey: %d) {
+                    primaryKey,
+                    proposalId,
                     proposer {
                         firstname,
                         lastname,
@@ -94,6 +93,7 @@ class UserOffice:
                         position
                     },
                     instrument {
+                        id,
                         name,
                         shortCode,
                         description
@@ -103,41 +103,9 @@ class UserOffice:
         """ % (
             id
         )
-        res = requests.post(self.__url, json={"query": query}, headers=headers)
+        res = requests.post(self.base_url, json={"query": query}, headers=headers)
 
         if res.status_code != 200:
             sys.exit(res.text)
 
         return res.json()["data"]["proposal"]
-
-    def get_samples_by_proposalId(self, proposalId: int) -> list:
-        """
-        Get samples by proposal id.
-
-        Parameters
-        ----------
-        proposalId : int
-            Id of the proposal you want to get samples for
-
-        Returns
-        -------
-        list
-            List of samples matching the query
-        """
-
-        headers = {"Authorization": "Bearer " + self.__access_token}
-        query = """
-            query Samples {
-                samples(filter: {proposalId: %d}) {
-                    id, title
-                }
-            }
-        """ % (
-            proposalId
-        )
-        res = requests.post(self.__url, json={"query": query}, headers=headers)
-
-        if res.status_code != 200:
-            sys.exit(res.text)
-
-        return res.json()["data"]["samples"]

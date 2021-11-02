@@ -1,0 +1,20 @@
+{
+  "kafka": {
+    "topic": "KAFKA_TOPIC",
+    "group_id": "GROUP_ID",
+    "bootstrap_servers": [
+      "HOST:9092"
+    ],
+    "auto_offset_reset": "earliest"
+  },
+  "user_office": {
+    "host": "https://useroffice.host",
+    "username": "USERNAME",
+    "password": "PASSWORD"
+  },
+  "scicat": {
+    "host": "https://scicat.host",
+    "username": "USERNAME",
+    "password": "PASSWORD"
+  }
+}
