@@ -36,8 +36,9 @@ class SciCat:
     """
 
     def __init__(self, base_url: str):
-        self.base_url = base_url + "/api/v3"
-        self.access_token = ""
+        self._base_url = base_url + "/api/v3"
+        self._access_token = ""
+        self._headers = {}
 
     def login(self, username: str, password: str):
         """
@@ -56,14 +57,16 @@ class SciCat:
         """
 
         endpoint = "/Users/login"
-        url = self.base_url + endpoint
+        url = self._base_url + endpoint
         credentials = {"username": username, "password": password}
         res = requests.post(url, json=credentials)
 
         if res.status_code != 200:
             sys.exit(res.text)
 
-        self.access_token = res.json()["id"]
+        self._access_token = res.json()["id"]
+        self._headers["Authorization"] = self._access_token
+
 
     def get_instrument_by_name(self, name: str) -> dict:
         """
@@ -82,39 +85,91 @@ class SciCat:
 
         endpoint = "/Instruments/findOne"
         query = json.dumps({"where": {"name": {"like": name}}})
-        url = self.base_url + endpoint + "?" + query
-        headers = {"Authorization": self.access_token}
-        res = requests.get(url, headers=headers)
+        url = self._base_url + endpoint + "?" + query
+        res = requests.get(url, headers=self._headers)
 
         if res.status_code != 200:
             sys.exit(res.text)
 
         return res.json()
 
-    def get_proposal(self, id: str) -> dict:
+
+    def get_instrument_by_pid(self, pid: str) -> dict:
         """
-        Get proposal by id.
+        Get an instrument by pid.
 
         Parameters
         ----------
-        id : str
-            The id of the proposal
+        pid : str
+            The pid of the instrument
 
         Returns
         -------
         dict
-            The proposal with the requested id
+            The instrument with the requested pid
         """
 
-        endpoint = "/Proposals/"
-        url = self.base_url + endpoint + id
-        headers = {"Authorization": self.access_token}
-        res = requests.get(url, headers=headers)
+        encoded_pid = parse.quote_plus(pid)
+        endpoint = "/Instruments/{}".format(encoded_pid)
+        url = self._base_url + endpoint
+        res = requests.get(url, headers=self._headers)
 
         if res.status_code != 200:
             sys.exit(res.text)
 
         return res.json()
+
+
+    def get_sample_by_pid(self, pid: str) -> dict:
+        """
+        Get an sample by pid.
+
+        Parameters
+        ----------
+        pid : str
+            The pid of the sample
+
+        Returns
+        -------
+        dict
+            The sample with the requested pid
+        """
+
+        encoded_pid = parse.quote_plus(pid)
+        endpoint = "/Samples/{}".format(encoded_pid)
+        url = self._base_url + endpoint
+        res = requests.get(url, headers=self._headers)
+
+        if res.status_code != 200:
+            sys.exit(res.text)
+
+        return res.json()
+
+
+    def get_proposal_by_pid(self, pid: str) -> dict:
+        """
+        Get proposal by pid.
+
+        Parameters
+        ----------
+        pid : str
+            The pid of the proposal
+
+        Returns
+        -------
+        dict
+            The proposal with the requested pid
+        """
+
+        endpoint = "/Proposals/"
+        url = self._base_url + endpoint + pid
+        res = requests.get(url, headers=self._headers)
+
+        if res.status_code != 200:
+            sys.exit(res.text)
+
+        return res.json()
+
 
     def post_dataset(self, dataset: dict) -> dict:
         """
@@ -132,16 +187,16 @@ class SciCat:
         """
 
         endpoint = "/Datasets"
-        url = self.base_url + endpoint
-        headers = {"Authorization": self.access_token}
-        res = requests.post(url, json=dataset, headers=headers)
+        url = self._base_url + endpoint
+        res = requests.post(url, json=dataset, headers=self._headers)
 
         if res.status_code != 200:
             sys.exit(res.text)
 
         return res.json()
 
-    def post_dataset_origdatablock(self, pid: str, orig_datablock: dict) -> dict:
+
+    def post_dataset_orig_datablock(self, datasetPid: str, orig_datablock: dict) -> dict:
         """
         Post SciCat Dataset OrigDatablock
 
@@ -158,11 +213,10 @@ class SciCat:
             The created OrigDatablock with id
         """
 
-        encoded_pid = parse.quote_plus(pid)
+        encoded_pid = parse.quote_plus(datasetPid)
         endpoint = "/Datasets/" + encoded_pid + "/origdatablocks"
-        url = self.base_url + endpoint
-        headers = {"Authorization": self.access_token}
-        res = requests.post(url, json=orig_datablock, headers=headers)
+        url = self._base_url + endpoint
+        res = requests.post(url, json=orig_datablock, headers=self._headers)
 
         if res.status_code != 200:
             sys.exit(res.text)

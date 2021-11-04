@@ -24,8 +24,21 @@ if __name__ == "__main__":
 
     # define metadata
     metadata = {
+        "name" : "",
+        "description" : "",
         "proposal_id" : 421725,
-        "instrument_name" : "Ymir"
+        "sample_id" : "e-PpW0Ayc",
+        "instrument_id" : "4319bbe4-3c92-11ec-a2c8-0fd94dec5ee1",
+        "techniques" : [ 
+            {
+                "pid" : "pid-technique-1",
+                "name" : "This our technique number 1"
+            },
+            {
+                "pid" : "pid-technique-2",
+                "name" : "This our technique number 1"
+            }
+        ]
     }
 
     write_job = WriteJob(

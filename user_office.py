@@ -162,4 +162,4 @@ class UserOffice:
         if res.status_code != 200:
             sys.exit(res.text)
 
-        return res.json()["data"]["proposal"]
+        return res.json()["data"]["proposals"]
