@@ -153,7 +153,7 @@ def create_dataset(metadata: dict, proposal: dict, instrument: dict, sample: dic
         "accessGroups": ["loki", "odin"],
         "techniques": metadata.get('techniques',[]),
         "instrumentId": instrument.get("pid",""),
-        "sampleId" : sample.get('pid',''),
+        "sampleId" : sample.get('sampleId',''),
         "proposalId": proposal.get("proposalId",''),
     }
     return dataset
