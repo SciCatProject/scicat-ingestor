@@ -4,6 +4,7 @@ from datetime import datetime
 import json
 import sys
 import uuid
+import re
 
 from user_office import UserOffice
 from scicat import SciCat
@@ -66,13 +67,12 @@ def main():
                         proposal = scicat.get_proposal_by_pid(proposal_id)
                         print(proposal)
 
-                        # find the instrument name
-                        instrument_id = metadata["instrument_id"] \
-                            if "instrument_id" in metadata and metadata["instrument_id"] \
-                            else ''
-                        instrument = scicat.get_instrument_by_pid(instrument_id) \
-                            if instrument_id \
-                            else {}
+                        # load instrument by id or by name
+                        instrument = {}
+                        if "instrument_id" in metadata and metadata["instrument_id"]:
+                            instrument = scicat.get_instrument_by_pid(metadata['instrument_id'])
+                        if not instrument and "instrument_name" in metadata and metadata["instrument_name"]:
+                            instrument = scicat.get_instrument_by_name(metadata["instrument_name"])
 
 
                         # find sample information
@@ -118,16 +118,16 @@ def get_config() -> dict:
 def create_dataset(metadata: dict, proposal: dict, instrument: dict, sample: dict) -> dict:
     # prepare info for datasets
     dataset_pid = str(uuid.uuid4())
-    dataset_name = metadata["dataset_name"] \
-        if "dataset_name" in metadata \
+    dataset_name = metadata["run_name"] \
+        if "run_name" in metadata \
         else "Dataset {} for proposal {}".format(dataset_pid,proposal.get('pid','unknown'))
-    dataset_description = metadata["dataset_description"] \
-        if "dataset_description" in metadata \
+    dataset_description = metadata["run_description"] \
+        if "run_description" in metadata \
         else "Dataset: {}. Proposal: {}. Sample: {}. Instrument: {}".format(
             dataset_pid,
-            proposal.get('pid','unknown'),
+            proposal.get('proposalId','unknown'),
             instrument.get('pid','unknown'),
-            sample.get('pid','unknown'))
+            sample.get('sampleId','unknown'))
     principal_investigator = proposal["pi_firstname"] + " " + proposal["pi_lastname"]
     email = proposal["pi_email"]
     instrument_name = instrument.get("name","")
@@ -142,7 +142,7 @@ def create_dataset(metadata: dict, proposal: dict, instrument: dict, sample: dic
         "description": dataset_description,
         "principalInvestigator": email,
         "creationLocation": instrument.get("name",""),
-        "scientificMetadata": metadata,
+        "scientificMetadata": prepare_metadata(flatten_metadata(metadata)),
         "owner": principal_investigator,
         "ownerEmail": email,
         "contactEmail": email,
@@ -157,6 +157,32 @@ def create_dataset(metadata: dict, proposal: dict, instrument: dict, sample: dic
         "proposalId": proposal.get("proposalId",''),
     }
     return dataset
+
+
+def flatten_metadata(inMetadata,prefix=""):
+    outMetadata={}
+
+    for k,v in inMetadata.items():
+        nk = '_'.join([i for i in [prefix,k] if i])
+        nk = re.sub('_/|/:|/|:',"_",nk)
+        if isinstance(v,dict):
+            outMetadata = {**outMetadata,**flatten_metadata(v,nk)}
+        else:
+            outMetadata[nk] = v
+
+    return outMetadata
+
+
+
+def prepare_metadata(inMetadata):
+    outMetadata = {}
+
+    for k,v in inMetadata.items():
+        outMetadata[k] = {
+            'value' : v if isinstance(v,str) or isinstance(v,int) or isinstance(v,float) else str(v),
+            'unit' : ''
+        }
+    return outMetadata
 
 
 

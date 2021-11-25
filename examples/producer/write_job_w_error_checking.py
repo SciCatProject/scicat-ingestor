@@ -3,6 +3,7 @@
 import time
 from datetime import datetime, timedelta
 import json
+import uuid
 
 from file_writer_control.CommandStatus import CommandState
 from file_writer_control.JobHandler import JobHandler
@@ -11,24 +12,46 @@ from file_writer_control.WorkerCommandChannel import WorkerCommandChannel
 from file_writer_control.WorkerJobPool import WorkerJobPool
 from file_writer_control.WriteJob import WriteJob
 
+# constants used throughout the generator
+kafka_host = "dmsc-kafka01.cslab.esss.lu.se:9092"
+channel_name = "{}/UTGARD_writerCommand".format(kafka_host)
+run_id = str(uuid.uuid4()).split('-')[0]
+run_name = "Run " + run_id
+instrument_name = "Ymir"
+instrument_id = "4319bbe4-3c92-11ec-a2c8-0fd94dec5ee1"
+proposal_id = 421725
+sample_id = "e-PpW0Ayc"
+start_time = datetime.now()
+formatted_start_time = "{0:%Y}{0:%m}{0:%d}{0:%H}{0:%M}{0:%S}".format(start_time)
+
+
 if __name__ == "__main__":
     #kafka_host = "dmsc-kafka01:9092"
-    kafka_host = "dmsc-kafka01.cslab.esss.lu.se:9092"
-    command_channel = WorkerCommandChannel(
-        "{}/UTGARD_writerCommand".format(kafka_host)
-    )
+    command_channel = WorkerCommandChannel(channel_name)
     job_handler = JobHandler(worker_finder=command_channel)
-    start_time = datetime.now()
-    with open("nexus_config.json", "r") as f:
-        nexus_structure = f.read()
+    
+    file_name = "{}_{}_{}_{}_user_notes.nxs".format(
+        instrument_name,
+        proposal_id,
+        run_id,
+        formatted_start_time)
+    with open("nexus_config.json", "r") as fh:
+        nexus_structure = json.dumps(json.load(fh),separators=(',',':'))
+
+
+    print("starting run {}".format(run_id))
 
     # define metadata
+    # using MVMS which are defined in the following ticket: https://jira.esss.lu.se/browse/SWAP-1831
+    # at least for now :)
     metadata = {
-        "name" : "",
-        "description" : "",
-        "proposal_id" : 421725,
-        "sample_id" : "e-PpW0Ayc",
-        "instrument_id" : "4319bbe4-3c92-11ec-a2c8-0fd94dec5ee1",
+        "proposal_id" : proposal_id,
+        "sample_id" : sample_id,
+        "run_name" : run_name,
+        "run_id" : run_id,
+        "instrument_id" : instrument_id,
+        "instrument_name" : instrument_name,
+        "start_time" : formatted_start_time,
         "techniques" : [ 
             {
                 "pid" : "pid-technique-1",
@@ -36,14 +59,14 @@ if __name__ == "__main__":
             },
             {
                 "pid" : "pid-technique-2",
-                "name" : "This our technique number 1"
+                "name" : "This our technique number 2"
             }
         ]
     }
 
     write_job = WriteJob(
         nexus_structure,
-        "{0:%Y}-{0:%m}-{0:%d}_{0:%H}{0:%M}.nxs".format(start_time),
+        file_name,
         kafka_host,
         start_time,
         metadata=json.dumps(metadata)
