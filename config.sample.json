@@ -16,5 +16,13 @@
     "host": "https://scicat.host",
     "username": "USERNAME",
     "password": "PASSWORD"
+  },
+  "dataset": {
+    "instrument" : "INSTRUMENT_NAME",
+    "default_proposal_id" : "714781",
+    "ownable" : {
+      "ownerGroup": "ess",
+      "accessGroups": ["ymir","swap"]  
+    }
   }
 }
