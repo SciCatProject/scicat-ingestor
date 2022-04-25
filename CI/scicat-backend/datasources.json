@@ -1,0 +1,14 @@
+{
+  "mongo": {
+    "host": "sfi-mongodb",
+    "port": 27017,
+    "url": "",
+    "database": "sfi-test",
+    "name": "mongo",
+    "connector": "mongodb"
+  },
+  "transient": {
+    "name": "transient",
+    "connector": "transient"
+  }
+}
