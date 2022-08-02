@@ -18,11 +18,22 @@
     "password": "PASSWORD"
   },
   "dataset": {
+    "instrument_id" : "",
     "instrument" : "INSTRUMENT_NAME",
     "default_proposal_id" : "714781",
     "ownable" : {
       "ownerGroup": "ess",
       "accessGroups": ["ymir","swap"]  
     }
+  },
+  "options": {
+    "config_file" : "config.json",
+    "verbose" : false,
+    "file_log" : false,
+    "file_log_base_name" : ".scicat_ingestor_log",
+    "file_log_timestamp" : false,
+    "debug_level" : "INFO",
+    "system_log" : false,
+    "system_log_facility" : "mail"
   }
 }

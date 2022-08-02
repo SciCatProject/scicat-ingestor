@@ -2,14 +2,17 @@
 #
 # 
 
+import copy
 from datetime import datetime
 import json
 import sys
+from typing import Any
 import uuid
 import re
 import os
 import argparse
 import logging
+import logging.handlers
 
 from user_office import UserOffice
 #from scicat import SciCat
@@ -25,9 +28,95 @@ sys.path.insert(
 import pyscicat.client as pyScClient
 import pyscicat.model as pyScModel
 
+scClient= None
+
+
+def get_instrument(id,name):
+    global scClient
+    # load instrument by id or by name
+    instrument = { 'id' : None }
+    if id and id is not None:
+        instrument = scClient.get_instrument_by_pid(id)
+    elif name and name is not None:
+        instrument = scClient.get_instrument_by_name(name)
+
+    return instrument
+
+
+def get_nested_value(structure: dict, path: list):
+    # get key
+    key = path.pop(0)
+    if type(key,str):
+        for i in structure[key]:
+            temp = get_nested_value(i,path)
+            if temp is not None:
+                return temp
+    elif type(key,tuple):
+        # check the condition
+        if key[0] is not None:
+            if (key[1] in structure.keys()) and (structure[key[1]] == key[2]):
+                for i in structure[key[0]]:
+                    temp = get_nested_value(i,path)
+                    if temp is not None:
+                        return temp
+        else:
+            if (key[1] in structure.keys()) and (structure[key[1]] == key[2]):
+                return structure[key[3]]
+    else:
+        raise(Exception("Invalid path"))
+    return None
+
+
+def get_nested_value_with_default(structure: dict, path: list, default: Any):
+    output = get_nested_value(structure,path)
+    return output if output and output is not None else default
+
+
+def get_nested_value_with_union(structure: dict, path: list, union: list):
+    output = get_nested_value(structure,path)
+    output = output if isinstance(output, list) else [output]
+    return list(set([*output, *union]))
+
+
+def get_proposal_id(
+    hdf_structure_string: str, 
+    default: str = "", 
+    proposal_path: list = None
+) -> dict:
+    # extract proposal id from hdf_structure field
+    # if such field does not exists, it uses the default
+
+    try:
+
+        # check if we are using the default path or the user has provided an alternative one
+        if proposal_path is None:
+            proposal_path = [
+                "children",
+                ("children", "name", "entry"),
+                ("config", "module","dataset"),
+                (None,"name","experiment_identifier","values")
+            ]
+
+        # convert json string to dictionary
+        hdf_structure_dict = json.loads(
+            hdf_structure_string.replace("\n","")
+        )
+
+        # now it finds the proposal id which is saved under the key experiment_identifier
+        return get_nested_value(
+            hdf_structure_dict,
+            proposal_path
+        )
+
+    except:
+        return default
+
+
 
 
 def main(config, logger):
+
+    global scClient
 
     # instantiate kafka consumer
     kafka_config = config["kafka"]
@@ -65,10 +154,28 @@ def main(config, logger):
         password=scicat_config["password"],
     )
 
+    defaultOwnerGroup = config['scicat']['ownable']['ownerGroup']
+    defaultAccessGroups = config['scicat']['ownable']['accessGroups']
+
+
+    defaultInstrument = get_instrument(
+        get_nested_value_with_default(
+            config,
+            ["dataset","instrument_id"],
+            None
+        ),
+        get_nested_value_with_default(
+            config,
+            ["dataset","instrument_name"],
+            None
+        )
+    )
+
     # main loop, waiting for messages
     for message in consumer:
         try:
             data_type = message.value[4:8]
+            logger.info("Received message. Data type : " + data_type)
             if data_type == b"wrdn":
                 logger.info("Received writing done message from file writer")
                 entry = deserialise_wrdn(message.value)
@@ -79,17 +186,19 @@ def main(config, logger):
                 logger.info(entry)
                 if entry.metadata is not None:
                     metadata = json.loads(entry.metadata)
-                    print(metadata)
+                    logger.info("Extracted metadata. Extracted {} keys".format(len(metadata.keys())))
+
                     # retrieve proposal id, if present
                     proposal_id = None
-                    if "proposal_id" in metadata:
+                    if "proposal_id" in metadata.keys() and metadata['proposal_id'] is not None:
+                        logger.info("Extracting proposal id from metadata")
+                        proposal_id = metadata['proposal_id']
+                    elif proposal_id is None:
+                        logger.info("Extracting propsal id from hdf structure")
                         proposal_id = get_proposal_id(
                             metadata["hdf_structure"],
                             config['dataset']['default_proposal_id']
                         )
-                    if proposal_id is None:
-                        # assign default proposal id
-                        proposal_id = config['dataset']['default_proposal_id']
                     
                     # We assume that all the relevant information are already in scicat
                     proposal = scClient.get_proposal_by_pid(proposal_id)
@@ -98,33 +207,34 @@ def main(config, logger):
                     # all the fields are retrieved directly from the simulation information
                     logger.info('Instantiate ownable model')
                     ownable = pyScModel.Ownable(
-                        ownerGroup=(
-                            config['dataset']['ownable']['ownerGroup'] 
-                            if 'ownerGroup' in config['dataset']['ownable'].keys() 
-                            else proposal_id
+                        ownerGroup=get_nested_value_with_default(
+                            proposal,
+                            ['ownerGroup'],
+                            defaultOwnerGroup
                         ), 
-                        accessGroups=config['scicat']["ownable"]['accessGroups']
+                        accessGroups=get_nested_value_with_union(
+                            proposal,
+                            ['accessGroups'],
+                            defaultAccessGroups
+                        )
                     )
 
-                    # load instrument by id or by name
-                    instrument_id = None
-                    if 'instrument_id' in config['dataset'].keys() and config['dataset']['instrument_id']:
-                        instrument_id = config['dataset']['instrument_id']
-                    elif "instrument_id" in metadata and metadata["instrument_id"]:
-                        instrument_id = metadata['instrument_id']
-                    instrument = scClient.get_instrument_by_pid(instrument_id) if instrument_id else {}
-
-                    if not instrument and "instrument_name" in metadata and metadata["instrument_name"]:
-                        instrument = scClient.get_instrument_by_name(metadata["instrument_name"])
+                    # if instrument is not assigned by config, tries to find it from the message
+                    if defaultInstrument and defaultInstrument is not None:
+                        instrument = defaultInstrument
+                    else:
+                        instrument = get_instrument(
+                            get_nested_value_with_default(metadata,['instrument_id'],None),
+                            get_nested_value_with_default(metadata,['instrument_name'],None)
+                        )
                         
-
                     # find sample information
                     sample_id = None
-                    if 'simple_id' in config['dataset'].keys() and config['dataset']['sample_id']:
-                        sample_id = config['dataset']['sample_id']
-                    elif "sample_id" in metadata and metadata["sample_id"]:
+                    if "sample_id" in metadata.keys() and metadata["sample_id"]:
                         sample_id = metadata['sample_id']
-                    sample = scClient.get_sample_by_pid(sample_id) if sample_id else {}
+                    elif 'simple_id' in config['dataset'].keys() and config['dataset']['sample_id']:
+                        sample_id = config['dataset']['sample_id']
+                    sample = scClient.get_sample_by_pid(sample_id) if sample_id else None
 
 
                     # create dataset object from the pyscicat model
@@ -158,20 +268,36 @@ def main(config, logger):
                     logger.info('Original datablock created with internal id {}'.format(created_orig_datablock['_id']))
 
                 else:
-                    logger.warning("No metadata in this message")
+                    logger.info("No metadata in this message")
+                    logger.info("Ignoring message")
+
         except KeyboardInterrupt:
             logger.info("Exiting ingestor")
             sys.exit()
+
         except Exception as error:
             logger.warning("Error ingesting the message: {}".format(error))
 
 
+def get_config(input_args: argparse.Namespace) -> dict:
 
-def get_config(config_file: str = 'config.json') -> dict:
-    with open(config_file, "r") as config_file:
-        data = config_file.read()
-        return json.loads(data)
+    config_file = input_args.config_file if input_args.config_file else "config.json"
 
+    with open(config_file, "r") as fh:
+        data = fh.read()
+        config = json.loads(data)
+
+    # copy options into run options
+    config['run_options'] = copy.deepcopy(config['options'])
+
+    for k,v in input_args.items():
+        if v is not None:
+            config['run_options'][k] = v
+
+    # define log level
+    config['logging_level'] = getattr(logging,config['debug_level'])
+
+    return config
 
 
 def create_dataset(
@@ -184,10 +310,10 @@ def create_dataset(
     # prepare info for datasets
     dataset_pid = str(uuid.uuid4())
     dataset_name = metadata["run_name"] \
-        if "run_name" in metadata \
+        if "run_name" in metadata.keys() \
         else "Dataset {} for proposal {}".format(dataset_pid,proposal.get('pid','unknown'))
     dataset_description = metadata["run_description"] \
-        if "run_description" in metadata \
+        if "run_description" in metadata.keys() \
         else "Dataset: {}. Proposal: {}. Sample: {}. Instrument: {}".format(
             dataset_pid,
             proposal.get('proposalId','unknown'),
@@ -222,7 +348,6 @@ def create_dataset(
         },
         **ownable
     )
-
 
 
 def flatten_metadata(inMetadata,prefix=""):
@@ -276,57 +401,9 @@ def create_orig_datablock(
 
 
 
-def get_proposal_id(hdf_structure_string: str, default: str = "") -> dict:
-    # extract proposal id from hdf_structure field
-    # if such field does not exists, it uses the default
 
-    try:
-        # convert json string to dictionary
-        hdf_structure_dict = json.loads(
-            hdf_structure_string.replace("\n","")
-        )
-
-        # now it finds the proposal id which is saved under the key experiment_identifier
-        return get_nested_value(
-            hdf_structure_dict,
-            [
-                "children",
-                ("children", "name", "entry"),
-                ("config", "module","dataset"),
-                (None,"name","experiment_identifier","values")
-            ]
-        )
-
-    except:
-        return default
-
-
-
-def get_nested_value(structure: dict, path: list):
-    # get key
-    key = path.pop(0)
-    if type(key,str):
-        for i in structure[key]:
-            temp = get_nested_value(i,path)
-            if temp is not None:
-                return temp
-        return None
-    elif type(key,tuple):
-        # check the condition
-        if key[0] is not None:
-            if (key[1] in structure.keys()) and (structure[key[1]] == key[2]):
-                for i in structure[key[0]]:
-                    temp = get_nested_value(i,path)
-                    if temp is not None:
-                        return temp
-        else:
-            if (key[1] in structure.keys()) and (structure[key[1]] == key[2]):
-                return structure[key[3]]
-        return None
-    else:
-        raise(Exception("Invalid path"))
-
-
+#
+# ======================================
 # define arguments
 parser = argparse.ArgumentParser()
 
@@ -350,6 +427,12 @@ parser.add_argument(
     action='store_true'
 )
 parser.add_argument(
+    '--sys-log',
+    dest='system_log',
+    help='Provide logging on the system log',
+    action='store_true'
+)
+parser.add_argument(
     '--debug',
     dest='debug_level',
     help='Adjust the debug level',
@@ -364,43 +447,39 @@ if __name__ == "__main__":
     # get input argumengts
     args = parser.parse_args()
 
-    # get configuration
-    config = get_config(args.config_file)
+    # get configuration from file and updates with command line options
+    config = get_config(args)
     
-    # define log level
-    if args.debug_level=='DEBUG':
-        logging_level = logging.DEBUG
-    elif args.debug_level=='INFO':
-        logging_level = logging.INFO
-    elif args.debug_level=='WARN':
-        logging_level = logging.WARN
-    elif args.debug_level=='ERROR':
-        logging_level = logging.ERROR
-    elif args.debug_level=='CRITICAL':
-        logging_level = logging.CRITICAL
-
     # instantiate logger
     logger = logging.getLogger('esd extract parameters')
-    logger.setLevel(logging_level)
+    logger.setLevel(config['logging_level'])
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-    if args.file_log:
+    if config['file_log']:
+
         fh = logging.FileHandler(
-            os.path.join(
-                config.data_folder,
-                config.output_file_name_base+'.log'
-            ),
+            config['file_log_base_name'] \
+                + ( 
+                    '_' + datetime.now().strptime('%Y%m%d%H%M%S%f') 
+                    if config['file_log_timestamp'] 
+                    else ""
+                )+ ".log",
             mode='w', 
             encoding='utf-8'
         )
-        fh.setLevel(logging_level)
+        fh.setLevel(config['logging_level'])
         fh.setFormatter(formatter)
         logger.addHandler(fh)
 
-    if args.verbose:
+    if config['verbose']:
         ch = logging.StreamHandler()
-        ch.setLevel(logging_level)
+        ch.setLevel(config['logging_level'])
         ch.setFormatter(formatter)
         logger.addHandler(ch)
+
+    if config['system_log']:
+        sh = logging.handlers.SysLogHandler(address='/dev/log')
+        sh.setLevel(config['logging_level'])
+        logger.addHandler(sh)
 
     main(config,logger)
