@@ -15,6 +15,7 @@ from streaming_data_types import deserialise_wrdn
 
 def main():
     # get configuration
+    print("Loading configuration")
     config = get_config()
     # instantiate kafka consumer
     kafka_config = config["kafka"]
@@ -27,18 +28,21 @@ def main():
 
     # instantiate connector to user office
     # retrieve relevant configuration
+    print("Connecting to user office")
     user_office_config = config["user_office"]
     user_office = UserOffice(user_office_config["host"])
     user_office.login(user_office_config["username"],user_office_config["password"])
 
     # instantiate connector to scicat
     # retrieve relevant configuration
+    print("Connecting to scicat")
     scicat_config = config["scicat"]
     scicat = SciCat(scicat_config["host"])
     scicat.login(scicat_config["username"],scicat_config["password"])
 
 
     # main loop, waiting for messages
+    print("Starting main loop")
     try:
         for message in consumer:
             data_type = message.value[4:8]
