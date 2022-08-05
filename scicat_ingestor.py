@@ -44,14 +44,22 @@ def get_instrument(id,name):
 
 
 def get_nested_value(structure: dict, path: list):
+    logger.info("get_nested_value ======================");
     # get key
     key = path.pop(0)
-    if type(key,str):
-        for i in structure[key]:
-            temp = get_nested_value(i,path)
-            if temp is not None:
-                return temp
-    elif type(key,tuple):
+    logger.info("get_nested_value key : {}".format(key));
+    logger.info("get_nested_value structure : {}".format(structure));
+    if isinstance(key,str):
+        substructure = structure[key]
+        if isinstance(substructure,list):
+            for i in substructure:
+                logger.info("get_nested_value structure[key] : {}".format(i));
+                temp = get_nested_value(i,path)
+                if temp is not None:
+                   return temp
+        elif isinstance(substructure,dict):
+            return get_nested_value(substructure,path)
+    elif isinstance(key,tuple):
         # check the condition
         if key[0] is not None:
             if (key[1] in structure.keys()) and (structure[key[1]] == key[2]):
@@ -154,8 +162,10 @@ def main(config, logger):
         password=scicat_config["password"],
     )
 
-    defaultOwnerGroup = config['scicat']['ownable']['ownerGroup']
-    defaultAccessGroups = config['scicat']['ownable']['accessGroups']
+    defaultOwnerGroup = config['dataset']['ownable']['ownerGroup']
+    logger.info('Default owner group : {}'.format(defaultOwnerGroup))
+    defaultAccessGroups = config['dataset']['ownable']['accessGroups']
+    logger.info('Default access groups : {}'.format(defaultAccessGroups))
 
 
     defaultInstrument = get_instrument(
@@ -170,12 +180,13 @@ def main(config, logger):
             None
         )
     )
+    logger.info('Default instrument : {}'.format(defaultInstrument))
 
     # main loop, waiting for messages
     for message in consumer:
         try:
             data_type = message.value[4:8]
-            logger.info("Received message. Data type : " + data_type)
+            logger.info("Received message. Data type : {}".format(data_type))
             if data_type == b"wrdn":
                 logger.info("Received writing done message from file writer")
                 entry = deserialise_wrdn(message.value)
@@ -290,12 +301,12 @@ def get_config(input_args: argparse.Namespace) -> dict:
     # copy options into run options
     config['run_options'] = copy.deepcopy(config['options'])
 
-    for k,v in input_args.items():
+    for k,v in vars(input_args).items():
         if v is not None:
             config['run_options'][k] = v
 
-    # define log level
-    config['logging_level'] = getattr(logging,config['debug_level'])
+    ## define log level
+    #config['logging_level'] = getattr(logging,config['run_options']['debug_level'])
 
     return config
 
@@ -381,7 +392,7 @@ def create_orig_datablock(
     dataset_pid: str, 
     file_size: int, 
     file_name: str,
-    ownable: pyScClient.Ownable
+    ownable: pyScModel.Ownable
 ) -> dict:
     return pyScModel.OrigDatablock(
         **{
@@ -434,7 +445,7 @@ parser.add_argument(
 )
 parser.add_argument(
     '--debug',
-    dest='debug_level',
+    dest='logging_level',
     help='Adjust the debug level',
     default='INFO',
     type=str
@@ -449,13 +460,17 @@ if __name__ == "__main__":
 
     # get configuration from file and updates with command line options
     config = get_config(args)
+    run_options = config['run_options']
     
     # instantiate logger
     logger = logging.getLogger('esd extract parameters')
-    logger.setLevel(config['logging_level'])
+    logger.setLevel(run_options['logging_level'])
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-    if config['file_log']:
+    print("Configuration : {}".format(json.dumps(config)))
+
+
+    if run_options['file_log']:
 
         fh = logging.FileHandler(
             config['file_log_base_name'] \
@@ -467,19 +482,21 @@ if __name__ == "__main__":
             mode='w', 
             encoding='utf-8'
         )
-        fh.setLevel(config['logging_level'])
+        fh.setLevel(run_options['logging_level'])
         fh.setFormatter(formatter)
         logger.addHandler(fh)
 
-    if config['verbose']:
+    if run_options['verbose']:
         ch = logging.StreamHandler()
-        ch.setLevel(config['logging_level'])
+        ch.setLevel(run_options['logging_level'])
         ch.setFormatter(formatter)
         logger.addHandler(ch)
 
-    if config['system_log']:
+    if run_options['system_log']:
         sh = logging.handlers.SysLogHandler(address='/dev/log')
-        sh.setLevel(config['logging_level'])
+        sh.setLevel(run_options['logging_level'])
         logger.addHandler(sh)
+
+    logger.info("Configuration : {}".format(json.dumps(config)))
 
     main(config,logger)
