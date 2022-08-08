@@ -212,7 +212,7 @@ def main(config, logger):
                         )
                     
                     # We assume that all the relevant information are already in scicat
-                    proposal = scClient.get_proposal_by_pid(proposal_id)
+                    proposal = scClient.proposals_get_one(proposal_id)
 
                     # create an owneable object to be used with all the other models
                     # all the fields are retrieved directly from the simulation information
@@ -245,7 +245,7 @@ def main(config, logger):
                         sample_id = metadata['sample_id']
                     elif 'simple_id' in config['dataset'].keys() and config['dataset']['sample_id']:
                         sample_id = config['dataset']['sample_id']
-                    sample = scClient.get_sample_by_pid(sample_id) if sample_id else None
+                    sample = scClient.samples_get_one(sample_id) if sample_id else None
 
 
                     # create dataset object from the pyscicat model
@@ -260,7 +260,7 @@ def main(config, logger):
                     )
 
                     logger.info('Creating dataset on SciCat')
-                    created_dataset = scClient.upload_new_dataset(dataset)
+                    created_dataset = scClient.datasets_create(dataset)
                     logger.info('Dataset created with pid {}'.format(created_dataset['pid']))
 
 
@@ -275,7 +275,7 @@ def main(config, logger):
                     # create origDatablock associated with dataset in SciCat
                     # it returns the full object including SciCat id assigned when created
                     logger.info('Creating original datablock in SciCat')
-                    created_orig_datablock = scClient.upload_dataset_origdatablock(origDatablock)
+                    created_orig_datablock = scClient.datasets_origdatablock_create(origDatablock)
                     logger.info('Original datablock created with internal id {}'.format(created_orig_datablock['_id']))
 
                 else:
