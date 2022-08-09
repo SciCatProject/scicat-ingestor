@@ -44,18 +44,18 @@ def get_instrument(id,name):
 
 
 def get_nested_value(structure: dict, path: list):
-    logger.info("get_nested_value ======================");
+    #logger.info("get_nested_value ======================");
     # get key
     key = path.pop(0)
-    logger.info("get_nested_value key : {}".format(key));
-    logger.info("get_nested_value structure : {}".format(structure));
+    #logger.info("get_nested_value key : {}".format(key));
+    #logger.info("get_nested_value structure : {}".format(structure));
     if not isinstance(structure,dict):
         return None
     elif isinstance(key,str):
         substructure = structure[key]
         if isinstance(substructure,list):
             for i in substructure:
-                logger.info("get_nested_value structure[key] : {}".format(i));
+                #logger.info("get_nested_value structure[key] : {}".format(i));
                 temp = get_nested_value(i,path)
                 if temp is not None:
                    return temp
@@ -223,20 +223,26 @@ def main(config, logger):
                     # create an owneable object to be used with all the other models
                     # all the fields are retrieved directly from the simulation information
                     logger.info('Instantiate ownable model')
+                    ownerGroup = get_nested_value_with_default(
+                        proposal,
+                        ['ownerGroup'],
+                        defaultOwnerGroup
+                    )
+                    logger.info('Owner group : {}'.format(ownerGroup))
+                    accessGroups = get_nested_value_with_union(
+                        proposal,
+                        ['accessGroups'],
+                        defaultAccessGroups
+                    )
+                    logger.info('Access groups : {}'.format(accessGroups))
+
                     ownable = pyScModel.Ownable(
-                        ownerGroup=get_nested_value_with_default(
-                            proposal,
-                            ['ownerGroup'],
-                            defaultOwnerGroup
-                        ), 
-                        accessGroups=get_nested_value_with_union(
-                            proposal,
-                            ['accessGroups'],
-                            defaultAccessGroups
-                        )
+                        ownerGroup=ownerGroup
+                        accessGroups=accessGroups
                     )
 
                     # if instrument is not assigned by config, tries to find it from the message
+                    logger.info('Defining Instrument');
                     if defaultInstrument and defaultInstrument is not None:
                         instrument = defaultInstrument
                     else:
@@ -244,6 +250,7 @@ def main(config, logger):
                             get_nested_value_with_default(metadata,['instrument_id'],None),
                             get_nested_value_with_default(metadata,['instrument_name'],None)
                         )
+                    logger.info('Instrument : {}'.format(instrument))
                         
                     # find sample information
                     sample_id = None
@@ -252,6 +259,7 @@ def main(config, logger):
                     elif 'simple_id' in config['dataset'].keys() and config['dataset']['sample_id']:
                         sample_id = config['dataset']['sample_id']
                     sample = scClient.samples_get_one(sample_id) if sample_id else None
+                    logger.info('Sample : {}'.format(sample))
 
 
                     # create dataset object from the pyscicat model
@@ -264,7 +272,7 @@ def main(config, logger):
                         sample,
                         ownable
                     )
-
+                    logger.info('Dataset : {}'.format(dataset))
                     logger.info('Creating dataset on SciCat')
                     created_dataset = scClient.datasets_create(dataset)
                     logger.info('Dataset created with pid {}'.format(created_dataset['pid']))
@@ -278,6 +286,7 @@ def main(config, logger):
                         entry.file_name,
                         ownable
                     )
+                    logger.info('Original datablock : {}'.format(origDatablock))
                     # create origDatablock associated with dataset in SciCat
                     # it returns the full object including SciCat id assigned when created
                     logger.info('Creating original datablock in SciCat')
