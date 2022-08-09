@@ -49,7 +49,9 @@ def get_nested_value(structure: dict, path: list):
     key = path.pop(0)
     logger.info("get_nested_value key : {}".format(key));
     logger.info("get_nested_value structure : {}".format(structure));
-    if isinstance(key,str):
+    if not isinstance(structure,dict):
+        return None
+    elif isinstance(key,str):
         substructure = structure[key]
         if isinstance(substructure,list):
             for i in substructure:
@@ -204,12 +206,16 @@ def main(config, logger):
                     if "proposal_id" in metadata.keys() and metadata['proposal_id'] is not None:
                         logger.info("Extracting proposal id from metadata")
                         proposal_id = metadata['proposal_id']
-                    elif proposal_id is None:
-                        logger.info("Extracting propsal id from hdf structure")
+                    if not proposal_id or proposal_id is None:
+                        logger.info("Extracting proposal id from hdf structure")
                         proposal_id = get_proposal_id(
                             metadata["hdf_structure"],
                             config['dataset']['default_proposal_id']
                         )
+                    if not proposal_id or proposal_id is None:
+                        logger.info("Using default proposal id")
+                        proposal_id = config['dataset']['default_proposal_id']
+                    logger.info("Proposal id : {}".format(proposal_id))
                     
                     # We assume that all the relevant information are already in scicat
                     proposal = scClient.proposals_get_one(proposal_id)
