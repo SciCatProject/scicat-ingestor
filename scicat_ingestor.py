@@ -237,7 +237,7 @@ def main(config, logger):
                     logger.info('Access groups : {}'.format(accessGroups))
 
                     ownable = pyScModel.Ownable(
-                        ownerGroup=ownerGroup
+                        ownerGroup=ownerGroup,
                         accessGroups=accessGroups
                     )
 
