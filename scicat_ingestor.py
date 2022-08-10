@@ -219,6 +219,7 @@ def main(config, logger):
                     
                     # We assume that all the relevant information are already in scicat
                     proposal = scClient.proposals_get_one(proposal_id)
+                    logger.info("Proposal : {}".format(proposal))
 
                     # create an owneable object to be used with all the other models
                     # all the fields are retrieved directly from the simulation information
@@ -326,6 +327,18 @@ def get_config(input_args: argparse.Namespace) -> dict:
     return config
 
 
+def get_prop(
+    input_object: dict,
+    field: str,
+    default: any = ""
+) -> any:
+    try:
+       output = input_object.get(field,default)
+    except:
+       output = default
+    return output
+
+
 def create_dataset(
     metadata: dict, 
     proposal: dict, 
@@ -335,21 +348,25 @@ def create_dataset(
 ) -> dict:
     # prepare info for datasets
     dataset_pid = str(uuid.uuid4())
+    proposal_id = get_prop(proposal,'pid','unknown')
     dataset_name = metadata["run_name"] \
         if "run_name" in metadata.keys() \
-        else "Dataset {} for proposal {}".format(dataset_pid,proposal.get('pid','unknown'))
+        else "Dataset {} for proposal {}".format(dataset_pid,proposal_id)
     dataset_description = metadata["run_description"] \
         if "run_description" in metadata.keys() \
         else "Dataset: {}. Proposal: {}. Sample: {}. Instrument: {}".format(
             dataset_pid,
-            proposal.get('proposalId','unknown'),
-            instrument.get('pid','unknown'),
-            sample.get('sampleId','unknown'))
-    principal_investigator = proposal["pi_firstname"] + " " + proposal["pi_lastname"]
-    email = proposal["pi_email"]
-    instrument_name = instrument.get("name","")
+            proposal_id,
+            get_prop(instrument,'pid','unknown'),
+            get_prop(sample,'sampleId','unknown'))
+    principal_investigator = " ".join([
+        get_prop(proposal,"pi_firstname","unknown"),
+        get_prop(proposal,"pi_lastname","")
+    ]).strip()
+    email = get_prop(proposal,"pi_email","unknown")
+    instrument_name = get_prop(instrument,"name","unknown")
     source_folder = (
-        "/nfs/groups/beamlines/" + instrument_name if instrument_name else "unknown" + "/" + proposal["proposalId"]
+        "/nfs/groups/beamlines/" + instrument_name + "/" + proposal_id
     ) 
     
     # create dictionary with all requested info
@@ -359,7 +376,7 @@ def create_dataset(
             "datasetName": dataset_name,
             "description": dataset_description,
             "principalInvestigator": principal_investigator,
-            "creationLocation": instrument.get("name",""),
+            "creationLocation": get_prop(instrument,"name",""),
             "scientificMetadata": prepare_metadata(flatten_metadata(metadata)),
             "owner": principal_investigator,
             "ownerEmail": email,
@@ -367,10 +384,10 @@ def create_dataset(
             "sourceFolder": source_folder,
             "creationTime": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.000Z"),
             "type": "raw",
-            "techniques": metadata.get('techniques',[]),
-            "instrumentId": instrument.get("pid",""),
-            "sampleId" : sample.get('sampleId',''),
-            "proposalId": proposal.get("proposalId",''),
+            "techniques": get_prop(metadata,'techniques',[]),
+            "instrumentId": get_prop(instrument,"pid",""),
+            "sampleId" : get_prop(sample,'sampleId',''),
+            "proposalId": get_prop(proposal,"proposalId",''),
         },
         **ownable
     )
