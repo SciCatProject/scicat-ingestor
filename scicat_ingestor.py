@@ -85,7 +85,7 @@ def get_nested_value_with_default(structure: dict, path: list, default: Any):
 def get_nested_value_with_union(structure: dict, path: list, union: list):
     output = get_nested_value(structure,path)
     output = output if isinstance(output, list) else [output]
-    return list(set([*output, *union]))
+    return [i for i in list(set([*output, *union])) if i is not None]
 
 
 def get_proposal_id(
