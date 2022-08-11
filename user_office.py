@@ -1,5 +1,4 @@
-#! /usr/bin/env python3
-
+#! /usr/b:win/env python3
 import sys
 import requests
 
@@ -26,7 +25,7 @@ class UserOffice:
     def __init__(self, base_url: str):
         self._access_token = ""
         self._headers = {}
-        self._base_url = base_url + "/graphql"
+        self._base_url = base_url + ( "/graphql" if not base_url.endswith("graphql") else "")
         self._proposal_fields = """
             primaryKey,
             proposalId,
@@ -88,8 +87,50 @@ class UserOffice:
         self._headers = {"Authorization": "Bearer " + self._access_token}
 
 
+    def set_access_token(self, token: str, error: bool = True) -> bool:
+        """
+        Set the access token and test that it can access
 
-    def get_proposal_by_primary_key(self, primaryKey: int) -> dict:
+        Parameters
+        ----------
+        token: str
+            access token
+        error: bool (defaul True)
+            throw error if it is not avble to connect if True
+
+        Returns
+        -------
+        result: bool
+            true if it could verify that it can access useroffice api
+
+        """ 
+        self._access_token = token
+        self._headers = {"authorization": "Bearer " + self._access_token}
+
+        query = """
+            query {
+                users {
+                    totalCount
+                }
+            }
+        """
+        
+        res = requests.post(
+            self._base_url, 
+            json={"query": query}, 
+            headers=self._headers
+        )
+
+        output = ( res.status_code == 200 and "totalCount" in res.json()["data"]["users"] )
+        if error and not output:
+            # throw exception
+            raise Exception("Unable to establish connection with User Office")
+
+        return output
+        
+
+
+    def proposals_get_one_by_primary_key(self, primaryKey: int) -> dict:
         """
         Get a proposal by primary key.
 
@@ -126,7 +167,7 @@ class UserOffice:
         return res.json()["data"]["proposal"]
 
 
-    def get_proposal_by_id(self, id: int) -> dict:
+    def proposals_get_one(self, id: str) -> dict:
         """
         Get a proposal by id.
 
@@ -142,13 +183,13 @@ class UserOffice:
         """
 
         query = """
-            {
-                proposals(filter:{ shortCodes : ["%d"]}) {
-                    proposals{
-                        %s
-                    }
-                }
-            }
+         query {
+          proposals(filter: { referenceNumbers: ["%s"] }) {
+           proposals {
+            %s
+           }
+          }
+         }     
         """ % (
             id,
             self._proposal_fields
@@ -162,4 +203,5 @@ class UserOffice:
         if res.status_code != 200:
             sys.exit(res.text)
 
-        return res.json()["data"]["proposals"]
+        return res.json()["data"]["proposals"]["proposals"][0]
+

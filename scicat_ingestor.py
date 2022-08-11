@@ -144,12 +144,13 @@ def main(config, logger):
     # instantiate connector to user office
     # retrieve relevant configuration
     user_office_config = config["user_office"]
-    logger.info('Connecting to User Office running on {} with username {}'.format(
-        user_office_config["host"],
-        user_office_config["username"]
-    ))
-    user_office = UserOffice(user_office_config["host"])
-    user_office.login(user_office_config["username"],user_office_config["password"])
+    #logger.info('Connecting to User Office running on {} with username {}'.format(
+    #    user_office_config["host"],
+    #    user_office_config["username"]
+    #))
+    uoClient = UserOffice(user_office_config["host"])
+    #user_office.login(user_office_config["username"],user_office_config["password"])
+    uoClient.set_access_token(user_office_config["token"])
 
     # instantiate connector to scicat
     # retrieve relevant configuration
@@ -184,7 +185,12 @@ def main(config, logger):
     )
     logger.info('Default instrument : {}'.format(defaultInstrument))
 
+    defaultProposal = uoClient.proposals_get_one(config['dataset']['default_proposal_id'])
+    logger.info("Default proposal : {}".format(defaultProposal))
+
+
     # main loop, waiting for messages
+    logger.info("Starting main loop ...")
     for message in consumer:
         try:
             data_type = message.value[4:8]
@@ -210,15 +216,18 @@ def main(config, logger):
                         logger.info("Extracting proposal id from hdf structure")
                         proposal_id = get_proposal_id(
                             metadata["hdf_structure"],
-                            config['dataset']['default_proposal_id']
+                            None
                         )
                     if not proposal_id or proposal_id is None:
-                        logger.info("Using default proposal id")
-                        proposal_id = config['dataset']['default_proposal_id']
+                        logger.info("Using default proposal")
+                        proposal = defaultProposal
+                    else:
+                        try:
+                            proposal = ouClient.proposals_get_one(proposal_id)
+                        except:
+                            proposal = defaultProposal
+
                     logger.info("Proposal id : {}".format(proposal_id))
-                    
-                    # We assume that all the relevant information are already in scicat
-                    proposal = scClient.proposals_get_one(proposal_id)
                     logger.info("Proposal : {}".format(proposal))
 
                     # create an owneable object to be used with all the other models
@@ -389,7 +398,7 @@ def create_dataset(
             "sampleId" : get_prop(sample,'sampleId',''),
             "proposalId": get_prop(proposal,"proposalId",''),
         },
-        **ownable
+        **dict(ownable)
     )
 
 
@@ -439,7 +448,7 @@ def create_orig_datablock(
                 }
             ],
         },
-        **ownable
+        **dict(ownable)
     )
 
 
