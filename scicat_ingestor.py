@@ -52,13 +52,16 @@ def get_nested_value(structure: dict, path: list):
     if not isinstance(structure,dict):
         return None
     elif isinstance(key,str):
-        substructure = structure[key]
-        if isinstance(substructure,list):
-            for i in substructure:
-                #logger.info("get_nested_value structure[key] : {}".format(i));
-                temp = get_nested_value(i,path)
-                if temp is not None:
-                   return temp
+        if key in structure.keys():
+            substructure = structure[key]
+            if isinstance(substructure,list):
+                for i in substructure:
+                    #logger.info("get_nested_value structure[key] : {}".format(i));
+                    temp = get_nested_value(i,path)
+                    if temp is not None:
+                        return temp
+            else:
+                return None
         elif isinstance(substructure,dict):
             return get_nested_value(substructure,path)
     elif isinstance(key,tuple):
@@ -78,14 +81,20 @@ def get_nested_value(structure: dict, path: list):
 
 
 def get_nested_value_with_default(structure: dict, path: list, default: Any):
-    output = get_nested_value(structure,path)
-    return output if output and output is not None else default
+    try:
+        output = get_nested_value(structure,path)
+        return output if output and output is not None else default
+    except:
+        return default
 
 
 def get_nested_value_with_union(structure: dict, path: list, union: list):
-    output = get_nested_value(structure,path)
-    output = output if isinstance(output, list) else [output]
-    return [i for i in list(set([*output, *union])) if i is not None]
+    try:
+        output = get_nested_value(structure,path)
+        output = output if isinstance(output, list) else [output]
+        return [i for i in list(set([*output, *union])) if i is not None]
+    except:
+        return union
 
 
 def get_proposal_id(
