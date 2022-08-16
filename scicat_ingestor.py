@@ -34,11 +34,9 @@ scClient= None
 def get_instrument(id,name):
     global scClient
     # load instrument by id or by name
-    instrument = { 'id' : None }
-    if id and id is not None:
-        instrument = scClient.get_instrument_by_pid(id)
-    elif name and name is not None:
-        instrument = scClient.get_instrument_by_name(name)
+    instrument = scClient.instruments_get_one(id,name)
+    if not instrument:
+        instrument = { 'id' : None , "name" : "unknown" }
 
     return instrument
 
@@ -47,23 +45,24 @@ def get_nested_value(structure: dict, path: list):
     #logger.info("get_nested_value ======================");
     # get key
     key = path.pop(0)
-    #logger.info("get_nested_value key : {}".format(key));
-    #logger.info("get_nested_value structure : {}".format(structure));
+    logger.info("get_nested_value key : {}".format(key));
+    logger.info("get_nested_value structure : {}".format(structure));
     if not isinstance(structure,dict):
         return None
     elif isinstance(key,str):
         if key in structure.keys():
             substructure = structure[key]
+            logger.info("get_nested_value substructure : {}".format(substructure));
             if isinstance(substructure,list):
                 for i in substructure:
                     #logger.info("get_nested_value structure[key] : {}".format(i));
                     temp = get_nested_value(i,path)
                     if temp is not None:
                         return temp
-            else:
-                return None
-        elif isinstance(substructure,dict):
-            return get_nested_value(substructure,path)
+            elif isinstance(substructure,dict):
+                return get_nested_value(substructure,path)
+            else: 
+                return substructure
     elif isinstance(key,tuple):
         # check the condition
         if key[0] is not None:
@@ -83,6 +82,7 @@ def get_nested_value(structure: dict, path: list):
 def get_nested_value_with_default(structure: dict, path: list, default: Any):
     try:
         output = get_nested_value(structure,path)
+        logger.info("get_nested_value_with_default output : {}".format(output));
         return output if output and output is not None else default
     except:
         return default
@@ -180,21 +180,28 @@ def main(config, logger):
     logger.info('Default access groups : {}'.format(defaultAccessGroups))
 
 
+
+    defaultInstrumentId = get_nested_value_with_default(
+        config,
+        ["dataset","instrument_id"],
+        None
+    )
+    logger.info('Default instrument id : {}'.format(defaultInstrumentId))
+    defaultInstrumentName = get_nested_value_with_default(
+        config,
+        ["dataset","instrument_name"],
+        None
+    )
+    logger.info('Default instrument name: {}'.format(defaultInstrumentName))
+    
     defaultInstrument = get_instrument(
-        get_nested_value_with_default(
-            config,
-            ["dataset","instrument_id"],
-            None
-        ),
-        get_nested_value_with_default(
-            config,
-            ["dataset","instrument_name"],
-            None
-        )
+        defaultInstrumentId,
+        defaultInstrumentName
     )
     logger.info('Default instrument : {}'.format(defaultInstrument))
 
     defaultProposal = uoClient.proposals_get_one(config['dataset']['default_proposal_id'])
+    defaultProposal['proposer']['email'] = uoClient.users_get_one_email(defaultProposal['proposer']['id'])
     logger.info("Default proposal : {}".format(defaultProposal))
 
 
@@ -366,7 +373,7 @@ def create_dataset(
 ) -> dict:
     # prepare info for datasets
     dataset_pid = str(uuid.uuid4())
-    proposal_id = get_prop(proposal,'pid','unknown')
+    proposal_id = get_prop(proposal,'proposalId','unknown')
     dataset_name = metadata["run_name"] \
         if "run_name" in metadata.keys() \
         else "Dataset {} for proposal {}".format(dataset_pid,proposal_id)
@@ -378,10 +385,10 @@ def create_dataset(
             get_prop(instrument,'pid','unknown'),
             get_prop(sample,'sampleId','unknown'))
     principal_investigator = " ".join([
-        get_prop(proposal,"pi_firstname","unknown"),
-        get_prop(proposal,"pi_lastname","")
+        get_nested_value_with_default(proposal,["proposer", "firstname"],"unknown"),
+        get_nested_value_with_default(proposal,["proposer", "lastname"],"")
     ]).strip()
-    email = get_prop(proposal,"pi_email","unknown")
+    email = get_nested_value_with_default(proposal,["proposer", "email"],"unknown")
     instrument_name = get_prop(instrument,"name","unknown")
     source_folder = (
         "/nfs/groups/beamlines/" + instrument_name + "/" + proposal_id

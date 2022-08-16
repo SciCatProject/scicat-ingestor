@@ -30,6 +30,7 @@ class UserOffice:
             primaryKey,
             proposalId,
             proposer {
+                id,
                 firstname,
                 lastname,
                 organisation,
@@ -204,4 +205,67 @@ class UserOffice:
             sys.exit(res.text)
 
         return res.json()["data"]["proposals"]["proposals"][0]
+
+
+    def users_get_one_email(self, id: str) -> dict:
+        """
+        Get a proposal by id.
+ 
+        Parameters
+        ----------
+        id : int
+            The user id
+ 
+        Returns
+        -------
+        str
+            The user email
+        """
+
+        query = """
+         query {
+          user(id:%s) {
+           email
+          }
+         }     
+        """ % (
+            id
+        )
+        res = requests.post(
+            self._base_url,
+            json={"query": query},
+            headers=self._headers
+        )
+
+        if res.status_code != 200:
+            sys.exit(res.text)
+
+        return res.json()["data"]["user"]["email"]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
