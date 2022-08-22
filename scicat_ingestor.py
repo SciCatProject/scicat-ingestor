@@ -223,6 +223,11 @@ def main(config, logger):
                     metadata = json.loads(entry.metadata)
                     logger.info("Extracted metadata. Extracted {} keys".format(len(metadata.keys())))
 
+                    # find run number
+                    file_name = get_nested_value_with_default(metadata,["file_being_written"],"unknown")
+                    run_number = file_name.split(".")[0].split("_")[1]
+                    metadata["run_number"] = int(run_number)
+
                     # retrieve proposal id, if present
                     proposal_id = None
                     if "proposal_id" in metadata.keys() and metadata['proposal_id'] is not None:
@@ -374,16 +379,18 @@ def create_dataset(
     # prepare info for datasets
     dataset_pid = str(uuid.uuid4())
     proposal_id = get_prop(proposal,'proposalId','unknown')
+    run_number = get_nested_value_with_default(metadata,['run_number'],'unknown')
     dataset_name = metadata["run_name"] \
         if "run_name" in metadata.keys() \
-        else "Dataset {} for proposal {}".format(dataset_pid,proposal_id)
+        else "Dataset {} for proposal {} run {}".format(dataset_pid,proposal_id,run_number)
     dataset_description = metadata["run_description"] \
         if "run_description" in metadata.keys() \
-        else "Dataset: {}. Proposal: {}. Sample: {}. Instrument: {}".format(
+        else "Dataset: {}. Proposal: {}. Sample: {}. Instrument: {}. File: {}".format(
             dataset_pid,
             proposal_id,
             get_prop(instrument,'pid','unknown'),
-            get_prop(sample,'sampleId','unknown'))
+            get_prop(sample,'sampleId','unknown'),
+            get_nested_value_with_default(metadata,['file_being_written'],'unknown'))
     principal_investigator = " ".join([
         get_nested_value_with_default(proposal,["proposer", "firstname"],"unknown"),
         get_nested_value_with_default(proposal,["proposer", "lastname"],"")
@@ -499,6 +506,12 @@ parser.add_argument(
     dest='system_log',
     help='Provide logging on the system log',
     action='store_true'
+)
+parser.add_argument(
+    '--log-prefix',
+    dest='log_prefix',
+    help='Prefix for log messages',
+    default=' SFI: '
 )
 parser.add_argument(
     '--debug',
