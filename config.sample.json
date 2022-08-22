@@ -34,6 +34,7 @@
     "file_log_timestamp" : false,
     "debug_level" : "INFO",
     "system_log" : false,
-    "system_log_facility" : "mail"
+    "system_log_facility" : "mail",
+    "log_prefix" : " SFI: "
   }
 }

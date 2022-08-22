@@ -42,20 +42,20 @@ def get_instrument(id,name):
 
 
 def get_nested_value(structure: dict, path: list):
-    #logger.info("get_nested_value ======================");
+    logger.debug("get_nested_value ======================");
     # get key
     key = path.pop(0)
-    logger.info("get_nested_value key : {}".format(key));
-    logger.info("get_nested_value structure : {}".format(structure));
+    logger.debug("get_nested_value key : {}".format(key));
+    logger.debug("get_nested_value structure : {}".format(structure));
     if not isinstance(structure,dict):
         return None
     elif isinstance(key,str):
         if key in structure.keys():
             substructure = structure[key]
-            logger.info("get_nested_value substructure : {}".format(substructure));
+            logger.debug("get_nested_value substructure : {}".format(substructure));
             if isinstance(substructure,list):
                 for i in substructure:
-                    #logger.info("get_nested_value structure[key] : {}".format(i));
+                    logger.debug("get_nested_value structure[key] : {}".format(i));
                     temp = get_nested_value(i,path)
                     if temp is not None:
                         return temp
@@ -82,7 +82,7 @@ def get_nested_value(structure: dict, path: list):
 def get_nested_value_with_default(structure: dict, path: list, default: Any):
     try:
         output = get_nested_value(structure,path)
-        logger.info("get_nested_value_with_default output : {}".format(output));
+        logger.debug("get_nested_value_with_default output : {}".format(output));
         return output if output and output is not None else default
     except:
         return default
@@ -535,7 +535,7 @@ if __name__ == "__main__":
     # instantiate logger
     logger = logging.getLogger('esd extract parameters')
     logger.setLevel(run_options['logging_level'])
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter(run_options['log_prefix'] + '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
     print("Configuration : {}".format(json.dumps(config)))
 
