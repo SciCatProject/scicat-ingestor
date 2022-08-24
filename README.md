@@ -69,11 +69,7 @@ If you are using conda, following are the instruction on how to set up the scica
   > cd scicat-filewriter-ingest
   ```
 
-- checkout current version
-  ```bash
-  > git checkout stable
-  ```
-  or the exact version, which at the moment is v1.0.0
+- checkout current version, which at the moment is v1.0.0
   ```bash
   > git checkout v1.0.0
   ```
@@ -119,11 +115,7 @@ If you prefer to use straight python with pip, these are the instructions for yo
   > cd scicat-filewriter-ingest
   ```
 
-- checkout current version
-  ```bash
-  > git checkout stable
-  ```
-  or the exact version, which at the moment is v1.0.0
+- checkout current version, which at the moment is v1.0.0
   ```bash
   > git checkout v1.0.0
   ```
