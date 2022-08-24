@@ -55,3 +55,97 @@ This link provide a lot of information regarding the setup of the kafka cluster 
 - https://confluence.esss.lu.se/pages/viewpage.action?pageId=167903470
 
 In the folder examples/producer, a file producer application is provided to test the consumer
+
+## Installation
+
+If you are using conda, following are the instruction on how to set up the scicat filewriter ingestor:
+- clone the code repository
+  ```bash
+  > git clone https://gitlab.esss.lu.se/swap/scicat-filewriter-ingest.git scicat-filewriter-ingest
+  ```
+
+- step in to the folder
+  ```bash
+  > cd scicat-filewriter-ingest
+  ```
+
+- checkout current version
+  ```bash
+  > git checkout stable
+  ```
+  or the exact version, which at the moment is v1.0.0
+  ```bash
+  > git checkout v1.0.0
+  ```
+
+- create conda environment
+  ```bash
+  > conda env create -f requirements-SFI.yml
+  ```
+
+- activate the conda environment
+  ```bash
+  > conda activate SFI
+  ```
+
+- prepare the configuration file. You can copy the example provided in the repo and customize it to your needs.
+  ```bash
+  > cp config.sample.json config.json
+  ``` 
+
+- start the ingestor. The application will read automatically the config file.
+  ```bash
+  > ./scicat_ingestor.py
+  ```
+  
+  if you want logging to the console and to the syslog
+  ```bash
+  > ./scicat_ingestor.py -v --sys-log
+  ```
+
+
+If you prefer to use straight python with pip, these are the instructions for you:
+- make sure that you have python 3.8.x or higher
+
+- make sure that pip is installed
+
+- clone the code repository
+  ```bash
+  > git clone https://gitlab.esss.lu.se/swap/scicat-filewriter-ingest.git scicat-filewriter-ingest
+  ```
+
+- step in to the folder
+  ```bash
+  > cd scicat-filewriter-ingest
+  ```
+
+- checkout current version
+  ```bash
+  > git checkout stable
+  ```
+  or the exact version, which at the moment is v1.0.0
+  ```bash
+  > git checkout v1.0.0
+  ```
+
+- install the required packages
+  ```bash
+  > pip install -f requirements_SFI.txt
+  ```
+
+- prepare the configuration file. You can copy the example provided in the repo and customize it to your needs.
+  ```bash
+  > cp config.sample.json config.json
+  ``` 
+
+- start the ingestor. The application will read automatically the config file.
+  ```bash
+  > ./scicat_ingestor.py
+  ```
+  
+  if you want logging to the console and to the syslog
+  ```bash
+  > ./scicat_ingestor.py -v --sys-log
+  ```
+
+
