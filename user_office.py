@@ -224,7 +224,7 @@ class UserOffice:
 
         query = """
          query {
-          user(id:%s) {
+          user(userId:%s) {
            email
           }
          }     
