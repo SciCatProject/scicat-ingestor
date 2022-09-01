@@ -565,6 +565,7 @@ if __name__ == "__main__":
     if run_options['system_log']:
         sh = logging.handlers.SysLogHandler(address='/dev/log')
         sh.setLevel(run_options['logging_level'])
+        sh.setFormatter(formatter)
         logger.addHandler(sh)
 
     logger.info("Configuration : {}".format(json.dumps(config)))
