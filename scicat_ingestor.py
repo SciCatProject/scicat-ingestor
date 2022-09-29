@@ -115,17 +115,22 @@ def get_proposal_id(
                 ("config", "module","dataset"),
                 (None,"name","experiment_identifier","values")
             ]
+        logger.debug("Proposal path : " + json.dumps(proposal_path))
 
         # convert json string to dictionary
         hdf_structure_dict = json.loads(
             hdf_structure_string.replace("\n","")
         )
+        logger.debug("hdf structure dict : " + json.dumps(hdf_structure_dict))
 
         # now it finds the proposal id which is saved under the key experiment_identifier
-        return get_nested_value(
+        proposal_id = get_nested_value(
             hdf_structure_dict,
             proposal_path
         )
+        logger.debug("Result : " + proposal_id)
+
+        return proposal_id
 
     except:
         return default
@@ -239,6 +244,7 @@ def main(config, logger):
                             metadata["hdf_structure"],
                             None
                         )
+                    logger.info("Proposal id found: {}".format(proposal_id))
                     if not proposal_id or proposal_id is None:
                         logger.info("Using default proposal")
                         proposal = defaultProposal
