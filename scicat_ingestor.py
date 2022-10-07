@@ -17,7 +17,7 @@ import logging.handlers
 from user_office import UserOffice
 #from scicat import SciCat
 
-from kafka import KafkaConsumer
+from kafka import KafkaConsumer, TopicPartition
 from streaming_data_types import deserialise_wrdn
 
 
@@ -158,11 +158,13 @@ def main(config, logger):
         kafka_config["topic"]
     ))
     consumer = KafkaConsumer(
-        kafka_config["topic"],
+        #kafka_config["topic"],
         group_id=kafka_config["group_id"],
         bootstrap_servers=kafka_config["bootstrap_servers"],
         auto_offset_reset=kafka_config["auto_offset_reset"],
     )
+    tp = TopicPartition(kafka_config["topic"], 0)
+    consumer.assign([tp])
     consumer.seek_to_end()
 
     # instantiate connector to user office
