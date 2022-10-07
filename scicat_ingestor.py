@@ -41,36 +41,44 @@ def get_instrument(id,name):
     return instrument
 
 
-def get_nested_value(structure: dict, path: list):
+def get_nested_value(structure: dict, path: list, logger: logging.Logger):
     logger.debug("get_nested_value ======================");
     # get key
-    key = path.pop(0)
+    key = path[0]
+    remaining_path = path[1:]
     logger.debug("get_nested_value key : {}".format(key));
     logger.debug("get_nested_value structure : {}".format(structure));
     if not isinstance(structure,dict):
+        logger.debug("get_nested_value structure is not a dictionary");
         return None
     elif isinstance(key,str):
+        logger.debug("get_nested_value key is a string");
         if key in structure.keys():
             substructure = structure[key]
             logger.debug("get_nested_value substructure : {}".format(substructure));
             if isinstance(substructure,list):
                 for i in substructure:
                     logger.debug("get_nested_value structure[key] : {}".format(i));
-                    temp = get_nested_value(i,path)
+                    temp = get_nested_value(i,remaining_path,logger)
                     if temp is not None:
                         return temp
             elif isinstance(substructure,dict):
-                return get_nested_value(substructure,path)
+                return get_nested_value(substructure,remaining_path,logger)
             else: 
                 return substructure
     elif isinstance(key,tuple):
+        logger.debug("get_nested_value key is a tuple");
         # check the condition
         if key[0] is not None:
             if (key[1] in structure.keys()) and (structure[key[1]] == key[2]):
-                for i in structure[key[0]]:
-                    temp = get_nested_value(i,path)
-                    if temp is not None:
-                        return temp
+                substructure = structure[key[0]]
+                if isinstance(substructure,list):
+                    for i in substructure:
+                        temp = get_nested_value(i,remaining_path,logger)
+                        if temp is not None:
+                            return temp
+                else:
+                    return get_nested_value(substructure, remaining_path, logger)
         else:
             if (key[1] in structure.keys()) and (structure[key[1]] == key[2]):
                 return structure[key[3]]
@@ -79,18 +87,18 @@ def get_nested_value(structure: dict, path: list):
     return None
 
 
-def get_nested_value_with_default(structure: dict, path: list, default: Any):
+def get_nested_value_with_default(structure: dict, path: list, default: Any, logger: logging.Logger):
     try:
-        output = get_nested_value(structure,path)
+        output = get_nested_value(structure, path, logger)
         logger.debug("get_nested_value_with_default output : {}".format(output));
         return output if output and output is not None else default
-    except:
+    except Exception as e:
         return default
 
 
-def get_nested_value_with_union(structure: dict, path: list, union: list):
+def get_nested_value_with_union(structure: dict, path: list, union: list, logger: logging.Logger):
     try:
-        output = get_nested_value(structure,path)
+        output = get_nested_value(structure,path, logger)
         output = output if isinstance(output, list) else [output]
         return [i for i in list(set([*output, *union])) if i is not None]
     except:
@@ -126,7 +134,8 @@ def get_proposal_id(
         # now it finds the proposal id which is saved under the key experiment_identifier
         proposal_id = get_nested_value(
             hdf_structure_dict,
-            proposal_path
+            proposal_path,
+            logger
         )
         logger.debug("Result : " + proposal_id)
 
@@ -154,6 +163,7 @@ def main(config, logger):
         bootstrap_servers=kafka_config["bootstrap_servers"],
         auto_offset_reset=kafka_config["auto_offset_reset"],
     )
+    consumer.seek_to_end()
 
     # instantiate connector to user office
     # retrieve relevant configuration
@@ -189,13 +199,15 @@ def main(config, logger):
     defaultInstrumentId = get_nested_value_with_default(
         config,
         ["dataset","instrument_id"],
-        None
+        None,
+        logger
     )
     logger.info('Default instrument id : {}'.format(defaultInstrumentId))
     defaultInstrumentName = get_nested_value_with_default(
         config,
         ["dataset","instrument_name"],
-        None
+        None,
+        logger
     )
     logger.info('Default instrument name: {}'.format(defaultInstrumentName))
     
@@ -229,7 +241,7 @@ def main(config, logger):
                     logger.info("Extracted metadata. Extracted {} keys".format(len(metadata.keys())))
 
                     # find run number
-                    file_name = get_nested_value_with_default(metadata,["file_being_written"],"unknown")
+                    file_name = get_nested_value_with_default(metadata,["file_being_written"],"unknown",logger)
                     run_number = file_name.split(".")[0].split("_")[1]
                     metadata["run_number"] = int(run_number)
 
@@ -244,6 +256,7 @@ def main(config, logger):
                             metadata["hdf_structure"],
                             None
                         )
+                    proposal_id = int(proposal_id) if not isinstance(proposal_id,int) and proposal_id is not None else proposal_id
                     logger.info("Proposal id found: {}".format(proposal_id))
                     if not proposal_id or proposal_id is None:
                         logger.info("Using default proposal")
@@ -260,16 +273,19 @@ def main(config, logger):
                     # create an owneable object to be used with all the other models
                     # all the fields are retrieved directly from the simulation information
                     logger.info('Instantiate ownable model')
-                    ownerGroup = get_nested_value_with_default(
-                        proposal,
-                        ['ownerGroup'],
-                        defaultOwnerGroup
-                    )
+                    # we set the owner group to the proposal id
+                    # ownerGroup = get_nested_value_with_default(
+                    #    proposal,
+                    #    ['ownerGroup'],
+                    #    defaultOwnerGroup
+                    #)
+                    ownerGroup = str(proposal_id)
                     logger.info('Owner group : {}'.format(ownerGroup))
                     accessGroups = get_nested_value_with_union(
                         proposal,
                         ['accessGroups'],
-                        defaultAccessGroups
+                        defaultAccessGroups,
+                        logger
                     )
                     logger.info('Access groups : {}'.format(accessGroups))
 
@@ -284,8 +300,8 @@ def main(config, logger):
                         instrument = defaultInstrument
                     else:
                         instrument = get_instrument(
-                            get_nested_value_with_default(metadata,['instrument_id'],None),
-                            get_nested_value_with_default(metadata,['instrument_name'],None)
+                            get_nested_value_with_default(metadata,['instrument_id'],None,logger),
+                            get_nested_value_with_default(metadata,['instrument_name'],None,logger)
                         )
                     logger.info('Instrument : {}'.format(instrument))
                         
@@ -298,6 +314,14 @@ def main(config, logger):
                     sample = scClient.samples_get_one(sample_id) if sample_id else None
                     logger.info('Sample : {}'.format(sample))
 
+                    # extract estimated file size from message
+                    file_size = 10**6 * get_nested_value_with_default(
+                        metadata,
+                        ['extra',":approx_file_size_mb"],
+                        0,
+                        logger
+                    )
+                    logger.info('Estimated file size : {}'.format(file_size))
 
                     # create dataset object from the pyscicat model
                     # includes ownable from previous step
@@ -319,7 +343,7 @@ def main(config, logger):
                     logger.info('Instantiating original datablock')
                     origDatablock = create_orig_datablock(
                         created_dataset["pid"], 
-                        entry.file_size if "file_size" in entry else 0,
+                        file_size,
                         entry.file_name,
                         ownable
                     )
@@ -380,12 +404,13 @@ def create_dataset(
     proposal: dict, 
     instrument: dict, 
     sample: dict,
-    ownable: pyScModel.Ownable
+    ownable: pyScModel.Ownable,
+    source_folder: str = ""
 ) -> dict:
     # prepare info for datasets
     dataset_pid = str(uuid.uuid4())
     proposal_id = get_prop(proposal,'proposalId','unknown')
-    run_number = get_nested_value_with_default(metadata,['run_number'],'unknown')
+    run_number = get_nested_value_with_default(metadata,['run_number'],'unknown',logger)
     dataset_name = metadata["run_name"] \
         if "run_name" in metadata.keys() \
         else "Dataset {} for proposal {} run {}".format(dataset_pid,proposal_id,run_number)
@@ -396,16 +421,14 @@ def create_dataset(
             proposal_id,
             get_prop(instrument,'pid','unknown'),
             get_prop(sample,'sampleId','unknown'),
-            get_nested_value_with_default(metadata,['file_being_written'],'unknown'))
+            get_nested_value_with_default(metadata,['file_being_written'],'unknown',logger))
     principal_investigator = " ".join([
-        get_nested_value_with_default(proposal,["proposer", "firstname"],"unknown"),
-        get_nested_value_with_default(proposal,["proposer", "lastname"],"")
+        get_nested_value_with_default(proposal,["proposer", "firstname"],"unknown",logger),
+        get_nested_value_with_default(proposal,["proposer", "lastname"],"",logger)
     ]).strip()
-    email = get_nested_value_with_default(proposal,["proposer", "email"],"unknown")
+    email = get_nested_value_with_default(proposal,["proposer", "email"],"unknown",logger)
     instrument_name = get_prop(instrument,"name","unknown")
-    source_folder = (
-        "/nfs/groups/beamlines/" + instrument_name + "/" + proposal_id
-    ) 
+    source_folder = instrument_name + "/" + proposal_id if not source_folder else source_folder
     
     # create dictionary with all requested info
     return pyScModel.RawDataset(
