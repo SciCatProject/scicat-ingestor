@@ -158,7 +158,6 @@ def main(config, logger):
         kafka_config["topic"]
     ))
     consumer = KafkaConsumer(
-        #kafka_config["topic"],
         group_id=kafka_config["group_id"],
         bootstrap_servers=kafka_config["bootstrap_servers"],
         auto_offset_reset=kafka_config["auto_offset_reset"],
@@ -266,7 +265,9 @@ def main(config, logger):
                     else:
                         try:
                             proposal = ouClient.proposals_get_one(proposal_id)
-                        except:
+                        except Exception as e:
+                            logger.error("Error retrieving proposal")
+                            logger.error("Error : " + e)
                             proposal = defaultProposal
 
                     logger.info("Proposal id : {}".format(proposal_id))
