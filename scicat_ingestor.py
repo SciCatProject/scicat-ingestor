@@ -334,7 +334,8 @@ def main(config, logger):
                         proposal, 
                         instrument,
                         sample,
-                        ownable
+                        ownable,
+                        proposal_id
                     )
                     logger.info('Dataset : {}'.format(dataset))
                     logger.info('Creating dataset on SciCat')
@@ -408,11 +409,12 @@ def create_dataset(
     instrument: dict, 
     sample: dict,
     ownable: pyScModel.Ownable,
+    proposal_id: None,
     source_folder: str = ""
 ) -> dict:
     # prepare info for datasets
     dataset_pid = str(uuid.uuid4())
-    proposal_id = get_prop(proposal,'proposalId','unknown')
+    proposal_id = proposal_id if proposal_id else get_prop(proposal,'proposalId','unknown')
     run_number = get_nested_value_with_default(metadata,['run_number'],'unknown',logger)
     dataset_name = metadata["run_name"] \
         if "run_name" in metadata.keys() \
