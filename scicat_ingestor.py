@@ -272,6 +272,8 @@ def main(config, logger):
 
                     logger.info("Proposal id : {}".format(proposal_id))
                     logger.info("Proposal : {}".format(proposal))
+                    if proposal_id != get_prop(proposal,'proposalId','unknown'):
+                        logger.error("Error: Proposal retrieved from UserOffice does not match Proposal indicated in message")
 
                     # create an owneable object to be used with all the other models
                     # all the fields are retrieved directly from the simulation information
