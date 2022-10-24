@@ -15,7 +15,7 @@ import logging
 import logging.handlers
 
 from user_office import UserOffice
-#from scicat import SciCat
+# from scicat import SciCat
 
 from kafka import KafkaConsumer, TopicPartition
 from streaming_data_types import deserialise_wrdn
@@ -42,23 +42,23 @@ def get_instrument(id,name):
 
 
 def get_nested_value(structure: dict, path: list, logger: logging.Logger):
-    logger.debug("get_nested_value ======================");
+    logger.debug("get_nested_value ======================")
     # get key
     key = path[0]
     remaining_path = path[1:]
-    logger.debug("get_nested_value key : {}".format(key));
-    logger.debug("get_nested_value structure : {}".format(structure));
+    logger.debug("get_nested_value key : {}".format(key))
+    logger.debug("get_nested_value structure : {}".format(structure))
     if not isinstance(structure,dict):
-        logger.debug("get_nested_value structure is not a dictionary");
+        logger.debug("get_nested_value structure is not a dictionary")
         return None
     elif isinstance(key,str):
-        logger.debug("get_nested_value key is a string");
+        logger.debug("get_nested_value key is a string")
         if key in structure.keys():
             substructure = structure[key]
-            logger.debug("get_nested_value substructure : {}".format(substructure));
+            logger.debug("get_nested_value substructure : {}".format(substructure))
             if isinstance(substructure,list):
                 for i in substructure:
-                    logger.debug("get_nested_value structure[key] : {}".format(i));
+                    logger.debug("get_nested_value structure[key] : {}".format(i))
                     temp = get_nested_value(i,remaining_path,logger)
                     if temp is not None:
                         return temp
@@ -151,6 +151,7 @@ def main(config, logger):
 
     global scClient
 
+    logger.info('SciCat FileWriter Ingestor main')
     # instantiate kafka consumer
     kafka_config = config["kafka"]
     logger.info('Connecting to Kafka server {} on topic {}'.format(
@@ -328,6 +329,12 @@ def main(config, logger):
                     )
                     logger.info('Estimated file size : {}'.format(file_size))
 
+                    # extract file information from message
+                    file_name = os.path.basename(entry.file_name)
+                    path_name = os.path.dirname(entry.file_name)
+                    logger.info('Dataset folder : {}'.format(path_name))
+                    logger.info('Dataset raw data file : {}'.format(file_name))
+
                     # create dataset object from the pyscicat model
                     # includes ownable from previous step
                     logger.info('Instantiating dataset model')
@@ -337,7 +344,8 @@ def main(config, logger):
                         instrument,
                         sample,
                         ownable,
-                        str(proposal_id)
+                        str(proposal_id),
+                        path_name
                     )
                     logger.info('Dataset : {}'.format(dataset))
                     logger.info('Creating dataset on SciCat')
@@ -350,7 +358,7 @@ def main(config, logger):
                     origDatablock = create_orig_datablock(
                         created_dataset["pid"], 
                         file_size,
-                        entry.file_name,
+                        file_name,
                         ownable
                     )
                     logger.info('Original datablock : {}'.format(origDatablock))
