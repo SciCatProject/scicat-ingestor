@@ -29,7 +29,19 @@ import pyscicat.client as pyScClient
 import pyscicat.model as pyScModel
 
 scClient= None
+METADATA_PROPOSAL_PATH = [
+    "children",
+    ("children", "name", "entry"),
+    ("config", "module","dataset"),
+    (None,"name","experiment_identifier","values")
+]
 
+METADATA_TITLE_PATH = [
+    "children",
+    ("children", "name", "entry"),
+    ("config", "module","dataset"),
+    (None,"name","title","values")
+]
 
 def get_instrument(id,name):
     global scClient
@@ -106,7 +118,8 @@ def get_nested_value_with_union(structure: dict, path: list, union: list, logger
 
 
 def get_proposal_id(
-    hdf_structure_string: str, 
+#    hdf_structure_string: str,
+    hdf_structure_dict: dict,
     default: str = "", 
     proposal_path: list = None
 ) -> dict:
@@ -117,19 +130,20 @@ def get_proposal_id(
 
         # check if we are using the default path or the user has provided an alternative one
         if proposal_path is None:
-            proposal_path = [
-                "children",
-                ("children", "name", "entry"),
-                ("config", "module","dataset"),
-                (None,"name","experiment_identifier","values")
-            ]
+            proposal_path = METADATA_PROPOSAL_PATH
+#            proposal_path = [
+#                "children",
+#                ("children", "name", "entry"),
+#                ("config", "module","dataset"),
+#                (None,"name","experiment_identifier","values")
+#            ]
         logger.debug("Proposal path : " + json.dumps(proposal_path))
 
         # convert json string to dictionary
-        hdf_structure_dict = json.loads(
-            hdf_structure_string.replace("\n","")
-        )
-        logger.debug("hdf structure dict : " + json.dumps(hdf_structure_dict))
+        #hdf_structure_dict = json.loads(
+        #    hdf_structure_string.replace("\n","")
+        #)
+        #logger.debug("hdf structure dict : " + json.dumps(hdf_structure_dict))
 
         # now it finds the proposal id which is saved under the key experiment_identifier
         proposal_id = get_nested_value(
@@ -247,6 +261,12 @@ def main(config, logger):
                     run_number = file_name.split(".")[0].split("_")[1]
                     metadata["run_number"] = int(run_number)
 
+                    # convert json string to dictionary
+                    hdf_structure_dict = json.loads(
+                        metadata["hdf_structure"].replace("\n", "")
+                    )
+                    logger.debug("hdf structure dict : " + json.dumps(hdf_structure_dict))
+
                     # retrieve proposal id, if present
                     proposal_id = None
                     if "proposal_id" in metadata.keys() and metadata['proposal_id'] is not None:
@@ -255,7 +275,8 @@ def main(config, logger):
                     if not proposal_id or proposal_id is None:
                         logger.info("Extracting proposal id from hdf structure")
                         proposal_id = get_proposal_id(
-                            metadata["hdf_structure"],
+                            #metadata["hdf_structure"],
+                            hdf_structure_dict,
                             None
                         )
                     proposal_id = int(proposal_id) if not isinstance(proposal_id,int) and proposal_id is not None else proposal_id
@@ -335,6 +356,15 @@ def main(config, logger):
                     logger.info('Dataset folder : {}'.format(path_name))
                     logger.info('Dataset raw data file : {}'.format(file_name))
 
+                    # dataset title
+                    dataset_title = get_nested_value_with_default(
+                        hdf_structure_dict,
+                        METADATA_TITLE_PATH,
+                        None,
+                        logger
+                    )
+                    logger.info('Dataset name from message : {}'.format(dataset_title))
+
                     # create dataset object from the pyscicat model
                     # includes ownable from previous step
                     logger.info('Instantiating dataset model')
@@ -345,7 +375,8 @@ def main(config, logger):
                         sample,
                         ownable,
                         str(proposal_id),
-                        path_name
+                        path_name,
+                        dataset_title
                     )
                     logger.info('Dataset : {}'.format(dataset))
                     logger.info('Creating dataset on SciCat')
@@ -420,15 +451,17 @@ def create_dataset(
     sample: dict,
     ownable: pyScModel.Ownable,
     proposal_id: str = None,
-    source_folder: str = ""
+    source_folder: str = "",
+    dataset_name: str = None
 ) -> dict:
     # prepare info for datasets
     dataset_pid = str(uuid.uuid4())
     proposal_id = proposal_id if proposal_id else get_prop(proposal,'proposalId','unknown')
     run_number = get_nested_value_with_default(metadata,['run_number'],'unknown',logger)
-    dataset_name = metadata["run_name"] \
-        if "run_name" in metadata.keys() \
-        else "Dataset {} for proposal {} run {}".format(dataset_pid,proposal_id,run_number)
+    if not dataset_name or dataset_name is None:
+        dataset_name = metadata["run_name"] \
+            if "run_name" in metadata.keys() \
+            else "Dataset {} for proposal {} run {}".format(dataset_pid,proposal_id,run_number)
     dataset_description = metadata["run_description"] \
         if "run_description" in metadata.keys() \
         else "Dataset: {}. Proposal: {}. Sample: {}. Instrument: {}. File: {}".format(
