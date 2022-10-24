@@ -264,7 +264,7 @@ def main(config, logger):
                         proposal = defaultProposal
                     else:
                         try:
-                            proposal = ouClient.proposals_get_one(proposal_id)
+                            proposal = ouClient.proposals_get_one(str(proposal_id))
                         except Exception as e:
                             logger.error("Error retrieving proposal")
                             logger.error("Error : ", e)
@@ -337,7 +337,7 @@ def main(config, logger):
                         instrument,
                         sample,
                         ownable,
-                        proposal_id
+                        str(proposal_id)
                     )
                     logger.info('Dataset : {}'.format(dataset))
                     logger.info('Creating dataset on SciCat')
@@ -411,7 +411,7 @@ def create_dataset(
     instrument: dict, 
     sample: dict,
     ownable: pyScModel.Ownable,
-    proposal_id: None,
+    proposal_id: str = None,
     source_folder: str = ""
 ) -> dict:
     # prepare info for datasets
@@ -455,7 +455,7 @@ def create_dataset(
             "techniques": get_prop(metadata,'techniques',[]),
             "instrumentId": get_prop(instrument,"pid",""),
             "sampleId" : get_prop(sample,'sampleId',''),
-            "proposalId": get_prop(proposal,"proposalId",''),
+            "proposalId": proposal_id,
         },
         **dict(ownable)
     )
