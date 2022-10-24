@@ -184,7 +184,7 @@ class UserOffice:
             The proposal with requested id
         """
 
-        query = json.loads("""
+        query = """
          query {
           proposals(filter: { referenceNumbers: ["%s"] }) {
            proposals {
@@ -195,10 +195,10 @@ class UserOffice:
         """ % (
             id,
             self._proposal_fields
-        ))
+        )
         res = requests.post(
             self._base_url, 
-            json=query,
+            json={"query": query},
             headers=self._headers
         )
 
