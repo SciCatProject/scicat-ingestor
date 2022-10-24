@@ -1,4 +1,5 @@
 #! /usr/b:win/env python3
+import json
 import sys
 import requests
 
@@ -183,7 +184,7 @@ class UserOffice:
             The proposal with requested id
         """
 
-        query = """
+        query = json.loads("""
          query {
           proposals(filter: { referenceNumbers: ["%s"] }) {
            proposals {
@@ -194,10 +195,10 @@ class UserOffice:
         """ % (
             id,
             self._proposal_fields
-        )
+        ))
         res = requests.post(
             self._base_url, 
-            json={"query": query}, 
+            json=query,
             headers=self._headers
         )
 

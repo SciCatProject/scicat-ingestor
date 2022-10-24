@@ -267,7 +267,7 @@ def main(config, logger):
                             proposal = ouClient.proposals_get_one(proposal_id)
                         except Exception as e:
                             logger.error("Error retrieving proposal")
-                            logger.error("Error : " + e)
+                            logger.error("Error : ", e)
                             proposal = defaultProposal
 
                     logger.info("Proposal id : {}".format(proposal_id))
