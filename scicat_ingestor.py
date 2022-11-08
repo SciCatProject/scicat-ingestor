@@ -279,14 +279,14 @@ def main(config, logger):
                             hdf_structure_dict,
                             None
                         )
-                    proposal_id = int(proposal_id) if not isinstance(proposal_id,int) and proposal_id is not None else proposal_id
+                    proposal_id = str(proposal_id) if not isinstance(proposal_id,str) and proposal_id is not None else proposal_id
                     logger.info("Proposal id found: {}".format(proposal_id))
                     if not proposal_id or proposal_id is None:
                         logger.info("Using default proposal")
                         proposal = defaultProposal
                     else:
                         try:
-                            proposal = ouClient.proposals_get_one(str(proposal_id))
+                            proposal = ouClient.proposals_get_one(proposal_id)
                         except Exception as e:
                             logger.error("Error retrieving proposal")
                             logger.error("Error : ", e)
@@ -306,7 +306,7 @@ def main(config, logger):
                     #    ['ownerGroup'],
                     #    defaultOwnerGroup
                     #)
-                    ownerGroup = str(proposal_id)
+                    ownerGroup = proposal_id
                     logger.info('Owner group : {}'.format(ownerGroup))
                     accessGroups = get_nested_value_with_union(
                         proposal,
@@ -374,7 +374,7 @@ def main(config, logger):
                         instrument,
                         sample,
                         ownable,
-                        str(proposal_id),
+                        proposal_id,
                         path_name,
                         dataset_title
                     )
