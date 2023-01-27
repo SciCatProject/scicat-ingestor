@@ -18,41 +18,24 @@ import ingestor_lib
 #from kafka import KafkaConsumer, TopicPartition
 from confluent_kafka import Consumer
 
-scClient= None
-METADATA_PROPOSAL_PATH = [
-    "children",
-    ("children", "name", "entry"),
-    ("config", "module","dataset"),
-    (None,"name","experiment_identifier","values")
-]
-
-METADATA_TITLE_PATH = [
-    "children",
-    ("children", "name", "entry"),
-    ("config", "module","dataset"),
-    (None,"name","title","values")
-]
-
-
 def main(config, logger):
 
     global scClient
 
-    logger.info('SciCat FileWriter Ingestor main')
+    logger.info('SciCat FileWriter Online Ingestor')
     # instantiate kafka consumer
     kafka_config = config["kafka"]
-    logger.info('Connecting to Kafka server {} on topic {}'.format(
-        kafka_config["bootstrap_servers"],
-        kafka_config["topic"]
-    ))
-    #consumer = KafkaConsumer(
-    #    group_id=kafka_config["group_id"],
-    #    bootstrap_servers=kafka_config["bootstrap_servers"],
-    #    auto_offset_reset=kafka_config["auto_offset_reset"],
-    #)
-    #tp = TopicPartition(kafka_config["topic"], 0)
-    #consumer.assign([tp])
-    #consumer.seek_to_end()
+    kafka_topics = kafka_config["topics"]
+    kafka_topics = kafka_topics.split(',') if isinstance(kafka_topics,str) else kafka_topics
+
+    logger.info(
+        "Connecting to Kafka\n" +
+        " - server ............: {}\n".format(kafka_config["bootstrap_servers"]) +
+        " - topics ............: {}\n".format(kafka_topics) +
+        " - group id  .........: {}\n".format(kafka_config["group_id"]) +
+        " - enable auto commit : {}\n".format(kafka_config["enable_auto_commit"]) +
+        " - auto offset reset .: {}\n".format(kafka_config["auto offset reset"])
+    )
     consumer = Consumer({
         'bootstrap.servers': kafka_config["bootstrap_servers"],
         "group.id": kafka_config["group_id"],
@@ -62,7 +45,6 @@ def main(config, logger):
 
     uoClient = ingestor_lib.instantiate_user_office_client(config, logger)
     scClient = ingestor_lib.instantiate_scicat_client(config, logger)
-
 
     (
         defaultOwnerGroup,
@@ -77,17 +59,31 @@ def main(config, logger):
         logger
     )
 
+    logger.info("Subscribing to kafka topics")
+    consumer.subscribe(kafka_topics)
     # main loop, waiting for messages
     logger.info("Starting main loop ...")
-    for message in consumer:
+    while True:
         try:
-            data_type = message.value[4:8]
+            message = consumer.poll(1.0)
+
+            if message in None:
+                logger.info("Received empty message")
+                continue
+
+            if message.error():
+                logger.info("Consumer error: {}".format(message.error()))
+                continue
+
+            message_value = message.value()
+
+            data_type = message_value[4:8]
             logger.info("Received message. Data type : {}".format(data_type))
             if data_type == b"wrdn":
                 logger.info("Received writing done message from file writer")
 
                 ingestor_lib.ingest_message(
-                    message.value,
+                    message_value,
                     defaultAccessGroups,
                     defaultProposal,
                     defaultInstrument,
@@ -99,6 +95,7 @@ def main(config, logger):
 
         except KeyboardInterrupt:
             logger.info("Exiting ingestor")
+            consumer.close()
             sys.exit()
 
         except Exception as error:
