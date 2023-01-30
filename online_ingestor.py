@@ -14,13 +14,12 @@ import argparse
 import logging
 import logging.handlers
 import ingestor_lib
+import traceback
 
 #from kafka import KafkaConsumer, TopicPartition
 from confluent_kafka import Consumer
 
 def main(config, logger):
-
-    global scClient
 
     logger.info('SciCat FileWriter Online Ingestor')
     # instantiate kafka consumer
@@ -34,7 +33,7 @@ def main(config, logger):
         " - topics ............: {}\n".format(kafka_topics) +
         " - group id  .........: {}\n".format(kafka_config["group_id"]) +
         " - enable auto commit : {}\n".format(kafka_config["enable_auto_commit"]) +
-        " - auto offset reset .: {}\n".format(kafka_config["auto offset reset"])
+        " - auto offset reset .: {}\n".format(kafka_config["auto_offset_reset"])
     )
     consumer = Consumer({
         'bootstrap.servers': kafka_config["bootstrap_servers"],
@@ -46,6 +45,8 @@ def main(config, logger):
     uoClient = ingestor_lib.instantiate_user_office_client(config, logger)
     scClient = ingestor_lib.instantiate_scicat_client(config, logger)
 
+    logger.info("scClient base url : {}".format(scClient._base_url))
+
     (
         defaultOwnerGroup,
         defaultAccessGroups,
@@ -55,6 +56,7 @@ def main(config, logger):
         defaultProposal
     ) = ingestor_lib.get_defaults(
         config,
+        scClient,
         uoClient,
         logger
     )
@@ -67,7 +69,7 @@ def main(config, logger):
         try:
             message = consumer.poll(1.0)
 
-            if message in None:
+            if message is None:
                 logger.info("Received empty message")
                 continue
 
@@ -82,6 +84,7 @@ def main(config, logger):
             if data_type == b"wrdn":
                 logger.info("Received writing done message from file writer")
 
+                logger.info("scClient base url : {}".format(scClient._base_url))
                 ingestor_lib.ingest_message(
                     message_value,
                     defaultAccessGroups,
@@ -92,6 +95,7 @@ def main(config, logger):
                     config,
                     logger
                 )
+                sys.exit()
 
         except KeyboardInterrupt:
             logger.info("Exiting ingestor")
@@ -99,8 +103,10 @@ def main(config, logger):
             sys.exit()
 
         except Exception as error:
-            logger.warning("Error ingesting the message: {}".format(error))
-
+            logger.error("Error ingesting the message: {}".format(error))
+            t, val, tb = sys.exc_info()   
+            logger.error(traceback.print_tb(tb))
+            sys.exit()
 
 #
 # ======================================

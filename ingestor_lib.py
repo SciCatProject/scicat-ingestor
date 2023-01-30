@@ -11,7 +11,7 @@ import re
 import os
 import argparse
 import logging.handlers
-from urllib.parse import urljoin
+from urllib.parse import urljoin,urlencode
 
 import requests
 
@@ -46,23 +46,23 @@ def get_instrument(scClient, iid, name):
 
 
 def get_nested_value(structure: dict, path: list, logger: logging.Logger):
-    logger.debug("get_nested_value ======================")
+    #logger.debug("get_nested_value ======================")
     # get key
     key = path[0]
     remaining_path = path[1:]
-    logger.debug("get_nested_value key : {}".format(key))
-    logger.debug("get_nested_value structure : {}".format(structure))
+    #logger.debug("get_nested_value key : {}".format(key))
+    #logger.debug("get_nested_value structure : {}".format(structure))
     if not isinstance(structure, dict):
-        logger.debug("get_nested_value structure is not a dictionary")
+        #logger.debug("get_nested_value structure is not a dictionary")
         return None
     elif isinstance(key, str):
-        logger.debug("get_nested_value key is a string")
+        #logger.debug("get_nested_value key is a string")
         if key in structure.keys():
             substructure = structure[key]
-            logger.debug("get_nested_value substructure : {}".format(substructure))
+            #logger.debug("get_nested_value substructure : {}".format(substructure))
             if isinstance(substructure, list):
                 for i in substructure:
-                    logger.debug("get_nested_value structure[key] : {}".format(i))
+                    #logger.debug("get_nested_value structure[key] : {}".format(i))
                     temp = get_nested_value(i, remaining_path, logger)
                     if temp is not None:
                         return temp
@@ -94,7 +94,7 @@ def get_nested_value(structure: dict, path: list, logger: logging.Logger):
 def get_nested_value_with_default(structure: dict, path: list, default: Any, logger: logging.Logger):
     try:
         output = get_nested_value(structure, path, logger)
-        logger.debug("get_nested_value_with_default output : {}".format(output))
+        #logger.debug("get_nested_value_with_default output : {}".format(output))
         return output if output and output is not None else default
     except Exception as e:
         return default
@@ -233,13 +233,18 @@ def ingest_message(
         logger.info("Extracted metadata. Extracted {} keys".format(len(metadata.keys())))
 
         # check if dataset has already been created using job id
+        logger.info("Run options")
+        logger.info(config["run_options"])
         if config["run_options"]['check_by_job_id'] :
+            logger.info("Checking job id")
             job_id = get_nested_value_with_default(metadata, ['job_id'], None, logger)
+            logger.info("Job id : {}".format(job_id))
+            logger.info("scClient base url : {}".format(scClient._base_url))
             if job_id:
                 dataset = get_dataset_by_job_id(scClient,job_id,config,logger)
                 if dataset:
                     logger.info("Dataset with job id {} already present in catalogue".format(job_id))
-                    logger.info("Dataset id : {}".format(dataset['pid']))
+                    logger.info("Dataset id : {}".format(dataset[0]['pid']))
                     return
 
         # find run number
@@ -548,26 +553,32 @@ def get_dataset_by_job_id(
     config,
     logger
 ) -> list:
+    logger.info("scClient base url : {}".format(scClient._base_url))
+    url = "{}?filter={{\"where\":{}}}&access_token={}".format(
+        urljoin(scClient._base_url,'Datasets'),
+        json.dumps({"scientificMetadata.job_id.value" : job_id}),
+        scClient._token
+    )
+    logger.info("Dataset by job id. url : {}".format(url))
+
+    # https://staging.scicat.ess.eu/api/v3/Datasets?filter=%7B%22where%22%3A+%7B%22scientificMetadata.job_id.value%22%3A+%2212aac4ec-92ba-11ed-81fb-fa163e943f63%22%7D%7D
+    # https://staging.scicat.ess.eu/api/v3/Datasets?filter=%7B%22where%22%3A%7B%22scientificMetadata.job_id.value%22%3A%2212aac4ec-92ba-11ed-81fb-fa163e943f63%22%7D%7D&access_token=AMOSyF2K3Iev7xu6eJe62RDAOMvnt3IQ6r2Z7SYMJtJlO7wqwvAI6DsM9xvf9UNA
+ 
     response = requests.request(
-        method="post",
-        url=urljoin(config['scicat']['host'],'/Datasets/fullquery'),
-        json={
-            'scientificMetadata' : {
-                'job_id' : {
-                    'value' : job_id
-                }
-            }
-        },
-        headers=scClient._headers,
+        method="get",
+        url=url,
+        headers={'Accept':'application/json'},
         timeout=scClient._timeout_seconds,
         stream=False,
         verify=True
     )
-    if response.ok:
-        error = response.get("error", {})
-        logger.info("Dataset by job id error : {}".format(error.get("message",{})))
+    logger.info(response)
+    logger.info(response.url)
+    if not response.ok:
+        logger.info("Dataset by job id error. status : {} {}".format(response.status_code,response.reason))
         return []
 
+    logger.info(response.text)
     results = response.json()
     logger.info("Retrieved {} Datasets with job id {}".format(len(results),job_id))
     return results
