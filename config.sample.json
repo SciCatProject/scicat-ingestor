@@ -1,10 +1,11 @@
 {
   "kafka": {
-    "topic": "KAFKA_TOPIC",
+    "topics": ["KAFKA_TOPIC_1","KAFKA_TOPIC_2"],
     "group_id": "GROUP_ID",
     "bootstrap_servers": [
       "HOST:9092"
     ],
+    "enable_auto_commit": true,
     "auto_offset_reset": "earliest"
   },
   "user_office": {
@@ -35,6 +36,7 @@
     "debug_level" : "INFO",
     "system_log" : false,
     "system_log_facility" : "mail",
-    "log_prefix" : " SFI: "
+    "log_prefix" : " SFI: ",
+    "check_by_job_id" : true
   }
 }

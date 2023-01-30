@@ -14,7 +14,7 @@ import argparse
 import logging
 import logging.handlers
 
-from user_office import UserOffice
+from user_office_lib import UserOffice
 # from scicat import SciCat
 
 from kafka import KafkaConsumer, TopicPartition
@@ -413,7 +413,7 @@ def main(config, logger):
 
 def get_config(input_args: argparse.Namespace) -> dict:
 
-    config_file = input_args.config_file if input_args.config_file else "config.json"
+    config_file = input_args.config_file if input_args.config_file else "config.20230125.json"
 
     with open(config_file, "r") as fh:
         data = fh.read()
@@ -561,9 +561,9 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument(
     '-c','--cf','--config','--config-file',
-    default='config.json',
+    default='config.20230125.json',
     dest='config_file',
-    help='Configuration file name. Default": config.json',
+    help='Configuration file name. Default": config.20230125.json',
     type=str
 )
 parser.add_argument(
