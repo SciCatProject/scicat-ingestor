@@ -95,7 +95,7 @@ def main(config, logger):
                     config,
                     logger
                 )
-                sys.exit()
+                #sys.exit()
 
         except KeyboardInterrupt:
             logger.info("Exiting ingestor")
@@ -106,7 +106,7 @@ def main(config, logger):
             logger.error("Error ingesting the message: {}".format(error))
             t, val, tb = sys.exc_info()   
             logger.error(traceback.print_tb(tb))
-            sys.exit()
+            #sys.exit()
 
 #
 # ======================================
