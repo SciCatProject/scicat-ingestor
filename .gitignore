@@ -2,3 +2,5 @@
 config.[0-9]*.json
 config.json
 test-data/*
+scicat_ingestor.pl
+
