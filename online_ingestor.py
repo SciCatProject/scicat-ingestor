@@ -195,4 +195,4 @@ if __name__ == "__main__":
 
     logger.info("Configuration : {}".format(json.dumps(config)))
 
-    main(config,logger)
+    main(config, logger)
