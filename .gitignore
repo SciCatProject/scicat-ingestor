@@ -1,3 +1,4 @@
 .vscode
-config.20230125.json
+config.[0-9]*.json
+config.json
 test-data/*
