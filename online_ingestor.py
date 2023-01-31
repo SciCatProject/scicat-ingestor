@@ -21,10 +21,6 @@ from confluent_kafka import Consumer
 
 def main(config, logger):
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 67b75bd69f9cfe098ed3333cc0b11b679d879d2d
     logger.info('SciCat FileWriter Online Ingestor')
     # instantiate kafka consumer
     kafka_config = config["kafka"]
