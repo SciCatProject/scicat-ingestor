@@ -14,13 +14,17 @@ import argparse
 import logging
 import logging.handlers
 import ingestor_lib
+import traceback
 
 #from kafka import KafkaConsumer, TopicPartition
 from confluent_kafka import Consumer
 
 def main(config, logger):
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 67b75bd69f9cfe098ed3333cc0b11b679d879d2d
     logger.info('SciCat FileWriter Online Ingestor')
     # instantiate kafka consumer
     kafka_config = config["kafka"]
@@ -45,6 +49,8 @@ def main(config, logger):
     uoClient = ingestor_lib.instantiate_user_office_client(config, logger)
     scClient = ingestor_lib.instantiate_scicat_client(config, logger)
 
+    logger.info("scClient base url : {}".format(scClient._base_url))
+
     (
         defaultOwnerGroup,
         defaultAccessGroups,
@@ -54,6 +60,7 @@ def main(config, logger):
         defaultProposal
     ) = ingestor_lib.get_defaults(
         config,
+        scClient,
         uoClient,
         logger
     )
@@ -66,7 +73,7 @@ def main(config, logger):
         try:
             message = consumer.poll(1.0)
 
-            if message in None:
+            if message is None:
                 logger.info("Received empty message")
                 continue
 
@@ -81,6 +88,7 @@ def main(config, logger):
             if data_type == b"wrdn":
                 logger.info("Received writing done message from file writer")
 
+                logger.info("scClient base url : {}".format(scClient._base_url))
                 ingestor_lib.ingest_message(
                     message_value,
                     defaultAccessGroups,
@@ -91,6 +99,7 @@ def main(config, logger):
                     config,
                     logger
                 )
+                #sys.exit()
 
         except KeyboardInterrupt:
             logger.info("Exiting ingestor")
@@ -98,9 +107,10 @@ def main(config, logger):
             sys.exit()
 
         except Exception as error:
-            logger.warning("Error ingesting the message: {}".format(error))
-            sys.exit()
-
+            logger.error("Error ingesting the message: {}".format(error))
+            t, val, tb = sys.exc_info()   
+            logger.error(traceback.print_tb(tb))
+            #sys.exit()
 
 #
 # ======================================
