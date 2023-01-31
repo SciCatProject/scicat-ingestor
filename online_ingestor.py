@@ -20,7 +20,6 @@ from confluent_kafka import Consumer
 
 def main(config, logger):
 
-    global scClient
 
     logger.info('SciCat FileWriter Online Ingestor')
     # instantiate kafka consumer
@@ -34,7 +33,7 @@ def main(config, logger):
         " - topics ............: {}\n".format(kafka_topics) +
         " - group id  .........: {}\n".format(kafka_config["group_id"]) +
         " - enable auto commit : {}\n".format(kafka_config["enable_auto_commit"]) +
-        " - auto offset reset .: {}\n".format(kafka_config["auto offset reset"])
+        " - auto offset reset .: {}\n".format(kafka_config["auto_offset_reset"])
     )
     consumer = Consumer({
         'bootstrap.servers': kafka_config["bootstrap_servers"],
@@ -100,6 +99,7 @@ def main(config, logger):
 
         except Exception as error:
             logger.warning("Error ingesting the message: {}".format(error))
+            sys.exit()
 
 
 #
