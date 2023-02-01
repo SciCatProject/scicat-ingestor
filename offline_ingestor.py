@@ -110,6 +110,12 @@ parser.add_argument(
     help='Input file containing the binary dump of the done writing kafka message',
     type=str
 )
+parser.add_argument(
+    '-d','--dry-run',
+    dest='dry_run',
+    help='Execute a dry run. Does not create any entry in SciCat',
+    action='store_true'
+)
 parser.set_defaults(verbose=False)
 parser.set_defaults(file_log=False)
 

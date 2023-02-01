@@ -381,9 +381,13 @@ def ingest_message(
         )
         logger.info('Dataset : {}'.format(dataset))
         logger.info('Creating dataset on SciCat')
-        created_dataset = scClient.datasets_create(dataset)
-        logger.info('Dataset created with pid {}'.format(created_dataset['pid']))
-
+        if ( not config['run_options']['dry_run'] ):
+            created_dataset = scClient.datasets_create(dataset)
+            logger.info('Dataset created with pid {}'.format(created_dataset['pid']))
+        else:
+            created_dataset = copy.deep_copy(dataset)
+            created_dataset['pid'] = str(uuid.uuid4())
+            logger.info('Dru Run. Dataset not created. Arbitrary pid {} assigned'.format(created_dataset['pid']))
 
         # create origdatablock object from pyscicat model
         logger.info('Instantiating original datablock')
@@ -397,8 +401,12 @@ def ingest_message(
         # create origDatablock associated with dataset in SciCat
         # it returns the full object including SciCat id assigned when created
         logger.info('Creating original datablock in SciCat')
-        created_orig_datablock = scClient.datasets_origdatablock_create(origDatablock)
-        logger.info('Original datablock created with internal id {}'.format(created_orig_datablock['id']))
+        if (not config['run_options']['dry_run']):
+            created_orig_datablock = scClient.datasets_origdatablock_create(origDatablock)
+            logger.info('Original datablock created with internal id {}'.format(created_orig_datablock['id']))
+        else:
+            logger.info('Dry Run. Original datablock not created')
+
 
     else:
          logger.info("No metadata in this message")
