@@ -235,7 +235,7 @@ def ingest_message(
         # check if dataset has already been created using job id
         logger.info("Run options")
         logger.info(config["run_options"])
-        if config["run_options"]['check_by_job_id'] :
+        if config["run_options"]["check_by_job_id"] and not config["run_options"]["dry_run"]:
             logger.info("Checking job id")
             job_id = get_nested_value_with_default(metadata, ['job_id'], None, logger)
             logger.info("Job id : {}".format(job_id))
@@ -385,9 +385,9 @@ def ingest_message(
             created_dataset = scClient.datasets_create(dataset)
             logger.info('Dataset created with pid {}'.format(created_dataset['pid']))
         else:
-            created_dataset = copy.deep_copy(dataset)
-            created_dataset['pid'] = str(uuid.uuid4())
-            logger.info('Dru Run. Dataset not created. Arbitrary pid {} assigned'.format(created_dataset['pid']))
+            created_dataset = copy.deepcopy(dict(dataset))
+            logger.info('Dry Run. Dataset not created. Arbitrary pid {} assigned'.format(created_dataset['pid']))
+            logger.info('Dry Run. Dataset in json format => {}'.format(created_dataset))
 
         # create origdatablock object from pyscicat model
         logger.info('Instantiating original datablock')
@@ -406,6 +406,7 @@ def ingest_message(
             logger.info('Original datablock created with internal id {}'.format(created_orig_datablock['id']))
         else:
             logger.info('Dry Run. Original datablock not created')
+            logger.info('Dry Run. Original datablock in json format => {}'.format(dict(origDatablock)))
 
 
     else:
