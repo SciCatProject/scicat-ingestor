@@ -1,0 +1,42 @@
+{
+  "kafka": {
+    "topics": [ "test_filewriter" ],
+    "group_id": "scicat_filewriter_ingestor",
+    "bootstrap_servers": "127.0.0.1:9092",
+    "auto_offset_reset": "earliest",
+    "enable_auto_commit": true
+  },
+  "user_office": {
+    "host" : "<URL-to-User-Office-instance-Graphql-interface>",
+    "token" : "<valid-JWT-token-for-User-Office>"
+  },
+  "scicat": {
+    "host": "<URL-to-SciCat-backend-instance",
+    "username": "ingestor",
+    "password": "<ingestor-password>"
+  },
+  "dataset": {
+    "instrument_id" : "<scicat-instrument-id>",
+    "instrument_name" : "<scicat-instrument-name>",
+    "default_proposal_id" : "<default-protocol-id>",
+    "ownable" : {
+      "ownerGroup": "<default-owner-group>",
+      "accessGroups": ["<default-access-group-1>"]
+    }
+  },
+  "options": {
+    "config_file" : "config.json.local.test.src",
+    "verbose" : false,
+    "file_log" : false,
+    "file_log_base_name" : "scicat_ingestor_log",
+    "file_log_timestamp" : false,
+    "logging_level" : "INFO",
+    "system_log" : true,
+    "system_log_facility" : "mail",
+    "log_prefix" : " SFI ",
+    "hdf_structure_in_metadata" : false,
+    "check_by_job_id" : true,
+    "dry_run": false
+  }
+}
+

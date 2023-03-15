@@ -251,11 +251,12 @@ def ingest_message(
         file_name = get_nested_value_with_default(metadata,["file_being_written"],"unknown",logger)
         run_number = file_name.split(".")[0].split("_")[1]
         metadata["run_number"] = int(run_number)
+        logger.info("Run number : {}".format(run_number))
 
         # convert json string to dictionary
-        hdf_structure_dict = json.loads(
-            metadata["hdf_structure"].replace("\n", "")
-        )
+        hdf_structure_string = metadata["hdf_structure"].replace("\n", "")
+        logger.info("hdf_structure : {}".format(hdf_structure_string))
+        hdf_structure_dict = json.loads(hdf_structure_string)
         if not config['run_options']['hdf_structure_in_metadata']:
             del metadata["hdf_structure"]
             logger.info("Removed hdf structure dict from metadata")
@@ -379,7 +380,8 @@ def ingest_message(
             path_name,
             dataset_title
         )
-        logger.info('Dataset : {}'.format(dataset))
+        #logger.info('Dataset : {}'.format(dataset))
+        logger.info('Dataset : {}'.format(json.dumps(dataset.dict(exclude_unset=True,exclude_none=True))))
         logger.info('Creating dataset on SciCat')
         if ( not config['run_options']['dry_run'] ):
             created_dataset = scClient.datasets_create(dataset)
@@ -397,7 +399,8 @@ def ingest_message(
             file_name,
             ownable
         )
-        logger.info('Original datablock : {}'.format(origDatablock))
+        #logger.info('Original datablock : {}'.format(origDatablock))
+        logger.info('Original datablock : {}'.format(json.dumps(origDatablock.dict(exclude_unset=True,exclude_none=True))))
         # create origDatablock associated with dataset in SciCat
         # it returns the full object including SciCat id assigned when created
         logger.info('Creating original datablock in SciCat')
@@ -472,7 +475,7 @@ def create_dataset(
         else "Dataset: {}. Proposal: {}. Sample: {}. Instrument: {}. File: {}".format(
             dataset_pid,
             proposal_id,
-            get_prop(instrument,'pid','unknown'),
+            get_prop(instrument,'name','unknown'),
             get_prop(sample,'sampleId','unknown'),
             get_nested_value_with_default(metadata,['file_being_written'],'unknown',logger))
     principal_investigator = " ".join([

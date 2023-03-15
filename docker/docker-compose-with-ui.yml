@@ -1,0 +1,60 @@
+version: "2"
+
+services:
+  zookeeper:
+    image: docker.io/bitnami/zookeeper:3.8
+    container_name: local-zookeeper
+      #    ports:
+      #      - "22181:2181"
+    volumes:
+      - "zookeeper_data:/bitnami"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+      - ZOO_PORT_NUMBER=2181
+      - ZOO_TICK_TIME=2000
+    network_mode: "host"
+        #    networks:
+        #      - scicat-filewriter-ingest
+  kafka:
+    image: docker.io/bitnami/kafka:3.4
+    container_name: local-kafka
+      #    ports:
+      #      - "29092:29092"
+    volumes:
+      - "kafka_data:/bitnami"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_CFG_ZOOKEEPER_CONNECT: 127.0.0.1:2181
+      KAFKA_CFG_LISTENERS: INTERNAL://127.0.0.1:9092 #,EXTERNAL://localhost:29092
+      KAFKA_CFG_ADVERTISED_LISTENERS: INTERNAL://127.0.0.1:9092 #,EXTERNAL://localhost:29092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT #,EXTERNAL:PLAINTEXT
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      ALLOW_PLAINTEXT_LISTENER: yes
+    depends_on:
+      - zookeeper
+    network_mode: "host"
+        #    networks:
+        #      - scicat-filewriter-ingest
+        #  kafka-ui:
+        #    image: provectuslabs/kafka-ui
+        #    container_name: local-kafka-ui
+        #      #    ports:
+        #      #      - "8080:8080"
+        #    restart: always
+        #    environment:
+        #      - KAFKA_CLUSTERS_0_NAME=local.test
+        #      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=127.0.0.1:9092
+        #    network_mode: "host"
+        #    networks:
+        #      - scicat-filewriter-ingest
+
+volumes:
+  zookeeper_data:
+    driver: local
+  kafka_data:
+    driver: local
+
+      #networks:
+#  scicat-filewriter-ingest:
+

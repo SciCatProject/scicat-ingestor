@@ -41,11 +41,13 @@ def main(config, logger):
         "enable.auto.commit": kafka_config["enable_auto_commit"],
         "auto.offset.reset": kafka_config["auto_offset_reset"]
     })
+    logger.info("Kafka consumer successfully instantiated... apparently!!!")
 
     uoClient = ingestor_lib.instantiate_user_office_client(config, logger)
-    scClient = ingestor_lib.instantiate_scicat_client(config, logger)
+    logger.info("User Office Client successfully instantiated ... apparently!!!")
 
-    logger.info("scClient base url : {}".format(scClient._base_url))
+    scClient = ingestor_lib.instantiate_scicat_client(config, logger)
+    logger.info("SciCat Client successfully instantiated... base url : {}".format(scClient._base_url))
 
     (
         defaultOwnerGroup,

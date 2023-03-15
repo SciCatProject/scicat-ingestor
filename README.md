@@ -127,7 +127,7 @@ If you prefer to use straight python with pip, these are the instructions for yo
 
 - prepare the configuration file. You can copy the example provided in the repo and customize it to your needs.
   ```bash
-  > cp config.sample.json config.json
+  > cp config.sample.json config.20230125.json
   ``` 
 
 - start the ingestor. The application will read automatically the config file.

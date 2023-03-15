@@ -35,6 +35,7 @@ class UserOffice:
                 firstname,
                 lastname,
                 organisation,
+                email,
                 position
             },
             instrument {
