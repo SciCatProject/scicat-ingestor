@@ -10,8 +10,10 @@ THis file assumes that you are running a dockerize kafka instance as it is confi
   
   
 Run local kafka containers  
+```bash
     > cd docker  
     > docker-compose up -d  
+```
 
 Create the generator container which post a specifically crafted message to the kafka topic:
     > docker run -d --name scicat-filewriter-generator -v ./sfi_generator_config_docker_local.json:/app/sfi_generator_config.json --network=host scicat-filewriter-ingest-generator:latest
