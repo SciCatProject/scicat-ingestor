@@ -17,7 +17,11 @@ Run local kafka containers
 
 Create the generator container which post a specifically crafted message to the kafka topic:  
 ```bash
-    > docker run -d --name scicat-filewriter-generator -v ./sfi_generator_config_docker_local.json:/app/sfi_generator_config.json --network=host scicat-filewriter-ingest-generator:latest
+    > docker run -d 
+        --name scicat-filewriter-generator 
+        -v ./sfi_generator_config_docker_local.json:/app/sfi_generator_config.json 
+        --network=host 
+        scicat-filewriter-ingest-generator:latest
 ```
 
 Than start the ingestor:
