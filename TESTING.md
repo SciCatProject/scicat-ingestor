@@ -15,15 +15,21 @@ Run local kafka containers
     > docker-compose up -d  
 ```
 
-Create the generator container which post a specifically crafted message to the kafka topic:
+Create the generator container which post a specifically crafted message to the kafka topic:  
+```bash
     > docker run -d --name scicat-filewriter-generator -v ./sfi_generator_config_docker_local.json:/app/sfi_generator_config.json --network=host scicat-filewriter-ingest-generator:latest
+```
 
 Than start the ingestor:
+```bash
     > conda activate SFI
     > python online_ingestor.py --config-file configs/config.json.local.test.src -v --debug DEBUG
+```
 
 Now you are ready to generate messages that will be ingested. Open a new terminal and run the following command anytime you want to simulate a filewriter message:
+```bash
     > docker start scicat-filewriter-ingest-generator
+```
 
 
 
