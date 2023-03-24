@@ -18,8 +18,10 @@ import requests
 from user_office_lib import UserOffice
 
 from streaming_data_types import deserialise_wrdn
+
 import pyscicat.client as pyScClient
 import pyscicat.model as pyScModel
+
 
 METADATA_PROPOSAL_PATH = [
     "children",
@@ -199,7 +201,7 @@ def get_defaults(config, scClient, uoClient, logger):
     logger.info('Default instrument : {}'.format(defaultInstrument))
 
     defaultProposal = uoClient.proposals_get_one(config['dataset']['default_proposal_id'])
-    defaultProposal['proposer']['email'] = uoClient.users_get_one_email(defaultProposal['proposer']['id'])
+    #defaultProposal['proposer']['email'] = uoClient.users_get_one_email(defaultProposal['proposer']['id'])
     logger.info("Default proposal : {}".format(defaultProposal))
 
     return \

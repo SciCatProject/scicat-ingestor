@@ -153,6 +153,13 @@ parser.add_argument(
     default='INFO',
     type=str
 )
+parser.add_argument(
+    '--pyscicat',
+    dest='pyscicat',
+    help='Location where a specific version of pyscicat is available',
+    default=None,
+    type=str
+)
 parser.set_defaults(verbose=False)
 parser.set_defaults(file_log=False)
 

@@ -1,0 +1,30 @@
+{
+  "service_id" : "sfi_generator",
+  "proposal_id" : "038243",
+  "error_encountered": false,
+  "logging_level": "INFO",
+  "log_prefix": "sfi_generator",
+  "file_name": "/ess/data/ymir/<year>/<proposal_id>/raw/sfi_<proposal_id>_phantom_data.hdf",
+  "job_duration": 120,
+  "refactor_metadata_keys": ["file_being_written","job_id","hdf_structure"],
+  "insert_metadata_keys": ["start_time","stop_time"],
+  "metadata" : {
+    "extra": {
+      "/entry/instrument/mini_chopper/rotation_speed:average_value": -0.00010111925521181175,
+      "/entry/instrument/mini_chopper/rotation_speed:maximum_value": 0.003718602703884244,
+      "/entry/instrument/mini_chopper/rotation_speed:minimum_value": -0.0015756487846374512,
+      "/entry/sample/transformations/rotation:average_value": 35.0,
+      "/entry/sample/transformations/rotation:maximum_value": 45.0,
+      "/entry/sample/transformations/rotation:minimum_value": 55.0
+    },
+    "approx_file_size_mb": 10,
+    "file_being_written": "<file_name>",
+    "hdf_structure": "{\"children\":[{\"name\":\"entry\",\"type\":\"group\",\"attributes\":[{\"name\":\"NX_class\",\"dtype\":\"string\",\"values\": \"NXentry\"}],\"children\":[{\"module\":\"dataset\",\"config\":{\"name\": \"title\",\"values\": \"SFI generator dataset with job id <job_id>\",\"type\":\"string\"}},{\"module\":\"dataset\",\"config\":{\"name\":\"experiment_identifier\",\"values\":\"<proposal_id>\",\"type\":\"string\"}},{\"module\": \"dataset\",\"config\": {\"name\": \"definition\",\"values\": \"NXtomo\",\"type\":\"string\"}}]}]}",
+    "job_id": "<job_id>",
+    "state": "writing"
+  },
+  "kafka" : {
+    "bootstrap_servers" : "localhost:9092",
+    "topics": "test_filewriter"
+  }
+}
