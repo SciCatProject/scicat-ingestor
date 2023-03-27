@@ -310,7 +310,7 @@ def ingest_message(
             instrument = get_instrument(
                 scClient,
                 instrument_id,
-                instrument_name
+                instrument_name.lower()
             )
         if instrument is None:
             instrument = defaultInstrument
