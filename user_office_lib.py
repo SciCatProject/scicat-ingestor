@@ -170,7 +170,7 @@ class UserOffice:
         return res.json()["data"]["proposal"]
 
 
-    def proposals_get_one(self, id: str) -> dict:
+    def proposals_get_one(self, id: str, logger) -> dict:
         """
         Get a proposal by id.
 
@@ -197,6 +197,7 @@ class UserOffice:
             id,
             self._proposal_fields
         )
+        #logger.info("user_office.proposals_get_one query : {}".format(query))
         res = requests.post(
             self._base_url, 
             json={"query": query},
@@ -204,8 +205,12 @@ class UserOffice:
         )
 
         if res.status_code != 200:
+            logger.info("user_office.proposals_get_one error : {}".format(res.text))
             sys.exit(res.text)
 
+        data = res.json()
+        logger.info("user_office.proposals_get_one result :")
+        logger.info(json.dumps(data,indent=4))
         return res.json()["data"]["proposals"]["proposals"][0]
 
 

@@ -38,8 +38,9 @@ METADATA_TITLE_PATH = [
 ]
 
 
-def get_instrument(scClient, iid, name):
+def get_instrument(scClient, iid, name, logger):
     # load instrument by id or by name
+    logger.info("ingestor_lib.get_instrument Id: {}, Name: {}".format(iid,name))
     instrument = scClient.instruments_get_one(iid, name)
     if not instrument:
         instrument = {'id': None, "name": "unknown"}
@@ -196,11 +197,12 @@ def get_defaults(config, scClient, uoClient, logger):
     defaultInstrument = get_instrument(
         scClient,
         defaultInstrumentId,
-        defaultInstrumentName
+        defaultInstrumentName,
+        logger
     )
     logger.info('Default instrument : {}'.format(defaultInstrument))
 
-    defaultProposal = uoClient.proposals_get_one(config['dataset']['default_proposal_id'])
+    defaultProposal = uoClient.proposals_get_one(config['dataset']['default_proposal_id'],logger)
     #defaultProposal['proposer']['email'] = uoClient.users_get_one_email(defaultProposal['proposer']['id'])
     logger.info("Default proposal : {}".format(defaultProposal))
 
@@ -251,13 +253,14 @@ def ingest_message(
 
         # find run number
         file_name = get_nested_value_with_default(metadata,["file_being_written"],"unknown",logger)
+        logger.info("File name : {}".format(file_name))
         run_number = file_name.split(".")[0].split("_")[1]
         metadata["run_number"] = int(run_number)
         logger.info("Run number : {}".format(run_number))
 
         # convert json string to dictionary
         hdf_structure_string = metadata["hdf_structure"].replace("\n", "")
-        logger.info("hdf_structure : {}".format(hdf_structure_string))
+        logger.info("hdf_structure : {}".format(hdf_structure_string[:500]))
         hdf_structure_dict = json.loads(hdf_structure_string)
         if not config['run_options']['hdf_structure_in_metadata']:
             del metadata["hdf_structure"]
@@ -284,10 +287,10 @@ def ingest_message(
             proposal = defaultProposal
         else:
             try:
-                proposal = ouClient.proposals_get_one(proposal_id)
+                proposal = ouClient.proposals_get_one(proposal_id, logger)
             except Exception as e:
                 logger.error("Error retrieving proposal")
-                logger.error("Error : ", e)
+                logger.error("Error : " + e)
                 proposal = defaultProposal
 
         logger.info("Proposal id : {}".format(proposal_id))
@@ -301,7 +304,13 @@ def ingest_message(
         # currently extract instrument name from file name
         # waiting for ECDC to see if it is possible to include it in the hdf structure
         instrument_id = None
-        instrument_name = file_name.split('/')[3]
+        instrument_name = None
+        if config['run_options']['retrieve_instrument_from'].lower() == 'path':
+            instrument_name = file_name.split('/')[config['run_options']['instrument_position_in_file_path']]
+        elif config['run_options']['retrieve_instrument_from'].lower() == 'proposal':
+            instrument_name = proposal['instrument']['name'].lower()
+        logger.info("Instrument id : {}".format(instrument_id))
+        logger.info("Instrument name : {}".format(instrument_name))
         #
         # the following two lines should be delete, but for the time been we keep them
         #instrument_id = get_nested_value_with_default(metadata, ['instrument_id'], None, logger)
@@ -310,7 +319,8 @@ def ingest_message(
             instrument = get_instrument(
                 scClient,
                 instrument_id,
-                instrument_name.lower()
+                instrument_name.lower(),
+                logger
             )
         if instrument is None:
             instrument = defaultInstrument

@@ -1,6 +1,6 @@
 {
   "kafka": {
-    "topics": [ "dev-filewriter" ],
+    "topics": [ "dev_filewriter" ],
     "group_id": "scicat_filewriter_ingestor",
     "bootstrap_servers": "localhost:9092",
     "auto_offset_reset": "earliest",
@@ -37,7 +37,9 @@
     "hdf_structure_in_metadata" : false,
     "check_by_job_id" : true,
     "dry_run" : false,
-    "pyscicat" : ""
+    "pyscicat" : "",
+    "retrieve_instrument_from" : "proposal",
+    "instrument_position_in_file_path" : 3
   }
 }
 
