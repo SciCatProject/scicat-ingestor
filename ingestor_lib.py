@@ -152,6 +152,9 @@ def instantiate_user_office_client(config,logger):
     # instantiate connector to user office
     # retrieve relevant configuration
     user_office_config = config["user_office"]
+    logger.info('Instantiating User Office client')
+    logger.info('User Office instance : {}'.format(user_office_config['host']))
+    logger.info('User Office token : {}'.format(user_office_config['token']))
     uoClient = UserOffice(user_office_config["host"])
     uoClient.set_access_token(user_office_config["token"])
     return uoClient
@@ -163,11 +166,10 @@ def instantiate_scicat_client(config,logger):
     # instantiate a pySciCat client
     logger.info('Instantiating SciCat client')
     logger.info('SciCat instance : {}'.format(scicat_config['host']))
-    logger.info('Login as user : {}'.format(scicat_config['username']))
+    logger.info('SciCat token : {}'.format(scicat_config['token']))
     scClient = pyScClient.ScicatClient(
         base_url=scicat_config['host'],
-        username=scicat_config["username"],
-        password=scicat_config["password"],
+        token=scicat_config["token"],
     )
     return scClient
 

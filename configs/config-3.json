@@ -12,8 +12,7 @@
   },
   "scicat": {
     "host": "https://scicat.swap.ess.eu/api/v3",
-    "username": "ingestor",
-    "password": "aman"
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2MzliMmE1MWI0MTU0OWY1M2RmOWVjMzYiLCJyZWFsbSI6ImxvY2FsaG9zdCIsInVzZXJuYW1lIjoiaW5nZXN0b3IiLCJlbWFpbCI6InNjaWNhdGluZ2VzdG9yQHlvdXIuc2l0ZSIsImVtYWlsVmVyaWZpZWQiOnRydWUsImlkIjoiNjM5YjJhNTFiNDE1NDlmNTNkZjllYzM2IiwiaWF0IjoxNjgxNDU2NjQxLCJleHAiOjQ4MzcyMTY2NDF9.GC5sfOF4WJYqXw6bY1Ps-HCK9Br0EWN1YzNBzS6EHME"
   },
   "dataset": {
     "instrument_id" : "20.500.12269/6d01c3de-cb0c-4954-a8b5-bcc055ad87ca",
