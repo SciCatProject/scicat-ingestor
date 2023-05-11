@@ -33,12 +33,22 @@
     "system_log" : false,
     "system_log_facility" : "mail",
     "log_prefix" : " SFI ",
-    "hdf_structure_in_metadata" : false,
     "check_by_job_id" : true,
     "dry_run" : false,
     "pyscicat" : "",
     "retrieve_instrument_from" : "proposal",
-    "instrument_position_in_file_path" : 3
+    "instrument_position_in_file_path" : 3,
+    "message_to_file" : true,
+    "message_file_extension" : ".message.json",
+    "message_output" : "LOCAL",
+    "hdf_structure_in_metadata" : false,
+    "hdf_structure_to_file" : true,
+    "hdf_structure_file_extension" : ".hdf_structure.json",
+    "hdf_structure_output" : "LOCAL",
+    "local_output_folder" : "./data",
+    "compute_files_stats" : true,
+    "compute_files_hash" : true,
+    "file_hash_algorithm" : "blake2b"
   }
 }
 

@@ -10,24 +10,44 @@ THis file assumes that you are running a dockerize kafka instance as it is confi
   
   
 Run local kafka containers  
-```bash
+```commandline
     > cd docker  
-    > docker-compose up -d  
+    > docker-compose -f docker-compose-kafka-with-ui.yml up  
+```
+This command will not release the terminal, so we can see all the logging from the containers.  
+If we want to run it in the background, add the `-d` option:
+```commandline
+    > docker-compose -f docker-compose-kafka-with-ui.yml -d up  
 ```
 
-Create the generator container which post a specifically crafted message to the kafka topic:  
-```bash
+___old setup___  
+Create and run the generator container which simulate the filewriter end message to the kafka topic:  
+```commandline
     > docker run -d 
         --name scicat-filewriter-generator 
         -v ./sfi_generator_config_docker_local.json:/app/sfi_generator_config.json 
         --network=host 
         scicat-filewriter-ingest-generator:latest
 ```
+Start the jupyter lab with the generator notebook, which allows to simulate the filewriter done writing message.
+```commandline
+    > cd generator
+    > micromamba run -n sfi-gen jupyter lab
+```
+This assume that the micromamba environment sfi-gen has already been created and is available in your system.
+To create the sfi-gen under the micromamba tool, use the following command:
+```commandline
+    > micromamba env create -n sfi-gen -f requirements_sfi_gen.yaml
+```
 
-Than start the ingestor:
-```bash
-    > conda activate SFI
-    > python online_ingestor.py --config-file configs/config.json.local.test.src -v --debug DEBUG
+The following command will start the ingestor. Make sure that you select the correct configuration file
+```commandline
+    > micromamba run -n sfi python online_ingestor.py --config-file configs/config.json.local.test.src -v --debug DEBUG
+```
+This command assumes that you have the correct environment setup.
+To create the sfi environment, run this command in the command line
+```commandline
+    > micromamba env create -n sfi -f requirements_sfi.yaml
 ```
 
 Now you are ready to generate messages that will be ingested. Open a new terminal and run the following command anytime you want to simulate a filewriter message:

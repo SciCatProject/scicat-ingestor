@@ -29,16 +29,17 @@ def main(config, logger):
 
     logger.info(
         "Connecting to Kafka\n" +
-        " - server ............: {}\n".format(kafka_config["bootstrap_servers"]) +
-        " - topics ............: {}\n".format(kafka_topics) +
-        " - group id  .........: {}\n".format(kafka_config["group_id"]) +
-        " - enable auto commit : {}\n".format(kafka_config["enable_auto_commit"]) +
-        " - auto offset reset .: {}\n".format(kafka_config["auto_offset_reset"])
+        " - server ...................: {}\n".format(kafka_config["bootstrap_servers"]) +
+        " - topics ...................: {}\n".format(kafka_topics) +
+        " - group id  ................: {}\n".format(kafka_config["group_id"]) +
+        " - enable auto commit .......: {}\n".format(kafka_config["enable_auto_commit"]) +
+        " - individual message commit : {}\n".format(kafka_config["individual_message_commit"]) +
+        " - auto offset reset ........: {}\n".format(kafka_config["auto_offset_reset"])
     )
     consumer = Consumer({
         'bootstrap.servers': kafka_config["bootstrap_servers"],
         "group.id": kafka_config["group_id"],
-        "enable.auto.commit": kafka_config["enable_auto_commit"],
+        "enable.auto.commit": (not kafka_config["individual_message_commit"]) and kafka_config["enable_auto_commit"],
         "auto.offset.reset": kafka_config["auto_offset_reset"]
     })
     logger.info("Kafka consumer successfully instantiated... apparently!!!")
@@ -98,6 +99,9 @@ def main(config, logger):
                     logger
                 )
                 #sys.exit()
+
+            if kafka_config["individual_message_commit"]:
+                consumer.commit(message=message)
 
         except KeyboardInterrupt:
             logger.info("Exiting ingestor")

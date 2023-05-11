@@ -234,6 +234,35 @@ def ingest_message(
         return
 
     logger.info(entry)
+
+    # extract file name information from message
+    # full_file_name = get_nested_value_with_default(metadata,["file_being_written"],"unknown",logger)
+    full_file_name = entry.file_name
+    logger.info("Full file name : {}".format(full_file_name))
+    file_name = os.path.basename(full_file_name)
+    path_name = os.path.dirname(full_file_name)
+    logger.info('Dataset folder : {}'.format(path_name))
+    logger.info('Dataset raw data file : {}'.format(file_name))
+
+    # list of files to be added to the dataset
+    files_list = []
+    if config["run_options"]["message_to_file"]:
+        message_file_name = os.path.splitext(file_name)[0] + config["run_options"]["message_file_extension"]
+        logger.info("message file name : " + message_file_name)
+        message_full_file_path = os.path.join(
+            path_name if config["run_options"]["message_output"] == "SOURCE_FOLDER" else config["run_options"]["local_output_folder"],
+            message_file_name
+        )
+        logger.info("message full file path : " + message_full_file_path)
+        with open(message_full_file_path, 'w') as fh:
+            json.dump(entry, fh)
+        logger.info("message saved to file")
+        if config["run_options"]["message_output"] == "SOURCE_FOLDER":
+            files_list += [{
+                "path": message_full_file_path,
+                "size": 0,
+            }]
+
     if entry.metadata is not None:
         metadata = json.loads(entry.metadata)
         logger.info("Extracted metadata. Extracted {} keys".format(len(metadata.keys())))
@@ -254,8 +283,6 @@ def ingest_message(
                     return
 
         # find run number
-        file_name = get_nested_value_with_default(metadata,["file_being_written"],"unknown",logger)
-        logger.info("File name : {}".format(file_name))
         run_number = file_name.split(".")[0].split("_")[1]
         metadata["run_number"] = int(run_number)
         logger.info("Run number : {}".format(run_number))
@@ -269,6 +296,20 @@ def ingest_message(
             logger.info("Removed hdf structure dict from metadata")
         else:
             logger.debug("hdf structure dict : " + json.dumps(hdf_structure_dict))
+        if config["run_options"]["hdf_structure_to_file"]:
+            hdf_structure_file_name = os.path.join(
+                path_name \
+                    if config["run_options"]["hdf_structure_output"] == "SOURCE_FOLDER" \
+                    else os.path.abspath(config["run_options"]["files_output_folder"]),
+                os.path.splitext(file_name)[0] + config["run_options"]["hdf_structure_file_extension"])
+            logger.info("hdf structure file name : " + hdf_structure_file_name)
+            with open(hdf_structure_file_name,'w') as fh:
+                json.dump(hdf_structure_dict,fh)
+            logger.info("hdf structure saved to file : " + hdf_structure_file_name)
+            if config["run_options"]["hdf_structure_output"] == "SOURCE_FOLDER":
+                files_list += [{
+                    "path": hdf_structure_file_name,
+                }]
 
         # retrieve proposal id, if present
         proposal_id = None
@@ -279,8 +320,7 @@ def ingest_message(
             logger.info("Extracting proposal id from hdf structure")
             proposal_id = get_proposal_id(
                 logger,
-                hdf_structure_dict,
-                None
+                hdf_structure_dict
             )
         proposal_id = str(proposal_id) if not isinstance(proposal_id,str) and proposal_id is not None else proposal_id
         logger.info("Proposal id found: {}".format(proposal_id))
@@ -364,12 +404,11 @@ def ingest_message(
             logger
         )
         logger.info('Estimated file size : {}'.format(file_size))
-
-        # extract file information from message
-        file_name = os.path.basename(entry.file_name)
-        path_name = os.path.dirname(entry.file_name)
-        logger.info('Dataset folder : {}'.format(path_name))
-        logger.info('Dataset raw data file : {}'.format(file_name))
+        # add data file
+        files_list += [{
+            "path" : full_file_name,
+            "size" : file_size,
+        }]
 
         # dataset title
         dataset_title = get_nested_value_with_default(
@@ -409,9 +448,11 @@ def ingest_message(
         logger.info('Instantiating original datablock')
         origDatablock = create_orig_datablock(
             created_dataset["pid"],
-            file_size,
-            file_name,
-            ownable
+            files_list,
+            ownable,
+            config['run_options']['compute_files_stats'],
+            config['run_options']['compute_files_hash'],
+            config['run_options']['file_hash_algorithm'],
         )
         #logger.info('Original datablock : {}'.format(origDatablock))
         logger.info('Original datablock : {}'.format(json.dumps(origDatablock.dict(exclude_unset=True,exclude_none=True))))
@@ -549,25 +590,106 @@ def prepare_metadata(inMetadata):
         }
     return outMetadata
 
+def _new_hash(algorithm: str) -> Any:
+    try:
+        return hashlib.new(algorithm, usedforsecurity=False)
+    except TypeError:
+        # Fallback for Python < 3.9
+        return hashlib.new(algorithm)
+
+
+def checksum_of_file(path: str, algorithm: str) -> str:
+    """Compute the checksum of a local file.
+
+    Parameters
+    ----------
+    path:
+        Path of the file on the local filesystem.
+    algorithm:
+        Hash algorithm to use. Can be any algorithm supported by :func:`hashlib.new`.
+
+    Returns
+    -------
+    :
+        The hex digest of the hash.
+    """
+    chk = _new_hash(algorithm)
+    buffer = memoryview(bytearray(128 * 1024))
+    with open(path, "rb", buffering=0) as file:
+        for n in iter(lambda: file.readinto(buffer), 0):
+            chk.update(buffer[:n])
+    return chk.hexdigest()  # type: ignore[no-any-return]
+
+def update_file_info(
+    file_item: dict,
+    compute_file_stats: bool,
+    compute_file_hash: bool,
+    file_hash_algorithm: str
+):
+    """
+    Update the file size and creation time according to the configuration
+    :param file_item:
+    :param check_file_stats:
+    :return:
+    """
+    output_item = {
+        "path": os.path.basename(file_item["path"]),
+    }
+    if compute_file_stats:
+        stats = os.stat(file_item["path"])
+        output_item = {
+            **output_item,
+            **{
+                "size": stats.st_size,
+                "time": stats.st_ctime,
+                "uid": stats.st_uid,
+                "gid": stats.st_gid,
+                "perm": stats.st_mode,
+            }
+        }
+    else:
+        output_item = {
+            **output_item,
+            **{
+                "size": file_item["size"],
+                "time": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+            }
+        }
+
+    if compute_file_hash:
+        output_item["chk"] = checksum_of_file(file_item["path"], file_hash_algorithm)
+
+    return output_item
 
 def create_orig_datablock(
     dataset_pid: str, 
-    file_size: int, 
-    file_name: str,
-    ownable: pyScModel.Ownable
+    input_files: list,
+    ownable: pyScModel.Ownable,
+    compute_files_stats: bool,
+    compute_files_hash: bool,
+    file_hash_algorithm: str
 ) -> dict:
+    #
+    # TO-DO:
+    # check file size and creation time
+    # update info
+    ready_files = [
+        update_file_info(
+            i,
+            compute_files_stats,
+            compute_files_hash,
+            file_hash_algorithm
+        )
+        for i
+        in input_files
+    ]
+
     return pyScModel.OrigDatablock(
         **{
             "id" : str(uuid.uuid4()),
-            "size": file_size,
+            "size": sum([i.size for i in ready_files]),
             "datasetId": dataset_pid,
-            "dataFileList": [
-                {
-                    "path": file_name,
-                    "size": file_size,
-                    "time": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-                }
-            ],
+            "dataFileList": ready_files,
         },
         **dict(ownable)
     )
