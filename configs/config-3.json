@@ -4,7 +4,8 @@
     "group_id": "scicat_filewriter_ingestor",
     "bootstrap_servers": "localhost:9092",
     "auto_offset_reset": "earliest",
-    "enable_auto_commit": true
+    "enable_auto_commit": true,
+    "individual_message_commit": true
   },
   "user_office": {
     "host" : "https://useroffice.swap.ess.eu/graphql",
@@ -40,11 +41,11 @@
     "instrument_position_in_file_path" : 3,
     "message_to_file" : true,
     "message_file_extension" : ".message.json",
-    "message_output" : "LOCAL",
+    "message_output" : "SOURCE_FOLDER",
     "hdf_structure_in_metadata" : false,
     "hdf_structure_to_file" : true,
     "hdf_structure_file_extension" : ".hdf_structure.json",
-    "hdf_structure_output" : "LOCAL",
+    "hdf_structure_output" : "SOURCE_FOLDER",
     "local_output_folder" : "./data",
     "compute_files_stats" : true,
     "compute_files_hash" : true,

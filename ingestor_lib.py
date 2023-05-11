@@ -3,7 +3,8 @@
 # 
 
 import copy
-from datetime import datetime
+from datetime import datetime, timezone
+import pytz
 import json
 from typing import Any
 import uuid
@@ -12,6 +13,7 @@ import os
 import argparse
 import logging.handlers
 from urllib.parse import urljoin,urlencode
+import hashlib
 
 import requests
 
@@ -260,7 +262,7 @@ def ingest_message(
         if config["run_options"]["message_output"] == "SOURCE_FOLDER":
             files_list += [{
                 "path": message_full_file_path,
-                "size": 0,
+                "size": len(json.dumps(entry)),
             }]
 
     if entry.metadata is not None:
@@ -309,6 +311,7 @@ def ingest_message(
             if config["run_options"]["hdf_structure_output"] == "SOURCE_FOLDER":
                 files_list += [{
                     "path": hdf_structure_file_name,
+                    "size": len(json.dumps(hdf_structure_dict)),
                 }]
 
         # retrieve proposal id, if present
@@ -641,7 +644,7 @@ def update_file_info(
             **output_item,
             **{
                 "size": stats.st_size,
-                "time": stats.st_ctime,
+                "time": datetime.fromtimestamp(stats.st_ctime, tz=pytz.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                 "uid": stats.st_uid,
                 "gid": stats.st_gid,
                 "perm": stats.st_mode,
@@ -687,7 +690,8 @@ def create_orig_datablock(
     return pyScModel.OrigDatablock(
         **{
             "id" : str(uuid.uuid4()),
-            "size": sum([i.size for i in ready_files]),
+            "size": sum([i["size"] for i in ready_files]),
+            "chkAlg": file_hash_algorithm,
             "datasetId": dataset_pid,
             "dataFileList": ready_files,
         },
