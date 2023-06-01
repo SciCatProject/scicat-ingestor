@@ -24,24 +24,20 @@ def main(config, logger):
     logger.info('SciCat FileWriter Online Ingestor')
     # instantiate kafka consumer
     kafka_config = config["kafka"]
-    kafka_topics = kafka_config["topics"]
-    kafka_topics = kafka_topics.split(',') if isinstance(kafka_topics,str) else kafka_topics
+    # update topics if needed
+    kafka_topics = kafka_config["topics"].split(',') if isinstance(kafka_config["topics"],str) else kafka_config["topics"]
+    kafka_config["enable_auto_commit"] = (not kafka_config["individual_message_commit"]) and kafka_config["enable_auto_commit"]
 
-    logger.info(
-        "Connecting to Kafka\n" +
-        " - server ...................: {}\n".format(kafka_config["bootstrap_servers"]) +
-        " - topics ...................: {}\n".format(kafka_topics) +
-        " - group id  ................: {}\n".format(kafka_config["group_id"]) +
-        " - enable auto commit .......: {}\n".format(kafka_config["enable_auto_commit"]) +
-        " - individual message commit : {}\n".format(kafka_config["individual_message_commit"]) +
-        " - auto offset reset ........: {}\n".format(kafka_config["auto_offset_reset"])
-    )
-    consumer = Consumer({
-        'bootstrap.servers': kafka_config["bootstrap_servers"],
-        "group.id": kafka_config["group_id"],
-        "enable.auto.commit": (not kafka_config["individual_message_commit"]) and kafka_config["enable_auto_commit"],
-        "auto.offset.reset": kafka_config["auto_offset_reset"]
-    })
+    logger.info("Connecting to Kafka with the following parameters")
+    kafka_config_run_time = {}
+    for k1,v in kafka_config.items():
+        if k1 in ["topics", "individual_message_commit"]:
+            continue
+        k2 = k1.replace("_",".")
+        kafka_config_run_time[k2] = v
+        logger.info(f" - {k2:<30}: {v}")
+
+    consumer = Consumer(kafka_config_run_time)
     logger.info("Kafka consumer successfully instantiated... apparently!!!")
 
     uoClient = ingestor_lib.instantiate_user_office_client(config, logger)
@@ -64,7 +60,7 @@ def main(config, logger):
         logger
     )
 
-    logger.info("Subscribing to kafka topics")
+    logger.info("Subscribing to following kafka topics : {}".format(kafka_topics))
     consumer.subscribe(kafka_topics)
     # main loop, waiting for messages
     logger.info("Starting main loop ...")
