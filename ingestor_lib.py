@@ -447,7 +447,11 @@ def ingest_message(
             ownable,
             proposal_id,
             path_name,
-            dataset_title
+            dataset_title,
+            config['run_options']['dataset_pid_prefix'],
+            config['run_options']['force_dataset_pid'],
+            config['run_options']['use_job_id_as_dataset'],
+            job_id
         )
         #logger.info('Dataset : {}'.format(dataset))
         logger.info('Dataset : {}'.format(json.dumps(dataset.dict(exclude_unset=True,exclude_none=True))))
@@ -531,10 +535,16 @@ def create_dataset(
     ownable: pyScModel.Ownable,
     proposal_id: str = None,
     source_folder: str = "",
-    dataset_name: str = None
+    dataset_name: str = None,
+    dataset_pid_prefix: str = None,
+    force_dataset_pid: bool = False,
+    use_job_id_as_dataset: bool = False,
+    job_id: str = "unknown"
 ) -> dict:
     # prepare info for datasets
-    dataset_pid = str(uuid.uuid4())
+    dataset_pid = job_id if use_job_id_as_dataset else str(uuid.uuid4())
+    if dataset_pid_prefix:
+        dataset_pid = dataset_pid_prefix + "/" + dataset_pid
     proposal_id = proposal_id if proposal_id else get_prop(proposal,'proposalId','unknown')
     run_number = get_nested_value_with_default(metadata,['run_number'],'unknown',logger)
     if not dataset_name or dataset_name is None:
@@ -543,12 +553,13 @@ def create_dataset(
             else "Dataset {} for proposal {} run {}".format(dataset_pid,proposal_id,run_number)
     dataset_description = metadata["run_description"] \
         if "run_description" in metadata.keys() \
-        else "Dataset: {}. Proposal: {}. Sample: {}. Instrument: {}. File: {}".format(
+        else "Dataset: {}. Proposal: {}. Sample: {}. Instrument: {}. File: {}. Job: {}".format(
             dataset_pid,
             proposal_id,
             get_prop(instrument,'name','unknown'),
             get_prop(sample,'sampleId','unknown'),
-            get_nested_value_with_default(metadata,['file_being_written'],'unknown',logger))
+            get_nested_value_with_default(metadata,['file_being_written'],'unknown',logger),
+            job_id)
     principal_investigator = " ".join([
         get_nested_value_with_default(proposal,["proposer", "firstname"],"unknown",logger),
         get_nested_value_with_default(proposal,["proposer", "lastname"],"",logger)
@@ -556,27 +567,31 @@ def create_dataset(
     email = get_nested_value_with_default(proposal,["proposer", "email"],"unknown",logger)
     instrument_name = get_prop(instrument,"name","unknown")
     source_folder = instrument_name + "/" + proposal_id if not source_folder else source_folder
-    
+
+    dataset = {
+        "datasetName": dataset_name,
+        "description": dataset_description,
+        "principalInvestigator": principal_investigator,
+        "creationLocation": get_prop(instrument,"name",""),
+        "scientificMetadata": prepare_flatten_metadata(metadata),
+        "owner": principal_investigator,
+        "ownerEmail": email,
+        "contactEmail": email,
+        "sourceFolder": source_folder,
+        "creationTime": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+        "type": "raw",
+        "techniques": get_prop(metadata,'techniques',[]),
+        "instrumentId": get_prop(instrument,"pid",""),
+        "sampleId" : get_prop(sample,'sampleId',''),
+        "proposalId": proposal_id,
+    }
+
+    if force_dataset_pid:
+        dataset["pid"] = dataset_pid
+
     # create dictionary with all requested info
     return pyScModel.RawDataset(
-        **{
-            "pid" : dataset_pid,
-            "datasetName": dataset_name,
-            "description": dataset_description,
-            "principalInvestigator": principal_investigator,
-            "creationLocation": get_prop(instrument,"name",""),
-            "scientificMetadata": prepare_flatten_metadata(metadata),
-            "owner": principal_investigator,
-            "ownerEmail": email,
-            "contactEmail": email,
-            "sourceFolder": source_folder,
-            "creationTime": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-            "type": "raw",
-            "techniques": get_prop(metadata,'techniques',[]),
-            "instrumentId": get_prop(instrument,"pid",""),
-            "sampleId" : get_prop(sample,'sampleId',''),
-            "proposalId": proposal_id,
-        },
+        **dataset,
         **dict(ownable)
     )
 
@@ -611,7 +626,7 @@ def prepare_flatten_metadata(inMetadata,inPrefix=""):
 
      for k,v in inMetadata.items():
          key_path = ' '.join([i for i in [inPrefix, k] if i])
-         nk = re.sub('_/|/:|/|:',"_",key_path)
+         nk = re.sub(' /|_/|/:|/|:',"_",key_path)
          if isinstance(v,dict):
              outMetadata = {**outMetadata,**prepare_flatten_metadata(v,key_path)}
          else:
