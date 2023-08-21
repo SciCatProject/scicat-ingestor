@@ -565,7 +565,7 @@ def create_dataset(
             "description": dataset_description,
             "principalInvestigator": principal_investigator,
             "creationLocation": get_prop(instrument,"name",""),
-            "scientificMetadata": prepare_metadata(flatten_metadata(metadata)),
+            "scientificMetadata": prepare_flatten_metadata(metadata),
             "owner": principal_investigator,
             "ownerEmail": email,
             "contactEmail": email,
@@ -580,31 +580,48 @@ def create_dataset(
         **dict(ownable)
     )
 
+#
+# def flatten_metadata(inMetadata,inPrefix=""):
+#     outMetadata={}
+#
+#     for k,v in inMetadata.items():
+#         outPrefix = ' '.join([i for i in [inPrefix, k] if i])
+#         nk = re.sub('_/|/:|/|:',"_",outPrefix)
+#         if isinstance(v,dict):
+#             outMetadata = {**outMetadata,**flatten_metadata(v,outPrefix)}
+#         else:
+#             outMetadata[nk] = v
+#
+#     return outMetadata
+#
+#
+#
+# def prepare_metadata(inMetadata):
+#     outMetadata = {}
+#
+#     for k,v in inMetadata.items():
+#         outMetadata[k] = {
+#             'value' : v if isinstance(v,str) or isinstance(v,int) or isinstance(v,float) else str(v),
+#             'unit' : ''
+#         }
+#     return outMetadata
 
-def flatten_metadata(inMetadata,prefix=""):
-    outMetadata={}
+def prepare_flatten_metadata(inMetadata,inPrefix=""):
+     outMetadata={}
 
-    for k,v in inMetadata.items():
-        nk = '_'.join([i for i in [prefix,k] if i])
-        nk = re.sub('_/|/:|/|:',"_",nk)
-        if isinstance(v,dict):
-            outMetadata = {**outMetadata,**flatten_metadata(v,nk)}
-        else:
-            outMetadata[nk] = v
+     for k,v in inMetadata.items():
+         key_path = ' '.join([i for i in [inPrefix, k] if i])
+         nk = re.sub('_/|/:|/|:',"_",key_path)
+         if isinstance(v,dict):
+             outMetadata = {**outMetadata,**prepare_flatten_metadata(v,key_path)}
+         else:
+             outMetadata[nk] = {
+                'value' : v if isinstance(v,str) or isinstance(v,int) or isinstance(v,float) else str(v),
+                'path' : key_path,
+                'unit' : ''
+            }
 
-    return outMetadata
-
-
-
-def prepare_metadata(inMetadata):
-    outMetadata = {}
-
-    for k,v in inMetadata.items():
-        outMetadata[k] = {
-            'value' : v if isinstance(v,str) or isinstance(v,int) or isinstance(v,float) else str(v),
-            'unit' : ''
-        }
-    return outMetadata
+     return outMetadata
 
 def _new_hash(algorithm: str) -> Any:
     try:
