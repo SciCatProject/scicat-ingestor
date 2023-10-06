@@ -52,7 +52,12 @@
     "file_hash_algorithm" : "blake2b",
     "dataset_pid_prefix" : "20.500.12269",
     "force_dataset_pid" : true,
-    "use_job_id_as_dataset" : true
+    "use_job_id_as_dataset" : true,
+    "ingestor_files_folder": "ingestor",
+    "beautify_metadata_keys" : false,
+    "metadata_levels_separator": " ",
+    "save_hash_in_file" : false,
+    "hash_file_extension" : "b2b"
   }
 }
 
