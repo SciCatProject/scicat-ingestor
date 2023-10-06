@@ -49,7 +49,10 @@
     "local_output_folder" : "./data",
     "compute_files_stats" : true,
     "compute_files_hash" : true,
-    "file_hash_algorithm" : "blake2b"
+    "file_hash_algorithm" : "blake2b",
+    "dataset_pid_prefix" : "20.500.12269",
+    "force_dataset_pid" : true,
+    "use_job_id_as_dataset" : true
   }
 }
 

@@ -248,6 +248,7 @@ def ingest_message(
     # create path for files saved by the ingestor
     ingestor_files_path = os.path.join(os.path.dirname(path_name),config["run_options"]["ingestor_files_folder"])
     logger.info("Ingestor files folder: {}".format(ingestor_files_path))
+    fix_dataset_source_folder = False
 
     # list of files to be added to the dataset
     files_list = []
@@ -270,6 +271,7 @@ def ingest_message(
                     "path": message_full_file_path,
                     "size": len(json.dumps(entry)),
                 }]
+            fix_dataset_source_folder = True
         else:
             logger.info("Message file path not accessible")
 
@@ -324,8 +326,12 @@ def ingest_message(
                         "path": hdf_structure_file_name,
                         "size": len(json.dumps(hdf_structure_dict)),
                     }]
+                fix_dataset_source_folder = True
             else:
                 logger.info("hdf structure file path not accessible")
+
+        # set dataset source folder and fix source folder if needed
+        dataset_source_folder = os.path.dirname(path_name) if fix_dataset_source_folder else path_name
 
         # retrieve proposal id, if present
         proposal_id = None
@@ -446,7 +452,7 @@ def ingest_message(
             sample,
             ownable,
             proposal_id,
-            path_name,
+            dataset_source_folder,
             dataset_title,
             config['run_options']['dataset_pid_prefix'],
             config['run_options']['force_dataset_pid'],
@@ -470,9 +476,7 @@ def ingest_message(
             created_dataset["pid"],
             files_list,
             ownable,
-            config['run_options']['compute_files_stats'],
-            config['run_options']['compute_files_hash'],
-            config['run_options']['file_hash_algorithm'],
+            config
         )
         #logger.info('Original datablock : {}'.format(origDatablock))
         logger.info('Original datablock : {}'.format(json.dumps(origDatablock.dict(exclude_unset=True,exclude_none=True))))
@@ -621,14 +625,18 @@ def create_dataset(
 #         }
 #     return outMetadata
 
-def prepare_flatten_metadata(inMetadata,inPrefix=""):
+
+#
+# add option to substitute characters in paths or not
+# HERE
+def prepare_flatten_metadata(config,inMetadata,inPrefix=""):
      outMetadata={}
 
      for k,v in inMetadata.items():
-         key_path = ' '.join([i for i in [inPrefix, k] if i])
-         nk = re.sub(' /|_/|/:|/|:',"_",key_path)
+         key_path = config['run_options']['metadata_levels_separator'].join([i for i in [inPrefix, k] if i])
+         nk = nk if config['run_options']['beautify_metadata_keys'] else re.sub(' /|_/|/:|/|:',"_",key_path)
          if isinstance(v,dict):
-             outMetadata = {**outMetadata,**prepare_flatten_metadata(v,key_path)}
+             outMetadata = {**outMetadata,**prepare_flatten_metadata(config,v,key_path)}
          else:
              outMetadata[nk] = {
                 'value' : v if isinstance(v,str) or isinstance(v,int) or isinstance(v,float) else str(v),
@@ -669,10 +677,9 @@ def checksum_of_file(path: str, algorithm: str) -> str:
     return chk.hexdigest()  # type: ignore[no-any-return]
 
 def update_file_info(
-    file_item: dict,
-    compute_file_stats: bool,
-    compute_file_hash: bool,
-    file_hash_algorithm: str
+    config: dict,
+    source_folder: str,
+    file_item: dict
 ):
     """
     Update the file size and creation time according to the configuration
@@ -681,9 +688,10 @@ def update_file_info(
     :return:
     """
     output_item = {
-        "path": os.path.basename(file_item["path"]),
+        "path": file_item["path"].replace(source_folder,"")
     }
-    if compute_file_stats and os.path.exists(file_item["path"]):
+
+    if config['run_options']['compute_files_stats'] and os.path.exists(file_item["path"]):
         stats = os.stat(file_item["path"])
         output_item = {
             **output_item,
@@ -704,18 +712,55 @@ def update_file_info(
             }
         }
 
-    if compute_file_hash and os.path.exists(file_item["path"]):
-        output_item["chk"] = checksum_of_file(file_item["path"], file_hash_algorithm)
+    if config['run_options']['compute_files_hash'] and os.path.exists(file_item["path"]):
+        output_item["chk"] = checksum_of_file(file_item["path"], config['run_options']['file_hash_algorithm'])
 
     return output_item
+
+def save_hash_in_file(
+    config: dict,
+    source_folder: str,
+    files_list: list,
+) -> list:
+    """
+    Save the hashes computed for the files in files along with the data files
+    :param config:
+    :param files_list:
+    :return:
+    """
+    hash_files = []
+    if config['run_options']['compute_files_hash'] and config['run_options']['save_hash_in_file']:
+        for data_file in files_list:
+            # file path for hash file
+            hash_file_name = data_file["path"] + "." + config['run_options']['hash_file_extension']
+            hash_file_full_path = os.path.join(source_folder,hash_file_name)
+
+            # save hash in file
+            with open(hash_file_full_path,'w') as fh:
+                fh.write(data_file['chk'])
+
+            # stats on the file
+            stats = os.stat(hash_file_full_path)
+
+            # add hash file in dataset files
+            hash_files.append({
+                "path": os.path.basename(hash_file_name),
+                "size": stats.st_size,
+                "time": datetime.fromtimestamp(stats.st_ctime, tz=pytz.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                "uid": stats.st_uid,
+                "gid": stats.st_gid,
+                "perm": stats.st_mode
+            })
+
+    return [*files_list, *hash_files]
+
 
 def create_orig_datablock(
     dataset_pid: str, 
     input_files: list,
     ownable: pyScModel.Ownable,
-    compute_files_stats: bool,
-    compute_files_hash: bool,
-    file_hash_algorithm: str
+    config: dict,
+    source_folder: str
 ) -> dict:
     #
     # TO-DO:
@@ -723,20 +768,26 @@ def create_orig_datablock(
     # update info
     ready_files = [
         update_file_info(
-            i,
-            compute_files_stats,
-            compute_files_hash,
-            file_hash_algorithm
+            config,
+            source_folder,
+            i
         )
         for i
         in input_files
     ]
 
+    # add hash files
+    ready_files = save_hash_in_file(
+        config,
+        source_folder,
+        ready_files
+    )
+
     return pyScModel.OrigDatablock(
         **{
             "id" : str(uuid.uuid4()),
             "size": sum([i["size"] for i in ready_files]),
-            "chkAlg": file_hash_algorithm,
+            "chkAlg": config['run_options']['file_hash_algorithm'],
             "datasetId": dataset_pid,
             "dataFileList": ready_files,
         },
