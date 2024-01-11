@@ -235,7 +235,7 @@ def ingest_message(
         logger.error("Unable to de-serialize message")
         return
 
-    logger.info(entry)
+    logger.info(str(entry)[0:5000])
 
     # extract file name information from message
     # full_file_name = get_nested_value_with_default(metadata,["file_being_written"],"unknown",logger)
@@ -371,7 +371,8 @@ def ingest_message(
         instrument_name = None
         if config['run_options']['retrieve_instrument_from'].lower() == 'path':
             instrument_name = file_name.split('/')[config['run_options']['instrument_position_in_file_path']]
-        elif config['run_options']['retrieve_instrument_from'].lower() == 'proposal':
+        elif config['run_options']['retrieve_instrument_from'].lower() == 'proposal' and \
+                proposal['instrument'] and proposal['instrument']['name']:
             instrument_name = proposal['instrument']['name'].lower()
         logger.info("Instrument id : {}".format(instrument_id))
         logger.info("Instrument name : {}".format(instrument_name))
@@ -815,7 +816,10 @@ def get_dataset_by_job_id(
     response = requests.request(
         method="get",
         url=url,
-        headers={'Accept':'application/json'},
+        headers={
+            'Accept':'application/json',
+            'Authorization':'Bearer {}'.format(scClient._token)
+        },
         timeout=scClient._timeout_seconds,
         stream=False,
         verify=True
