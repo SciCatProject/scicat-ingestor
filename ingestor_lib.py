@@ -447,6 +447,7 @@ def ingest_message(
         logger.info('Instantiating dataset model')
         dataset = create_dataset(
             logger,
+            config,
             metadata,
             proposal,
             instrument,
@@ -455,9 +456,6 @@ def ingest_message(
             proposal_id,
             dataset_source_folder,
             dataset_title,
-            config['run_options']['dataset_pid_prefix'],
-            config['run_options']['force_dataset_pid'],
-            config['run_options']['use_job_id_as_dataset'],
             job_id
         )
         #logger.info('Dataset : {}'.format(dataset))
@@ -533,6 +531,7 @@ def get_prop(
 
 def create_dataset(
     logger,
+    config,
     metadata: dict, 
     proposal: dict, 
     instrument: dict, 
@@ -541,11 +540,12 @@ def create_dataset(
     proposal_id: str = None,
     source_folder: str = "",
     dataset_name: str = None,
-    dataset_pid_prefix: str = None,
-    force_dataset_pid: bool = False,
-    use_job_id_as_dataset: bool = False,
     job_id: str = "unknown"
 ) -> dict:
+    # extract settings from configuration
+    dataset_pid_prefix = config['run_options']['dataset_pid_prefix']
+    force_dataset_pid = config['run_options']['force_dataset_pid']
+    use_job_id_as_dataset = config['run_options']['use_job_id_as_dataset']
     # prepare info for datasets
     dataset_pid = job_id if use_job_id_as_dataset else str(uuid.uuid4())
     if dataset_pid_prefix:
@@ -578,7 +578,7 @@ def create_dataset(
         "description": dataset_description,
         "principalInvestigator": principal_investigator,
         "creationLocation": get_prop(instrument,"name",""),
-        "scientificMetadata": prepare_flatten_metadata(metadata),
+        "scientificMetadata": prepare_flatten_metadata(config,metadata),
         "owner": principal_investigator,
         "ownerEmail": email,
         "contactEmail": email,
