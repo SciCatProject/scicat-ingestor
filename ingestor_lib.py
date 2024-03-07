@@ -246,14 +246,17 @@ def ingest_message(
     logger.info('Dataset folder : {}'.format(path_name))
     logger.info('Dataset raw data file : {}'.format(file_name))
     # create path for files saved by the ingestor
-    ingestor_files_path = os.path.join(os.path.dirname(path_name),config["run_options"]["ingestor_files_folder"])
+    ingestor_files_path = \
+      os.path.join(os.path.dirname(path_name),config["run_options"]["ingestor_files_folder"]) \
+        if config["run_options"]["hdf_structure_output"] == "SOURCE_FOLDER" \
+        else os.path.abspath(config["run_options"]["files_output_folder"])
     logger.info("Ingestor files folder: {}".format(ingestor_files_path))
     fix_dataset_source_folder = False
 
     # list of files to be added to the dataset
     files_list = []
     if config["run_options"]["message_to_file"]:
-        message_file_path = ingestor_files_path if config["run_options"]["message_output"] == "SOURCE_FOLDER" else config["run_options"]["local_output_folder"]
+        message_file_path = ingestor_files_path
         logger.info("message file will be saved in {}".format(message_file_path))
         if os.path.exists(message_file_path):
             message_file_name = os.path.splitext(file_name)[0] + config["run_options"]["message_file_extension"]
@@ -309,9 +312,7 @@ def ingest_message(
         else:
             logger.debug("hdf structure dict : " + json.dumps(hdf_structure_dict))
         if config["run_options"]["hdf_structure_to_file"]:
-            hdf_structure_file_path = ingestor_files_path \
-                if config["run_options"]["hdf_structure_output"] == "SOURCE_FOLDER" \
-                else os.path.abspath(config["run_options"]["files_output_folder"])
+            hdf_structure_file_path = ingestor_files_path
             logger.info("hdf structure file will be saved in {}".format(hdf_structure_file_path))
             if os.path.exists(hdf_structure_file_path):
                 hdf_structure_file_name = os.path.join(
@@ -472,10 +473,13 @@ def ingest_message(
         # create origdatablock object from pyscicat model
         logger.info('Instantiating original datablock')
         origDatablock = create_orig_datablock(
+            logger,
             created_dataset["pid"],
             files_list,
             ownable,
-            config
+            config,
+            dataset_source_folder,
+            ingestor_files_path 
         )
         #logger.info('Original datablock : {}'.format(origDatablock))
         logger.info('Original datablock : {}'.format(json.dumps(origDatablock.dict(exclude_unset=True,exclude_none=True))))
@@ -678,6 +682,7 @@ def checksum_of_file(path: str, algorithm: str) -> str:
     return chk.hexdigest()  # type: ignore[no-any-return]
 
 def update_file_info(
+    logger,
     config: dict,
     source_folder: str,
     file_item: dict
@@ -688,8 +693,14 @@ def update_file_info(
     :param check_file_stats:
     :return:
     """
+    logger.info("update_file_info: info for file {}".format(file_item["path"]))
+    file_path = file_item["path"].replace(source_folder,"")
+    if file_path.startswith("/"):
+      file_path = file_path[1:]
+    logger.info("update_file_info: file path for scicat : {}".format(file_path))
+
     output_item = {
-        "path": file_item["path"].replace(source_folder,"")
+        "path": file_path
     }
 
     if config['run_options']['compute_files_stats'] and os.path.exists(file_item["path"]):
@@ -716,12 +727,15 @@ def update_file_info(
     if config['run_options']['compute_files_hash'] and os.path.exists(file_item["path"]):
         output_item["chk"] = checksum_of_file(file_item["path"], config['run_options']['file_hash_algorithm'])
 
+    logger.info("Output item : {}".format(json.dumps(output_item)))
     return output_item
 
 def save_hash_in_file(
+    logger,
     config: dict,
     source_folder: str,
     files_list: list,
+    ingestor_files_path: str
 ) -> list:
     """
     Save the hashes computed for the files in files along with the data files
@@ -729,12 +743,18 @@ def save_hash_in_file(
     :param files_list:
     :return:
     """
+    logger.info("save_hash_in_file: Ingestor files path: {}".format(ingestor_files_path))
     hash_files = []
     if config['run_options']['compute_files_hash'] and config['run_options']['save_hash_in_file']:
+        logger.info("save_hash_in_file: source folder: {}".format(source_folder));
         for data_file in files_list:
             # file path for hash file
-            hash_file_name = data_file["path"] + "." + config['run_options']['hash_file_extension']
-            hash_file_full_path = os.path.join(source_folder,hash_file_name)
+            hash_file_full_path = os.path.join(
+                ingestor_files_path,
+                os.path.basename(data_file["path"]) + "." + config['run_options']['hash_file_extension'])
+            hash_file_name = hash_file_full_path.replace(source_folder,"")[1:]
+            logger.info("save_hash_in_file: Hash file full path : {}".format(hash_file_full_path))
+            logger.info("save_hash_in_file: Hash file name in scicat : {}".format(hash_file_name))
 
             # save hash in file
             with open(hash_file_full_path,'w') as fh:
@@ -745,30 +765,35 @@ def save_hash_in_file(
 
             # add hash file in dataset files
             hash_files.append({
-                "path": os.path.basename(hash_file_name),
+                "path": hash_file_name,
                 "size": stats.st_size,
                 "time": datetime.fromtimestamp(stats.st_ctime, tz=pytz.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                 "uid": stats.st_uid,
                 "gid": stats.st_gid,
                 "perm": stats.st_mode
             })
+            logger.info("hash_file_in_file: Hash file entry : {}".format(json.dumps(hash_files[-1])))
 
     return [*files_list, *hash_files]
 
 
 def create_orig_datablock(
+    logger,
     dataset_pid: str, 
     input_files: list,
     ownable: pyScModel.Ownable,
     config: dict,
-    source_folder: str
+    source_folder: str,
+    ingestor_files_path: str
 ) -> dict:
     #
     # TO-DO:
     # check file size and creation time
     # update info
+    logger.info("create_orig_datablock: Checking file size and creation")
     ready_files = [
         update_file_info(
+            logger,
             config,
             source_folder,
             i
@@ -778,10 +803,14 @@ def create_orig_datablock(
     ]
 
     # add hash files
+    logger.info("create_orig_datablock: Saving hash in file")
+    logger.info("create_orig_datablock: Ingestor files path: {}".format(ingestor_files_path))
     ready_files = save_hash_in_file(
+        logger,
         config,
         source_folder,
-        ready_files
+        ready_files,
+        ingestor_files_path
     )
 
     return pyScModel.OrigDatablock(
