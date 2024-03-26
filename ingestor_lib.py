@@ -565,8 +565,8 @@ def create_dataset(
         else "Dataset: {}. Proposal: {}. Sample: {}. Instrument: {}. File: {}. Job: {}".format(
             dataset_pid,
             proposal_id,
-            get_prop(instrument,'name','unknown'),
             get_prop(sample,'sampleId','unknown'),
+            get_prop(instrument, 'name', 'unknown'),
             get_nested_value_with_default(metadata,['file_being_written'],'unknown',logger),
             job_id)
     principal_investigator = " ".join([
