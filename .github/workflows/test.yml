@@ -59,3 +59,4 @@ jobs:
         with:
           name: CoverageReport
           path: coverage_html/
+      - run: scicat_ingestor --help  # Minimal test of the script
