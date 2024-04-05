@@ -77,3 +77,9 @@ def test_scicat_config_original_dict_read_only(scicat_config: ScicatConfig) -> N
     assert isinstance(scicat_config.original_dict, MappingProxyType)
     for sub_option in scicat_config.original_dict.values():
         assert isinstance(sub_option, MappingProxyType)
+
+
+def test_scicat_config_kafka_options(scicat_config: ScicatConfig) -> None:
+    """Test if the Kafka options are correctly read."""
+    assert scicat_config.kafka_options.topics == ["KAFKA_TOPIC_1", "KAFKA_TOPIC_2"]
+    assert scicat_config.kafka_options.enable_auto_commit

@@ -2,7 +2,7 @@ import pathlib
 
 import pytest
 
-from scicat_configuration import RunOptions, ScicatConfig
+from scicat_configuration import RunOptions, ScicatConfig, kafkaOptions
 
 
 @pytest.fixture
@@ -22,6 +22,7 @@ def scicat_config(tmp_path: pathlib.Path) -> ScicatConfig:
             check_by_job_id=True,
             pyscicat='test',
         ),
+        kafka_options=kafkaOptions(),
     )
 
 
