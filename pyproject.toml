@@ -41,7 +41,7 @@ dynamic = ["version"]
 "Source" = "https://github.com/ScicatProject/scicat-filewriter-ingest"
 
 [project.scripts]
-scicat-filewriter-ingest = "scicat_filewriter_ingest:main"
+scicat_ingestor = "scicat_ingestor:main"
 
 [tool.setuptools_scm]
 
