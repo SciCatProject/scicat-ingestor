@@ -84,7 +84,3 @@ enable_error_code = [
 ]
 show_error_codes = true
 warn_unreachable = true
-
-[tool.flake8]
-max-line-length = 88
-extend-ignore = "E203"
