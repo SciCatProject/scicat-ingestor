@@ -1,5 +1,0 @@
-FROM centos:7
-
-RUN cd / && \
-    curl -LO https://jenkins.esss.dk/dm/job/ess-dmsc/job/kafka-to-nexus/job/main/lastSuccessfulBuild/artifact/kafka-to-nexus-centos7-release.tar.gz && \
-    tar xzvf kafka-to-nexus-centos7-release.tar.gz
