@@ -9,7 +9,7 @@ A daemon that creates a raw dataset using scicat interface whenever a new file i
 ## Configuration
 
 You can use a json file to configure options.
-There is a template, ``resources/config.sample.json`` you can copy/paste.
+There is a template, ``resources/config.sample.json`` you can copy/paste to make your own configuration file.
 
 ```bash
 cp resources/config.sample.json config.20240405.json
