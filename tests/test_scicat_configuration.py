@@ -49,6 +49,7 @@ def test_build_scicat_config_default(main_arg_parser: argparse.ArgumentParser) -
 
     scicat_namespace = main_arg_parser.parse_args()
     scicat_config = build_scicat_config(scicat_namespace)
+    assert scicat_config.original_dict['options']['config_file'] == 'config.json'
     assert scicat_config.run_options.config_file == 'config.20240405.json'
 
 
