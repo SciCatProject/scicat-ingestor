@@ -36,9 +36,9 @@ def build_main_arg_parser() -> argparse.ArgumentParser:
         default=False,
     )
     group.add_argument(
-        '--log-file-suffix',
-        dest='log_file_suffix',
-        help='Suffix of the log file name',
+        '--log-filepath-prefix',
+        dest='log_filepath_prefix',
+        help='Prefix of the log file path',
         default='.scicat_ingestor_log',
     )
     group.add_argument(
@@ -62,8 +62,8 @@ def build_main_arg_parser() -> argparse.ArgumentParser:
         default='mail',
     )
     group.add_argument(
-        '--log-prefix',
-        dest='log_prefix',
+        '--log-message-prefix',
+        dest='log_message_prefix',
         help='Prefix for log messages',
         default=' SFI: ',
     )
@@ -92,13 +92,13 @@ class RunOptions:
     config_file: str
     verbose: bool
     file_log: bool
-    log_file_suffix: str
+    log_filepath_prefix: str
     file_log_timestamp: bool
     system_log: bool
-    system_log_facility: str
-    log_prefix: str
+    log_message_prefix: str
     log_level: str
     check_by_job_id: bool
+    system_log_facility: Optional[str] = None
     pyscicat: Optional[str] = None
 
 
@@ -108,6 +108,19 @@ class ScicatConfig:
     """Original configuration dictionary in the json file."""
     run_options: RunOptions
     """Merged configuration dictionary with command line arguments."""
+
+    def to_dict(self) -> dict:
+        """Return the configuration as a dictionary."""
+        from dataclasses import asdict
+
+        # Deep copy the original dictionary recursively
+        original_dict = dict(self.original_dict)
+        for key, value in original_dict.items():
+            if isinstance(value, Mapping):
+                original_dict[key] = dict(value)
+
+        copied = ScicatConfig(original_dict, self.run_options)
+        return asdict(copied)
 
 
 def build_scicat_config(input_args: argparse.Namespace) -> ScicatConfig:

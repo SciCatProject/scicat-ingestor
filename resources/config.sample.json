@@ -31,12 +31,12 @@
     "config_file" : "config.json",
     "verbose" : false,
     "file_log" : false,
-    "log_file_suffix" : ".scicat_ingestor_log",
+    "log_filepath_prefix" : ".scicat_ingestor_log",
     "file_log_timestamp" : false,
     "log_level" : "INFO",
     "system_log" : false,
     "system_log_facility" : "mail",
-    "log_prefix" : " SFI: ",
+    "log_message_prefix" : " SFI: ",
     "check_by_job_id" : true,
     "pyscicat": null
   }
