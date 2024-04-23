@@ -89,6 +89,13 @@ def build_main_arg_parser() -> argparse.ArgumentParser:
 
 @dataclass
 class RunOptions:
+    """RunOptions dataclass to store the configuration options.
+
+    Most of options don't have default values because they are expected
+    to be set by the user either in the configuration file or through
+    command line arguments.
+    """
+
     config_file: str
     verbose: bool
     file_log: bool
@@ -103,11 +110,35 @@ class RunOptions:
 
 
 @dataclass
+class kafkaOptions:
+    """KafkaOptions dataclass to store the configuration options.
+
+    Default values are provided as they are not
+    expected to be set by command line arguments.
+    """
+
+    topics: list[str] | str = "KAFKA_TOPIC_1,KAFKA_TOPIC_2"
+    """List of Kafka topics. Multiple topics can be separated by commas."""
+    group_id: str = "GROUP_ID"
+    """Kafka consumer group ID."""
+    bootstrap_servers: list[str] | str = "localhost:9092"
+    """List of Kafka bootstrap servers. Multiple servers can be separated by commas."""
+    individual_message_commit: bool = False
+    """Commit for each topic individually."""
+    enable_auto_commit: bool = True
+    """Enable Kafka auto commit."""
+    auto_offset_reset: str = "earliest"
+    """Kafka auto offset reset."""
+
+
+@dataclass
 class ScicatConfig:
     original_dict: Mapping
     """Original configuration dictionary in the json file."""
     run_options: RunOptions
     """Merged configuration dictionary with command line arguments."""
+    kafka_options: kafkaOptions
+    """Kafka configuration options read from files."""
 
     def to_dict(self) -> dict:
         """Return the configuration as a dictionary."""
@@ -119,7 +150,7 @@ class ScicatConfig:
             if isinstance(value, Mapping):
                 original_dict[key] = dict(value)
 
-        copied = ScicatConfig(original_dict, self.run_options)
+        copied = ScicatConfig(original_dict, self.run_options, self.kafka_options)
         return asdict(copied)
 
 
@@ -153,4 +184,5 @@ def build_scicat_config(input_args: argparse.Namespace) -> ScicatConfig:
     return ScicatConfig(
         original_dict=MappingProxyType(config_dict),
         run_options=RunOptions(**run_option_dict),
+        kafka_options=kafkaOptions(**config_dict.setdefault('kafka', dict())),
     )

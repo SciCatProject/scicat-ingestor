@@ -5,6 +5,7 @@
     "bootstrap_servers": [
       "HOST:9092"
     ],
+    "individual_message_commit": false,
     "enable_auto_commit": true,
     "auto_offset_reset": "earliest"
   },
