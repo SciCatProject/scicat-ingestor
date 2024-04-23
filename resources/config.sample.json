@@ -1,0 +1,43 @@
+{
+  "kafka": {
+    "topics": ["KAFKA_TOPIC_1","KAFKA_TOPIC_2"],
+    "group_id": "GROUP_ID",
+    "bootstrap_servers": [
+      "HOST:9092"
+    ],
+    "enable_auto_commit": true,
+    "auto_offset_reset": "earliest"
+  },
+  "user_office": {
+    "host": "https://useroffice.host",
+    "username": "USERNAME",
+    "password": "PASSWORD"
+  },
+  "scicat": {
+    "host": "https://scicat.host",
+    "username": "USERNAME",
+    "password": "PASSWORD"
+  },
+  "dataset": {
+    "instrument_id" : "",
+    "instrument" : "INSTRUMENT_NAME",
+    "default_proposal_id" : "714781",
+    "ownable" : {
+      "ownerGroup": "ess",
+      "accessGroups": ["ymir","swap"]
+    }
+  },
+  "options": {
+    "config_file" : "config.json",
+    "verbose" : false,
+    "file_log" : false,
+    "log_file_suffix" : ".scicat_ingestor_log",
+    "file_log_timestamp" : false,
+    "log_level" : "INFO",
+    "system_log" : false,
+    "system_log_facility" : "mail",
+    "log_prefix" : " SFI: ",
+    "check_by_job_id" : true,
+    "pyscicat": null
+  }
+}

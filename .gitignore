@@ -33,3 +33,6 @@ __pycache__/
 *.cif
 *.rcif
 *.ort
+
+# User configuration
+config.*.json
