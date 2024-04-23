@@ -5,3 +5,4 @@
 kafka-python
 ess-streaming-data-types
 requests
+rich

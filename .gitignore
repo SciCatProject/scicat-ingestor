@@ -36,3 +36,6 @@ __pycache__/
 
 # User configuration
 config.*.json
+
+# Log files
+*.log
