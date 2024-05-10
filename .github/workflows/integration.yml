@@ -15,7 +15,6 @@ on:
 jobs:
   tests:
     name: Integration Tests
-    needs: formatting
     runs-on: 'ubuntu-22.04'
     steps:
       - run: sudo apt install --yes docker-compose
