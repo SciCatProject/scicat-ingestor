@@ -3,6 +3,7 @@
 name: Integration
 
 on:
+  pull_request:
   workflow_dispatch:
     inputs:
       python-version:
