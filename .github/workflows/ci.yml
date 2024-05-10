@@ -49,9 +49,7 @@ jobs:
 
   intergration-tests:
     name: Integration Tests
-    needs:
-      - formatting
-      - tests
+    needs: tests
     uses: ./.github/workflows/integration.yml
     with:
       python-version: '${{needs.formatting.outputs.min_python}}'
