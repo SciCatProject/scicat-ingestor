@@ -16,6 +16,8 @@ jobs:
   tests:
     name: Integration Tests
     runs-on: 'ubuntu-22.04'
+    env:
+      FILEWRITER_FILEWRITER_CONTAINER_NAME: filewriter-$GITHUB_JOB  # For ECDC docker compose recipe.
     steps:
       - run: sudo apt install --yes docker-compose
       - uses: actions/checkout@v4
