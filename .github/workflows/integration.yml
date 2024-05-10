@@ -11,13 +11,16 @@ on:
     inputs:
       python-version:
         type: string
+env:
+  # For ECDC docker compose recipe.
+  FILEWRITER_ZOOKEEPER_CONTAINER_NAME: zookeeper-$GITHUB_JOB
+  FILEWRITER_KAFKA_CONTAINER_NAME: kafka-$GITHUB_JOB
+  FILEWRITER_FILEWRITER_CONTAINER_NAME: filewriter-$GITHUB_JOB
 
 jobs:
   tests:
     name: Integration Tests
     runs-on: 'ubuntu-22.04'
-    env:
-      FILEWRITER_FILEWRITER_CONTAINER_NAME: filewriter-$GITHUB_JOB  # For ECDC docker compose recipe.
     steps:
       - run: sudo apt install --yes docker-compose
       - uses: actions/checkout@v4
