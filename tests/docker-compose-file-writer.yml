@@ -32,7 +32,7 @@ services:
       KAFKA_LOG_RETENTION_MS: -1  # keep data forever, required for tests involving fake "historical" data
       ## listeners
       KAFKA_LISTENERS: INSIDE://:9092,OUTSIDE://:9093
-      KAFKA_ADVERTISED_LISTENERS: INSIDE://file-writer-kafka:9092,OUTSIDE://file-writer-kafka:9093
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://file-writer-kafka:9092,OUTSIDE://localhost:9093
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
     healthcheck:

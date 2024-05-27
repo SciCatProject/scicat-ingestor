@@ -2,7 +2,7 @@
   "kafka": {
     "topics": ["KAFKA_TOPIC_1","KAFKA_TOPIC_2"],
     "group_id": "GROUP_ID",
-    "bootstrap_servers": "file-writer-kafka:9093",
+    "bootstrap_servers": ["localhost:9093"],
     "enable_auto_commit": true,
     "auto_offset_reset": "earliest"
   },
