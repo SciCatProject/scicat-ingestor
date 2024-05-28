@@ -95,6 +95,7 @@ def wrdn_messages(
         if data_type == WRDN_FILE_IDENTIFIER:
             logger.info("Deserialising WRDN message")
             wrdn_content: WritingFinished = deserialise_wrdn(message_content)
+            logger.info("Deserialised WRDN message: %.5000s", wrdn_content)
             if wrdn_content.error_encountered:
                 logger.error(
                     "``error_encountered`` flag True. "
