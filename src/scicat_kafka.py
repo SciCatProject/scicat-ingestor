@@ -1,8 +1,14 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 import logging
+from collections.abc import Generator
 
 from confluent_kafka import Consumer
+from streaming_data_types import deserialise_wrdn
+from streaming_data_types.finished_writing_wrdn import (
+    FILE_IDENTIFIER as WRDN_FILE_IDENTIFIER,
+)
+from streaming_data_types.finished_writing_wrdn import WritingFinished
 
 from scicat_configuration import kafkaOptions
 
@@ -66,3 +72,28 @@ def validate_consumer(consumer: Consumer, logger: logging.Logger) -> bool:
     else:
         logger.info("Kafka consumer successfully instantiated")
         return True
+
+
+def wrdn_messages(
+    consumer: Consumer, logger: logging.Logger
+) -> Generator[WritingFinished, None, None]:
+    """Wait for a WRDN message and yield it."""
+    while True:
+        message = consumer.poll(timeout=1.0)
+        if message is None:
+            logger.info("Received no messages")
+            continue
+        elif message.error():
+            logger.error("Consumer error: %s", message.error())
+            continue
+        else:
+            logger.info("Received message.")
+
+        message_content: str = message.value()
+        data_type = message_content[4:8]
+        logger.info("Data type: %s", data_type)
+        if data_type == WRDN_FILE_IDENTIFIER:
+            logger.info("Deserialising WRDN message")
+            yield deserialise_wrdn(message_content)
+        else:
+            logger.error("Unexpected data type: %s", data_type)
