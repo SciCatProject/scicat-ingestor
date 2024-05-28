@@ -94,6 +94,14 @@ def wrdn_messages(
         logger.info("Data type: %s", data_type)
         if data_type == WRDN_FILE_IDENTIFIER:
             logger.info("Deserialising WRDN message")
-            yield deserialise_wrdn(message_content)
+            wrdn_content: WritingFinished = deserialise_wrdn(message_content)
+            if wrdn_content.error_encountered:
+                logger.error(
+                    "``error_encountered`` flag True. "
+                    "Unable to deserialize message. Skipping message."
+                )
+                continue
+            else:
+                yield wrdn_content
         else:
             logger.error("Unexpected data type: %s", data_type)
