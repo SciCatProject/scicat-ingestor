@@ -51,4 +51,4 @@ def main() -> None:
 
         # Receive messages
         for message in wrdn_messages(consumer, logger):
-            logger.info(f"Received message: {message}")
+            logger.info("Processing message: %s", message)

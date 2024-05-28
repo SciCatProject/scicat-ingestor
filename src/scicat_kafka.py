@@ -74,36 +74,56 @@ def validate_consumer(consumer: Consumer, logger: logging.Logger) -> bool:
         return True
 
 
+def _validate_data_type(message_content: bytes, logger: logging.Logger) -> bool:
+    logger.info("Data type: %s", (data_type := message_content[4:8]))
+    if data_type == WRDN_FILE_IDENTIFIER:
+        logger.info("WRDN message received.")
+        return True
+    else:
+        logger.error("Unexpected data type: %s", data_type)
+        return False
+
+
+def _filter_error_encountered(
+    wrdn_content: WritingFinished, logger: logging.Logger
+) -> WritingFinished | None:
+    """Filter out messages with the ``error_encountered`` flag set to True."""
+    if wrdn_content.error_encountered:
+        logger.error(
+            "``error_encountered`` flag True. "
+            "Unable to deserialize message. Skipping the message."
+        )
+        return wrdn_content
+    else:
+        return None
+
+
+def _deserialise_wrdn(
+    message_content: bytes, logger: logging.Logger
+) -> WritingFinished | None:
+    if _validate_data_type(message_content, logger):
+        logger.info("Deserialising WRDN message")
+        wrdn_content: WritingFinished = deserialise_wrdn(message_content)
+        logger.info("Deserialised WRDN message: %.5000s", wrdn_content)
+        return _filter_error_encountered(wrdn_content, logger)
+
+
 def wrdn_messages(
     consumer: Consumer, logger: logging.Logger
-) -> Generator[WritingFinished, None, None]:
-    """Wait for a WRDN message and yield it."""
+) -> Generator[WritingFinished | None, None, None]:
+    """Wait for a WRDN message and yield it.
+
+    Yield ``None`` if no message is received or an error is encountered.
+    """
     while True:
+        # The decision to proceed or stop will be done by the caller.
         message = consumer.poll(timeout=1.0)
         if message is None:
             logger.info("Received no messages")
-            continue
+            yield None
         elif message.error():
             logger.error("Consumer error: %s", message.error())
-            continue
+            yield None
         else:
             logger.info("Received message.")
-
-        message_content: str = message.value()
-        data_type = message_content[4:8]
-        logger.info("Data type: %s", data_type)
-        if data_type == WRDN_FILE_IDENTIFIER:
-            logger.info("Deserialising WRDN message")
-            wrdn_content: WritingFinished = deserialise_wrdn(message_content)
-            logger.info("Deserialised WRDN message: %.5000s", wrdn_content)
-            if wrdn_content.error_encountered:
-                logger.error(
-                    "``error_encountered`` flag True. "
-                    "Unable to deserialize message. Skipping the message."
-                )
-                continue
-            else:
-                logger.info("Successfully desrialized a WRDN message.")
-                yield wrdn_content
-        else:
-            logger.error("Unexpected data type: %s", data_type)
+            yield _deserialise_wrdn(message.value(), logger)
