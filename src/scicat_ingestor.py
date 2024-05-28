@@ -49,5 +49,6 @@ def main() -> None:
         if (consumer := build_consumer(config.kafka_options, logger)) is None:
             raise RuntimeError("Failed to build the Kafka consumer")
 
+        # Receive messages
         for message in wrdn_messages(consumer, logger):
             logger.info(f"Received message: {message}")

@@ -98,10 +98,11 @@ def wrdn_messages(
             if wrdn_content.error_encountered:
                 logger.error(
                     "``error_encountered`` flag True. "
-                    "Unable to deserialize message. Skipping message."
+                    "Unable to deserialize message. Skipping the message."
                 )
                 continue
             else:
+                logger.info("Successfully desrialized a WRDN message.")
                 yield wrdn_content
         else:
             logger.error("Unexpected data type: %s", data_type)
