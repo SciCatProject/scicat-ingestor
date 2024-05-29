@@ -7,12 +7,12 @@ from scicat_kafka import build_consumer
 from scicat_logging import build_logger
 
 
-def quit(logger: logging.Logger) -> None:
+def quit(logger: logging.Logger, unexpected: bool = True) -> None:
     """Log the message and exit the program."""
     import sys
 
     logger.info("Exiting ingestor")
-    sys.exit()
+    sys.exit(1 if unexpected else 0)
 
 
 def main() -> None:

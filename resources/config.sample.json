@@ -1,10 +1,8 @@
 {
   "kafka": {
-    "topics": ["KAFKA_TOPIC_1","KAFKA_TOPIC_2"],
+    "topics": ["KAFKA_TOPIC_1", "KAFKA_TOPIC_2"],
     "group_id": "GROUP_ID",
-    "bootstrap_servers": [
-      "HOST:9092"
-    ],
+    "bootstrap_servers": ["localhost:9093"],
     "individual_message_commit": false,
     "enable_auto_commit": true,
     "auto_offset_reset": "earliest"
