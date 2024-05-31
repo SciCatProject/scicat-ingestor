@@ -68,5 +68,4 @@ def main() -> None:
 
             # check if we need to commit the individual message
             if config.kafka_options.individual_message_commit:
-                consumer.commit(message=message)
-                
+                consumer.commit(message=message)           
