@@ -1,9 +1,11 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 import logging
+from collections.abc import Generator
+from contextlib import contextmanager
 
 from scicat_configuration import build_main_arg_parser, build_scicat_config
-from scicat_kafka import build_consumer
+from scicat_kafka import build_consumer, wrdn_messages
 from scicat_logging import build_logger
 
 
@@ -13,6 +15,22 @@ def quit(logger: logging.Logger, unexpected: bool = True) -> None:
 
     logger.info("Exiting ingestor")
     sys.exit(1 if unexpected else 0)
+
+
+@contextmanager
+def exit_at_exceptions(logger: logging.Logger) -> Generator[None, None, None]:
+    """Exit the program if an exception is raised."""
+    try:
+        yield
+    except KeyboardInterrupt:
+        logger.info("Received keyboard interrupt.")
+        quit(logger, unexpected=False)
+    except Exception as e:
+        logger.error("An exception occurred: %s", e)
+        quit(logger, unexpected=True)
+    else:
+        logger.error("Loop finished unexpectedly.")
+        quit(logger, unexpected=True)
 
 
 def main() -> None:
@@ -26,6 +44,11 @@ def main() -> None:
     logger.info('Starting the Scicat Ingestor with the following configuration:')
     logger.info(config.to_dict())
 
-    # Kafka consumer
-    if build_consumer(config.kafka_options, logger) is None:
-        quit(logger)
+    with exit_at_exceptions(logger):
+        # Kafka consumer
+        if (consumer := build_consumer(config.kafka_options, logger)) is None:
+            raise RuntimeError("Failed to build the Kafka consumer")
+
+        # Receive messages
+        for message in wrdn_messages(consumer, logger):
+            logger.info("Processing message: %s", message)

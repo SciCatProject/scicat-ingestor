@@ -1,8 +1,14 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 import logging
+from collections.abc import Generator
 
 from confluent_kafka import Consumer
+from streaming_data_types import deserialise_wrdn
+from streaming_data_types.finished_writing_wrdn import (
+    FILE_IDENTIFIER as WRDN_FILE_IDENTIFIER,
+)
+from streaming_data_types.finished_writing_wrdn import WritingFinished
 
 from scicat_configuration import kafkaOptions
 
@@ -66,3 +72,58 @@ def validate_consumer(consumer: Consumer, logger: logging.Logger) -> bool:
     else:
         logger.info("Kafka consumer successfully instantiated")
         return True
+
+
+def _validate_data_type(message_content: bytes, logger: logging.Logger) -> bool:
+    logger.info("Data type: %s", (data_type := message_content[4:8]))
+    if data_type == WRDN_FILE_IDENTIFIER:
+        logger.info("WRDN message received.")
+        return True
+    else:
+        logger.error("Unexpected data type: %s", data_type)
+        return False
+
+
+def _filter_error_encountered(
+    wrdn_content: WritingFinished, logger: logging.Logger
+) -> WritingFinished | None:
+    """Filter out messages with the ``error_encountered`` flag set to True."""
+    if wrdn_content.error_encountered:
+        logger.error(
+            "``error_encountered`` flag True. "
+            "Unable to deserialize message. Skipping the message."
+        )
+        return wrdn_content
+    else:
+        return None
+
+
+def _deserialise_wrdn(
+    message_content: bytes, logger: logging.Logger
+) -> WritingFinished | None:
+    if _validate_data_type(message_content, logger):
+        logger.info("Deserialising WRDN message")
+        wrdn_content: WritingFinished = deserialise_wrdn(message_content)
+        logger.info("Deserialised WRDN message: %.5000s", wrdn_content)
+        return _filter_error_encountered(wrdn_content, logger)
+
+
+def wrdn_messages(
+    consumer: Consumer, logger: logging.Logger
+) -> Generator[WritingFinished | None, None, None]:
+    """Wait for a WRDN message and yield it.
+
+    Yield ``None`` if no message is received or an error is encountered.
+    """
+    while True:
+        # The decision to proceed or stop will be done by the caller.
+        message = consumer.poll(timeout=1.0)
+        if message is None:
+            logger.info("Received no messages")
+            yield None
+        elif message.error():
+            logger.error("Consumer error: %s", message.error())
+            yield None
+        else:
+            logger.info("Received message.")
+            yield _deserialise_wrdn(message.value(), logger)
