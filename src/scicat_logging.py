@@ -40,7 +40,8 @@ def build_logger(config: ScicatConfig) -> logging.Logger:
         graylog_handler = graypy.GELFTCPHandler(
             run_options.graylog_host,
             int(run_options.graylog_port),
-            facility=run_options.graylog_facility)
+            facility=run_options.graylog_facility,
+        )
         logger.addHandler(graylog_handler)
 
     # Set the level and formatter for all handlers
