@@ -125,5 +125,11 @@ def wrdn_messages(
             logger.error("Consumer error: %s", message.error())
             yield None
         else:
-            logger.info("Received message.")
-            yield _deserialise_wrdn(message.value(), logger)
+            # retrieve type of message
+            message_value = message.value()
+            message_type = message_value[4:8]
+            logger.info("Received message. Type : %s", message_type)
+            if message_value == b"wrdn":
+                yield _deserialise_wrdn(message.value(), logger)
+            else:
+                yield None
