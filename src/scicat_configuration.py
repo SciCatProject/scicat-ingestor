@@ -107,6 +107,10 @@ class RunOptions:
     check_by_job_id: bool
     system_log_facility: Optional[str] = None
     pyscicat: Optional[str] = None
+    graylog_log: bool = False
+    graylog_host: str = ""
+    graylog_port: str = ""
+    graylog_facility: str = ""
 
 
 @dataclass

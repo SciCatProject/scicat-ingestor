@@ -37,6 +37,10 @@
     "system_log_facility" : "mail",
     "log_message_prefix" : " SFI: ",
     "check_by_job_id" : true,
-    "pyscicat": null
+    "pyscicat": null,
+    "graylog_log" : false,
+    "graylog_host" : "",
+    "graylog_port" : "",
+    "graylog_facility" : "scicat.ingestor"
   }
 }
