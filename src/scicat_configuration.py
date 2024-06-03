@@ -84,6 +84,31 @@ def build_main_arg_parser() -> argparse.ArgumentParser:
         default=None,
         type=str,
     )
+    group.add_argument(
+        '--graylog-log',
+        dest='graylog_log',
+        help='Provide logging on a graylog system',
+        action='store_true',
+        default=False,
+    )
+    group.add_argument(
+        '--graylog-host',
+        dest='graylog_host',
+        help='Hostname or ip address of the graylog server',
+        default='',
+    )
+    group.add_argument(
+        '--graylog-port',
+        dest='graylog_port',
+        help='POrt number used to communicate with the graylog server',
+        default='',
+    )
+    group.add_argument(
+        '--graylog-facility',
+        dest='graylog_facility',
+        help='Facility for graylog logs',
+        default='scicat.ingestor',
+    )
     return parser
 
 
