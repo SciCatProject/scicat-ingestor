@@ -46,6 +46,11 @@ dynamic = ["version"]
 [project.scripts]
 scicat_ingestor = "scicat_ingestor:main"
 
+[project.entry-points."scicat_ingestor.metadata_extractor"]
+max = "numpy:max"
+min = "numpy:min"
+mean = "numpy:mean"
+
 [tool.setuptools_scm]
 
 [tool.pytest.ini_options]
