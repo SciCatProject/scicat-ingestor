@@ -86,7 +86,7 @@ def build_main_arg_parser() -> argparse.ArgumentParser:
     )
     group.add_argument(
         "--graylog",
-        dest="graylog_log",
+        dest="graylog",
         help="Use graylog for additional logs",
         action="store_true",
         default=False,
