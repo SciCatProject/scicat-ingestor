@@ -32,7 +32,8 @@ dependencies = [
   "confluent_kafka",
   "ess-streaming-data-types",
   "requests",
-  "rich"
+  "rich",
+  "graypy"
 ]
 
 dynamic = ["version"]
