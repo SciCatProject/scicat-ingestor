@@ -1,4 +1,4 @@
-version: "24.06.11"  # Calendar versioning
+version: "24.6"
 
 services:
 # Kafka and file-writer services are copied from

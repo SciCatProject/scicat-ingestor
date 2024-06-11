@@ -17,8 +17,7 @@ jobs:
     name: Integration Tests
     runs-on: 'ubuntu-22.04'
     steps:
-      - run: sudo apt upgrade --yes
-      - run: sudo apt install --yes docker-compose=2.22.0
+      - run: sudo apt install --yes docker-compose
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
