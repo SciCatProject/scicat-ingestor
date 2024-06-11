@@ -36,11 +36,12 @@ def build_logger(config: ScicatConfig) -> logging.Logger:
         logger.addHandler(logging.handlers.SysLogHandler(address='/dev/log'))
 
     # Add graylog handler
-    if run_options.graylog_log:
+    if run_options.graylog:
+        graylog_config = config.graylog_options
         graylog_handler = graypy.GELFTCPHandler(
-            run_options.graylog_host,
-            int(run_options.graylog_port),
-            facility=run_options.graylog_facility,
+            graylog_config.host,
+            int(graylog_config.port),
+            facility=graylog_config.facility,
         )
         logger.addHandler(graylog_handler)
 
