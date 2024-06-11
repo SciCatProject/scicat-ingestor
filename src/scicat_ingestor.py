@@ -64,7 +64,8 @@ def main() -> None:
 
                 # instantiate a new process and runs backeground ingestor
                 # on the nexus file
+                ...
 
             # check if we need to commit the individual message
-            if config.kafka_options.individual_message_commit:
+            elif config.kafka_options.individual_message_commit:
                 consumer.commit(message=message)
