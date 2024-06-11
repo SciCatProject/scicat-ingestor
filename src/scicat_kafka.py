@@ -129,7 +129,7 @@ def wrdn_messages(
             message_value = message.value()
             message_type = message_value[4:8]
             logger.info("Received message. Type : %s", message_type)
-            if message_value == b"wrdn":
-                yield _deserialise_wrdn(message.value(), logger)
+            if message_type == b"wrdn":
+                yield _deserialise_wrdn(message_value, logger)
             else:
                 yield None
