@@ -56,7 +56,6 @@ def main() -> None:
             # check if we have received a WRDN message
             # if message is not a WRDN, we get None back
             if message:
-
                 # extract nexus file name from message
 
                 # extract job id from message
@@ -69,4 +68,3 @@ def main() -> None:
             # check if we need to commit the individual message
             if config.kafka_options.individual_message_commit:
                 consumer.commit(message=message)
-                
