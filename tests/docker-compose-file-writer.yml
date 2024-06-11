@@ -1,4 +1,4 @@
-version: "11.06.2024"  # Calendar versioning
+version: "24.06.11"  # Calendar versioning
 
 services:
 # Kafka and file-writer services are copied from
