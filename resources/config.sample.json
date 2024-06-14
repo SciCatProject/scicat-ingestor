@@ -17,6 +17,11 @@
     "username": "USERNAME",
     "password": "PASSWORD"
   },
+  "graylog": {
+    "host" : "",
+    "port" : "",
+    "facility" : "scicat.ingestor"
+  },
   "dataset": {
     "instrument_id" : "",
     "instrument" : "INSTRUMENT_NAME",
@@ -37,6 +42,7 @@
     "system_log_facility" : "mail",
     "log_message_prefix" : " SFI: ",
     "check_by_job_id" : true,
-    "pyscicat": null
+    "pyscicat": null,
+    "graylog" : false
   }
 }
