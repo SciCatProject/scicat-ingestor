@@ -4,6 +4,8 @@ import logging
 import logging.handlers
 from datetime import datetime
 
+import graypy
+
 from scicat_configuration import ScicatConfig
 
 
@@ -32,6 +34,16 @@ def build_logger(config: ScicatConfig) -> logging.Logger:
     # Add SysLogHandler
     if run_options.system_log:
         logger.addHandler(logging.handlers.SysLogHandler(address='/dev/log'))
+
+    # Add graylog handler
+    if run_options.graylog:
+        graylog_config = config.graylog_options
+        graylog_handler = graypy.GELFTCPHandler(
+            graylog_config.host,
+            int(graylog_config.port),
+            facility=graylog_config.facility,
+        )
+        logger.addHandler(graylog_handler)
 
     # Set the level and formatter for all handlers
     logger.setLevel(run_options.log_level)

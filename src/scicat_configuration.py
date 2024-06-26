@@ -8,81 +8,88 @@ from typing import Mapping, Optional
 def build_main_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
 
-    group = parser.add_argument_group('Scicat Ingestor Options')
+    group = parser.add_argument_group("Scicat Ingestor Options")
 
     group.add_argument(
-        '-c',
-        '--cf',
-        '--config',
-        '--config-file',
-        default='config.20240405.json',
-        dest='config_file',
-        help='Configuration file name. Default: config.20240405.json',
+        "-c",
+        "--cf",
+        "--config",
+        "--config-file",
+        default="config.20240405.json",
+        dest="config_file",
+        help="Configuration file name. Default: config.20240405.json",
         type=str,
     )
     group.add_argument(
-        '-v',
-        '--verbose',
-        dest='verbose',
-        help='Provide logging on stdout',
-        action='store_true',
+        "-v",
+        "--verbose",
+        dest="verbose",
+        help="Provide logging on stdout",
+        action="store_true",
         default=False,
     )
     group.add_argument(
-        '--file-log',
-        dest='file_log',
-        help='Provide logging on file',
-        action='store_true',
+        "--file-log",
+        dest="file_log",
+        help="Provide logging on file",
+        action="store_true",
         default=False,
     )
     group.add_argument(
-        '--log-filepath-prefix',
-        dest='log_filepath_prefix',
-        help='Prefix of the log file path',
-        default='.scicat_ingestor_log',
+        "--log-filepath-prefix",
+        dest="log_filepath_prefix",
+        help="Prefix of the log file path",
+        default=".scicat_ingestor_log",
     )
     group.add_argument(
-        '--file-log-timestamp',
-        dest='file_log_timestamp',
-        help='Provide logging on the system log',
-        action='store_true',
+        "--file-log-timestamp",
+        dest="file_log_timestamp",
+        help="Provide logging on the system log",
+        action="store_true",
         default=False,
     )
     group.add_argument(
-        '--system-log',
-        dest='system_log',
-        help='Provide logging on the system log',
-        action='store_true',
+        "--system-log",
+        dest="system_log",
+        help="Provide logging on the system log",
+        action="store_true",
         default=False,
     )
     group.add_argument(
-        '--system-log-facility',
-        dest='system_log_facility',
-        help='Facility for system log',
-        default='mail',
+        "--system-log-facility",
+        dest="system_log_facility",
+        help="Facility for system log",
+        default="mail",
     )
     group.add_argument(
-        '--log-message-prefix',
-        dest='log_message_prefix',
-        help='Prefix for log messages',
-        default=' SFI: ',
+        "--log-message-prefix",
+        dest="log_message_prefix",
+        help="Prefix for log messages",
+        default=" SFI: ",
     )
     group.add_argument(
-        '--log-level', dest='log_level', help='Logging level', default='INFO', type=str
+        "--log-level", dest="log_level", help="Logging level", default="INFO", type=str
     )
     group.add_argument(
-        '--check-by-job-id',
-        dest='check_by_job_id',
-        help='Check the status of a job by job_id',
-        action='store_true',
+        "--check-by-job-id",
+        dest="check_by_job_id",
+        help="Check the status of a job by job_id",
+        action="store_true",
         default=True,
     )
     group.add_argument(
-        '--pyscicat',
-        dest='pyscicat',
-        help='Location where a specific version of pyscicat is available',
+        "--pyscicat",
+        dest="pyscicat",
+        help="Location where a specific version of pyscicat is available",
         default=None,
         type=str,
+    )
+    group.add_argument(
+        "--graylog",
+        dest="graylog",
+        help="Use graylog for additional logs",
+        action="store_true",
+        default=False,
     )
     return parser
 
@@ -121,6 +128,13 @@ def build_background_ingestor_arg_parser() -> argparse.ArgumentParser:
 
 
 @dataclass
+class GraylogOptions:
+    host: str = ""
+    port: str = ""
+    facility: str = "scicat.ingestor"
+
+
+@dataclass
 class RunOptions:
     """RunOptions dataclass to store the configuration options.
 
@@ -140,6 +154,7 @@ class RunOptions:
     check_by_job_id: bool
     system_log_facility: Optional[str] = None
     pyscicat: Optional[str] = None
+    graylog: bool = False
 
 
 @dataclass
@@ -172,6 +187,8 @@ class ScicatConfig:
     """Merged configuration dictionary with command line arguments."""
     kafka_options: kafkaOptions
     """Kafka configuration options read from files."""
+    graylog_options: GraylogOptions
+    """Graylog configuration options for streaming logs."""
 
     def to_dict(self) -> dict:
         """Return the configuration as a dictionary."""
@@ -183,7 +200,9 @@ class ScicatConfig:
             if isinstance(value, Mapping):
                 original_dict[key] = dict(value)
 
-        copied = ScicatConfig(original_dict, self.run_options, self.kafka_options)
+        copied = ScicatConfig(
+            original_dict, self.run_options, self.kafka_options, self.graylog_options
+        )
         return asdict(copied)
 
 
@@ -204,7 +223,7 @@ def build_scicat_config(input_args: argparse.Namespace) -> ScicatConfig:
         config_dict = dict()
 
     # Overwrite deep-copied options with command line arguments
-    run_option_dict: dict = copy.deepcopy(config_dict.setdefault('options', dict()))
+    run_option_dict: dict = copy.deepcopy(config_dict.setdefault("options", dict()))
     for arg_name, arg_value in vars(input_args).items():
         if arg_value is not None:
             run_option_dict[arg_name] = arg_value
@@ -217,5 +236,6 @@ def build_scicat_config(input_args: argparse.Namespace) -> ScicatConfig:
     return ScicatConfig(
         original_dict=MappingProxyType(config_dict),
         run_options=RunOptions(**run_option_dict),
-        kafka_options=kafkaOptions(**config_dict.setdefault('kafka', dict())),
+        kafka_options=kafkaOptions(**config_dict.setdefault("kafka", dict())),
+        graylog_options=GraylogOptions(**config_dict.setdefault("graylog", dict())),
     )
