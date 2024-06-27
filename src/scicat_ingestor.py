@@ -41,7 +41,7 @@ def main() -> None:
     logger = build_logger(config)
 
     # Log the configuration as dictionary so that it is easier to read from the logs
-    logger.info('Starting the Scicat Ingestor with the following configuration:')
+    logger.info('Starting the Scicat online Ingestor with the following configuration:')
     logger.info(config.to_dict())
 
     with exit_at_exceptions(logger):

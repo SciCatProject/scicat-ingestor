@@ -94,6 +94,39 @@ def build_main_arg_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def build_background_ingestor_arg_parser() -> argparse.ArgumentParser:
+    parser = build_main_arg_parser()
+
+    group = parser.add_argument_group('Scicat Background Ingestor Options')
+
+    group.add_argument(
+        '-f',
+        '--nf',
+        '--file',
+        '--nexus-file',
+        default='',
+        dest='nexus_file',
+        help='Full path of the input nexus file to be ingested',
+        type=str,
+    )
+
+    group.add_argument(
+        '-m',
+        '--dm',
+        '--wrdm',
+        '--done-writing-message-file',
+        default='',
+        dest='done_writing_message_file',
+        help="""
+          Full path of the input done writing message
+          file that match the nexus file to be ingested
+        """,
+        type=str,
+    )
+
+    return parser
+
+
 @dataclass
 class GraylogOptions:
     host: str = ""
