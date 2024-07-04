@@ -17,6 +17,10 @@ pip install -e .  # It will allow you to use entry-points of the scripts,
 All scripts parse the system arguments and configuration in the same way.
 
 ### Online ingestor (Highest level interface)
+You can start the ingestor daemon with certain configurations.
+
+It will continuously process `wrdn` messages and ingest the nexus files.
+
 ```bash
 scicat_ingestor --verbose -c PATH_TO_CONFIGURATION_FILE.yaml
 ```
