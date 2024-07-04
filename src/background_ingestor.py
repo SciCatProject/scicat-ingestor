@@ -1,42 +1,15 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
+# import scippnexus as snx
 import json
-import logging
 import pathlib
-from collections.abc import Generator
-from contextlib import contextmanager
 
 from scicat_configuration import (
     build_background_ingestor_arg_parser,
     build_scicat_config,
 )
 from scicat_logging import build_logger
-
-# import scippnexus as snx
-
-
-def quit(logger: logging.Logger, unexpected: bool = True) -> None:
-    """Log the message and exit the program."""
-    import sys
-
-    logger.info("Exiting ingestor")
-    sys.exit(1 if unexpected else 0)
-
-
-@contextmanager
-def exit_at_exceptions(logger: logging.Logger) -> Generator[None, None, None]:
-    """Exit the program if an exception is raised."""
-    try:
-        yield
-    except KeyboardInterrupt:
-        logger.info("Received keyboard interrupt.")
-        quit(logger, unexpected=False)
-    except Exception as e:
-        logger.error("An exception occurred: %s", e)
-        quit(logger, unexpected=True)
-    else:
-        logger.error("Loop finished unexpectedly.")
-        quit(logger, unexpected=True)
+from system_helpers import exit_at_exceptions
 
 
 def main() -> None:
@@ -53,7 +26,7 @@ def main() -> None:
     logger.info(config.to_dict())
 
     with exit_at_exceptions(logger):
-        nexus_file = arg_namespace.nexus_file
+        nexus_file = pathlib.Path(arg_namespace.nexus_file)
         logger.info("Nexus file to be ingested : ")
         logger.info(nexus_file)
 

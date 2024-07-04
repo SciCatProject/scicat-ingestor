@@ -45,6 +45,7 @@ dynamic = ["version"]
 
 [project.scripts]
 scicat_ingestor = "scicat_ingestor:main"
+background_ingestor = "background_ingestor:main"
 
 [project.entry-points."scicat_ingestor.metadata_extractor"]
 max = "numpy:max"
