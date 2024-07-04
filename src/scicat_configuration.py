@@ -2,7 +2,58 @@
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 import argparse
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from types import MappingProxyType
+from typing import Any
+
+
+def _load_config(config_file: Any) -> dict:
+    """Load configuration from the configuration file path."""
+    import json
+    import pathlib
+
+    if (
+        isinstance(config_file, str | pathlib.Path)
+        and (config_file_path := pathlib.Path(config_file)).is_file()
+    ):
+        return json.loads(config_file_path.read_text())
+    return {}
+
+
+def _merge_run_options(config_dict: dict, input_args_dict: dict) -> dict:
+    """Merge configuration from the configuration file and input arguments."""
+    import copy
+
+    # Overwrite deep-copied options with command line arguments
+    run_option_dict: dict = copy.deepcopy(config_dict.setdefault("options", {}))
+    for arg_name, arg_value in input_args_dict.items():
+        if arg_value is not None:
+            run_option_dict[arg_name] = arg_value
+
+    return run_option_dict
+
+
+def _freeze_dict_items(d: dict) -> MappingProxyType:
+    """Freeze the dictionary to make it read-only."""
+    return MappingProxyType(
+        {
+            key: MappingProxyType(value) if isinstance(value, dict) else value
+            for key, value in d.items()
+        }
+    )
+
+
+def _recursive_deepcopy(obj: Any) -> dict:
+    """Recursively deep copy a dictionary."""
+    if not isinstance(obj, dict | MappingProxyType):
+        return obj
+
+    copied = dict(obj)
+    for key, value in copied.items():
+        if isinstance(value, Mapping | MappingProxyType):
+            copied[key] = _recursive_deepcopy(value)
+
+    return copied
 
 
 def build_main_arg_parser() -> argparse.ArgumentParser:
@@ -96,7 +147,6 @@ def build_main_arg_parser() -> argparse.ArgumentParser:
 
 def build_background_ingestor_arg_parser() -> argparse.ArgumentParser:
     parser = build_main_arg_parser()
-
     group = parser.add_argument_group('Scicat Background Ingestor Options')
 
     group.add_argument(
@@ -180,7 +230,7 @@ class kafkaOptions:
 
 
 @dataclass
-class ScicatConfig:
+class IngesterConfig:
     original_dict: Mapping
     """Original configuration dictionary in the json file."""
     run_options: RunOptions
@@ -192,50 +242,79 @@ class ScicatConfig:
 
     def to_dict(self) -> dict:
         """Return the configuration as a dictionary."""
-        from dataclasses import asdict
 
-        # Deep copy the original dictionary recursively
-        original_dict = dict(self.original_dict)
-        for key, value in original_dict.items():
-            if isinstance(value, Mapping):
-                original_dict[key] = dict(value)
-
-        copied = ScicatConfig(
-            original_dict, self.run_options, self.kafka_options, self.graylog_options
+        return asdict(
+            IngesterConfig(
+                _recursive_deepcopy(
+                    self.original_dict
+                ),  # asdict does not support MappingProxyType
+                self.run_options,
+                self.kafka_options,
+                self.graylog_options,
+            )
         )
-        return asdict(copied)
 
 
-def build_scicat_config(input_args: argparse.Namespace) -> ScicatConfig:
+def build_scicat_ingester_config(input_args: argparse.Namespace) -> IngesterConfig:
     """Merge configuration from the configuration file and input arguments."""
-    import copy
-    import json
-    import pathlib
-    from types import MappingProxyType
-
-    # Read configuration file
-    if (
-        input_args.config_file
-        and (config_file_path := pathlib.Path(input_args.config_file)).is_file()
-    ):
-        config_dict = json.loads(config_file_path.read_text())
-    else:
-        config_dict = {}
-
-    # Overwrite deep-copied options with command line arguments
-    run_option_dict: dict = copy.deepcopy(config_dict.setdefault("options", {}))
-    for arg_name, arg_value in vars(input_args).items():
-        if arg_value is not None:
-            run_option_dict[arg_name] = arg_value
-
-    # Protect original configuration by making it read-only
-    for key, value in config_dict.items():
-        config_dict[key] = MappingProxyType(value)
+    config_dict = _load_config(input_args.config_file)
+    run_option_dict = _merge_run_options(config_dict, vars(input_args))
 
     # Wrap configuration in a dataclass
-    return ScicatConfig(
-        original_dict=MappingProxyType(config_dict),
+    return IngesterConfig(
+        original_dict=_freeze_dict_items(config_dict),
         run_options=RunOptions(**run_option_dict),
         kafka_options=kafkaOptions(**config_dict.setdefault("kafka", {})),
+        graylog_options=GraylogOptions(**config_dict.setdefault("graylog", {})),
+    )
+
+
+@dataclass
+class SingleRunOptions:
+    nexus_file: str
+    """Full path of the input nexus file to be ingested."""
+    done_writing_message_file: str
+    """Full path of the done writing message file that match the ``nexus_file``."""
+
+
+@dataclass
+class BackgroundIngestorConfig(IngesterConfig):
+    single_run_options: SingleRunOptions
+    """Single run configuration options for background ingestor."""
+
+    def to_dict(self) -> dict:
+        """Return the configuration as a dictionary."""
+
+        return asdict(
+            BackgroundIngestorConfig(
+                _recursive_deepcopy(
+                    self.original_dict
+                ),  # asdict does not support MappingProxyType
+                self.run_options,
+                self.kafka_options,
+                self.graylog_options,
+                self.single_run_options,
+            )
+        )
+
+
+def build_scicat_background_ingester_config(
+    input_args: argparse.Namespace,
+) -> BackgroundIngestorConfig:
+    """Merge configuration from the configuration file and input arguments."""
+    config_dict = _load_config(input_args.config_file)
+    input_args_dict = vars(input_args)
+    single_run_option_dict = {
+        "nexus_file": input_args_dict.pop("nexus_file"),
+        "done_writing_message_file": input_args_dict.pop("done_writing_message_file"),
+    }
+    run_option_dict = _merge_run_options(config_dict, input_args_dict)
+
+    # Wrap configuration in a dataclass
+    return BackgroundIngestorConfig(
+        original_dict=_freeze_dict_items(config_dict),
+        run_options=RunOptions(**run_option_dict),
+        kafka_options=kafkaOptions(**config_dict.setdefault("kafka", {})),
+        single_run_options=SingleRunOptions(**single_run_option_dict),
         graylog_options=GraylogOptions(**config_dict.setdefault("graylog", {})),
     )
