@@ -2,6 +2,7 @@
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 import json
 import logging
+import pathlib
 from collections.abc import Generator
 from contextlib import contextmanager
 
@@ -56,17 +57,16 @@ def main() -> None:
         logger.info("Nexus file to be ingested : ")
         logger.info(nexus_file)
 
-        done_writing_message_file = (
+        done_writing_message_file = pathlib.Path(
             arg_namespace.arg_namespace.done_writing_message_file
         )
         logger.info("Done writing message file linked to nexus file : ")
         logger.info(done_writing_message_file)
 
         # open and read done writing message input file
-        with open(done_writing_message_file, 'r') as f:
-            done_writing_message = json.load(f)
+        done_writing_message = json.load(done_writing_message_file.open())
+        logger.info(done_writing_message)
 
-        print(done_writing_message)
         # open nexus file
         # nxs = snx.File(nexus_file)
 
