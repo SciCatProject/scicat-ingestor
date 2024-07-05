@@ -1,12 +1,17 @@
 import pathlib
 
 import pytest
-from scicat_configuration import GraylogOptions, RunOptions, ScicatConfig, kafkaOptions
+from scicat_configuration import (
+    GraylogOptions,
+    IngesterConfig,
+    RunOptions,
+    kafkaOptions,
+)
 
 
 @pytest.fixture()
-def scicat_config(tmp_path: pathlib.Path) -> ScicatConfig:
-    return ScicatConfig(
+def scicat_config(tmp_path: pathlib.Path) -> IngesterConfig:
+    return IngesterConfig(
         original_dict={},
         run_options=RunOptions(
             config_file='test',
@@ -26,7 +31,7 @@ def scicat_config(tmp_path: pathlib.Path) -> ScicatConfig:
     )
 
 
-def test_scicat_logging_build_logger(scicat_config: ScicatConfig) -> None:
+def test_scicat_logging_build_logger(scicat_config: IngesterConfig) -> None:
     from scicat_logging import build_logger
 
     logger = build_logger(scicat_config)

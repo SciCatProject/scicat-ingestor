@@ -6,7 +6,7 @@ import pathlib
 
 from scicat_configuration import (
     build_background_ingestor_arg_parser,
-    build_scicat_config,
+    build_scicat_background_ingester_config,
 )
 from scicat_logging import build_logger
 from system_helpers import exit_at_exceptions
@@ -16,7 +16,7 @@ def main() -> None:
     """Main entry point of the app."""
     arg_parser = build_background_ingestor_arg_parser()
     arg_namespace = arg_parser.parse_args()
-    config = build_scicat_config(arg_namespace)
+    config = build_scicat_background_ingester_config(arg_namespace)
     logger = build_logger(config)
 
     # Log the configuration as dictionary so that it is easier to read from the logs
@@ -25,13 +25,13 @@ def main() -> None:
     )
     logger.info(config.to_dict())
 
-    with exit_at_exceptions(logger):
-        nexus_file = pathlib.Path(arg_namespace.nexus_file)
+    with exit_at_exceptions(logger, daemon=False):
+        nexus_file = pathlib.Path(config.single_run_options.nexus_file)
         logger.info("Nexus file to be ingested : ")
         logger.info(nexus_file)
 
         done_writing_message_file = pathlib.Path(
-            arg_namespace.arg_namespace.done_writing_message_file
+            config.single_run_options.done_writing_message_file
         )
         logger.info("Done writing message file linked to nexus file : ")
         logger.info(done_writing_message_file)

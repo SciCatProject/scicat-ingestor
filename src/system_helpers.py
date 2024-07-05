@@ -12,7 +12,9 @@ def quit(logger: logging.Logger, unexpected: bool = True) -> None:
 
 
 @contextmanager
-def exit_at_exceptions(logger: logging.Logger) -> Generator[None, None, None]:
+def exit_at_exceptions(
+    logger: logging.Logger, daemon: bool = True
+) -> Generator[None, None, None]:
     """Exit the program if an exception is raised."""
     try:
         yield
@@ -23,5 +25,9 @@ def exit_at_exceptions(logger: logging.Logger) -> Generator[None, None, None]:
         logger.error("An exception occurred: %s", e)
         quit(logger, unexpected=True)
     else:
-        logger.error("Loop finished unexpectedly.")
-        quit(logger, unexpected=True)
+        if daemon:
+            logger.error("Loop finished unexpectedly.")
+            quit(logger, unexpected=True)
+        else:
+            logger.info("Finished successfully.")
+            quit(logger, unexpected=False)
