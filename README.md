@@ -2,9 +2,44 @@
 
 # Scicat Filewriter Ingest
 
-## About
-
 A daemon that creates a raw dataset using scicat interface whenever a new file is written by a file-writer.
+
+## How to INSTALL
+```bash
+git clone https://github.com/SciCatProject/scicat-filewriter-ingest.git
+cd scicat-filewriter-ingest
+pip install -e .  # It will allow you to use entry-points of the scripts,
+                  # defined in ``pyproject.toml``, under ``[project.scripts]`` section.
+```
+
+## How to RUN
+
+All scripts parse the system arguments and configuration in the same way.
+
+### Online ingestor (Highest level interface)
+You can start the ingestor daemon with certain configurations.
+
+It will continuously process `wrdn` messages and ingest the nexus files.
+
+```bash
+scicat_ingestor --verbose -c PATH_TO_CONFIGURATION_FILE.yaml
+```
+
+See [configuration](#configuration) for how to use configuration files.
+
+### Background ingestor  (Lower level interface)
+You can also run the ingestor file by file.
+
+You need to know the path to the nexus file you want to ingest
+and also the path to the ``done_writing_message_file`` as a json file.
+
+```bash
+background_ingestor \\
+    --verbose \\
+    -c PATH_TO_CONFIGURATION_FILE.yaml \\
+    --nexus-file PATH_TO_THE_NEXUS_FILE.nxs \\
+    --done-writing-message-file PATH_TO_THE_MESSAGE_FILE.json
+```
 
 ## Configuration
 

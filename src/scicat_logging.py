@@ -5,10 +5,10 @@ import logging
 import logging.handlers
 
 import graypy
-from scicat_configuration import ScicatConfig
+from scicat_configuration import IngesterConfig
 
 
-def build_logger(config: ScicatConfig) -> logging.Logger:
+def build_logger(config: IngesterConfig) -> logging.Logger:
     """Build a logger and configure it according to the ``config``."""
     run_options = config.run_options
 

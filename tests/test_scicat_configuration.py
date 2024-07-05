@@ -3,7 +3,7 @@
 import argparse
 
 import pytest
-from scicat_configuration import ScicatConfig
+from scicat_configuration import IngesterConfig
 
 
 @pytest.fixture()
@@ -44,41 +44,70 @@ def test_scicat_arg_parser_configuration_matches(
 
 def test_build_scicat_config_default(main_arg_parser: argparse.ArgumentParser) -> None:
     """Test if the configuration can be built from default arguments."""
-    from scicat_configuration import build_scicat_config
+    from scicat_configuration import build_scicat_ingester_config
 
     scicat_namespace = main_arg_parser.parse_args()
-    scicat_config = build_scicat_config(scicat_namespace)
+    scicat_config = build_scicat_ingester_config(scicat_namespace)
     assert scicat_config.run_options.config_file == 'config.20240405.json'
 
 
 @pytest.fixture()
-def scicat_config(main_arg_parser: argparse.ArgumentParser) -> ScicatConfig:
-    from scicat_configuration import build_scicat_config
+def ingester_config(main_arg_parser: argparse.ArgumentParser) -> IngesterConfig:
+    from scicat_configuration import build_scicat_ingester_config
 
     scicat_namespace = main_arg_parser.parse_args(
         ['-c', 'resources/config.sample.json', '--verbose']
     )
-    return build_scicat_config(scicat_namespace)
+    return build_scicat_ingester_config(scicat_namespace)
 
 
-def test_build_scicat_config(scicat_config: ScicatConfig) -> None:
+def test_build_scicat_config(ingester_config: IngesterConfig) -> None:
     """Test if the configuration can be built from arguments."""
-    assert scicat_config.original_dict['options']['config_file'] == 'config.json'
-    assert scicat_config.run_options.config_file == 'resources/config.sample.json'
-    assert not scicat_config.original_dict['options']['verbose']
-    assert scicat_config.run_options.verbose
+    assert ingester_config.original_dict['options']['config_file'] == 'config.json'
+    assert ingester_config.run_options.config_file == 'resources/config.sample.json'
+    assert not ingester_config.original_dict['options']['verbose']
+    assert ingester_config.run_options.verbose
 
 
-def test_scicat_config_original_dict_read_only(scicat_config: ScicatConfig) -> None:
+def test_scicat_config_original_dict_read_only(ingester_config: IngesterConfig) -> None:
     """Test if the original dictionary is read-only."""
     from types import MappingProxyType
 
-    assert isinstance(scicat_config.original_dict, MappingProxyType)
-    for sub_option in scicat_config.original_dict.values():
+    assert isinstance(ingester_config.original_dict, MappingProxyType)
+    for sub_option in ingester_config.original_dict.values():
         assert isinstance(sub_option, MappingProxyType)
 
 
-def test_scicat_config_kafka_options(scicat_config: ScicatConfig) -> None:
+def test_scicat_config_kafka_options(ingester_config: IngesterConfig) -> None:
     """Test if the Kafka options are correctly read."""
-    assert scicat_config.kafka_options.topics == ["KAFKA_TOPIC_1", "KAFKA_TOPIC_2"]
-    assert scicat_config.kafka_options.enable_auto_commit
+    assert ingester_config.kafka_options.topics == ["KAFKA_TOPIC_1", "KAFKA_TOPIC_2"]
+    assert ingester_config.kafka_options.enable_auto_commit
+
+
+def test_scicat_background_config_single_run_option() -> None:
+    """Test if the single run options are correctly read."""
+    from scicat_configuration import (
+        build_background_ingestor_arg_parser,
+        build_scicat_background_ingester_config,
+    )
+
+    arg_parser = build_background_ingestor_arg_parser()
+    scicat_namespace = arg_parser.parse_args(
+        [
+            '-c',
+            'resources/config.sample.json',
+            '--verbose',
+            '--nexus-file',
+            'file.nxs',
+            '--done-writing-message-file',
+            'file.json',
+        ]
+    )
+    background_ingester_config = build_scicat_background_ingester_config(
+        scicat_namespace
+    )
+    assert background_ingester_config.single_run_options.nexus_file == 'file.nxs'
+    assert (
+        background_ingester_config.single_run_options.done_writing_message_file
+        == 'file.json'
+    )
