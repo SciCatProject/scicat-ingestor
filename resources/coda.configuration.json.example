@@ -5,7 +5,13 @@
     "pid": {
       "field_type": "high_level",
       "machine_name": "pid",
-      "source": "NXS:/entry/experiment_identifier",
+      "source": "NXS:/entry/entry_identifier_uuid",
+      "type": "string"
+    },
+    "type" : {
+      "field_type": "high_level",
+      "machine_name": "type",
+      "value": "raw",
       "type": "string"
     },
     "proposal_id": {
