@@ -1,4 +1,6 @@
 {
+  "id" : "715ce7ba-3f91-11ef-932f-37a5c6fd60b1"
+  "name" : "Coda Metadata Schema"
   "instrument": "coda",
   "selector": "filename:starts_with:/ess/data/coda",
   "variables" : {

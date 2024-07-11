@@ -41,15 +41,70 @@ def main() -> None:
             # if message is not a WRDN, we get None back
             if message:
                 # extract nexus file name from message
+                nexus_filename = message.file_name
 
                 # extract job id from message
+                job_id = message.job_id
 
-                # saves the WRDN message in a file
+                if config["run_options"]["message_to_file"]:
+                    # Move this to library file as it is used also in background ingestor
+                    ingestor_files_path = (
+                        os.path.join(
+                            os.path.dirname(path_name),
+                            config["run_options"]["ingestor_files_folder"],
+                        )
+                        if config["run_options"]["hdf_structure_output"]
+                        == "SOURCE_FOLDER"
+                        else os.path.abspath(
+                            config["run_options"]["files_output_folder"]
+                        )
+                    )
+                    logger.info("Ingestor files folder: {}".format(ingestor_files_path))
 
-                # instantiate a new process and runs backeground ingestor
+                    message_file_path = ingestor_files_path
+                    logger.info(
+                        "message file will be saved in {}".format(message_file_path)
+                    )
+                    if os.path.exists(message_file_path):
+                        message_file_name = (
+                            os.path.splitext(filename)[0]
+                            + config["run_options"]["message_file_extension"]
+                        )
+                        logger.info("message file name : " + message_file_name)
+                        message_full_file_path = os.path.join(
+                            message_file_path, message_file_name
+                        )
+                        logger.info(
+                            "message full file path : " + message_full_file_path
+                        )
+                        with open(message_full_file_path, 'w') as fh:
+                            json.dump(message, fh)
+                        logger.info("message saved to file")
+                        if config["run_options"]["message_output"] == "SOURCE_FOLDER":
+                            files_list += [
+                                {
+                                    "path": message_full_file_path,
+                                    "size": len(json.dumps(entry)),
+                                }
+                            ]
+                        fix_dataset_source_folder = True
+                    else:
+                        logger.info("Message file path not accessible")
+
+                # instantiate a new process and runs background ingestor
                 # on the nexus file
-                ...
+                # use open process and wait for outcome
+                """
+                background_ingestor
+                    -c configuration_file
+                    -f nexus_filename
+                    -j job_id
+                    -m message_file_path
+                """
 
-            # check if we need to commit the individual message
-            elif config.kafka_options.individual_message_commit:
-                consumer.commit(message=message)
+                # if background process is successful
+                # check if we need to commit the individual message
+                """
+                if config.kafka_options.individual_message_commit and background_process is successful:
+                    consumer.commit(message=message)
+                """

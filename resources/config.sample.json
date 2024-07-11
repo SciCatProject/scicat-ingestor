@@ -3,19 +3,25 @@
     "topics": ["KAFKA_TOPIC_1", "KAFKA_TOPIC_2"],
     "group_id": "GROUP_ID",
     "bootstrap_servers": ["localhost:9093"],
-    "individual_message_commit": false,
+    "sasl_mechanism": "SCRAM-SHA-256",
+    "sasl_username": "USERNAME",
+    "sasl_password": "PASSWORD",
+    "ssl_ca_location": "FULL_PATH_TO_CERTIFICATE_FILE",
+    "individual_message_commit": true,
     "enable_auto_commit": true,
     "auto_offset_reset": "earliest"
   },
   "user_office": {
     "host": "https://useroffice.host",
     "username": "USERNAME",
-    "password": "PASSWORD"
+    "password": "PASSWORD",
+    "token" : "JWT_TOKEN"
   },
   "scicat": {
     "host": "https://scicat.host",
     "username": "USERNAME",
-    "password": "PASSWORD"
+    "password": "PASSWORD",
+    "token" : "JWT_TOKEN"
   },
   "graylog": {
     "host" : "",
@@ -23,26 +29,49 @@
     "facility" : "scicat.ingestor"
   },
   "dataset": {
-    "instrument_id" : "",
-    "instrument" : "INSTRUMENT_NAME",
-    "default_proposal_id" : "714781",
+    "instrument_id" : "ID_OF_FALLBACK_INSTRUMENT",
+    "instrument" : "FALLBACK_INSTRUMENT_NAME",
+    "default_proposal_id" : "DEFAULT_PROPOSAL_ID",
     "ownable" : {
-      "ownerGroup": "ess",
-      "accessGroups": ["ymir","swap"]
+      "ownerGroup": "DEFAULT_OWNER_GROUP",
+      "accessGroups": ["ACCESS_GROUP_1"]
     }
   },
   "options": {
     "config_file" : "config.json",
+    "schemas_folders" : "schemas",
     "verbose" : false,
     "file_log" : false,
-    "log_filepath_prefix" : ".scicat_ingestor_log",
+    "file_log_base_name" : "scicat_ingestor_log",
     "file_log_timestamp" : false,
-    "log_level" : "INFO",
+    "loggin_level" : "INFO",
     "system_log" : false,
     "system_log_facility" : "mail",
-    "log_message_prefix" : " SFI: ",
+    "log_message_prefix" : " SFI ",
     "check_by_job_id" : true,
     "pyscicat": null,
-    "graylog" : false
+    "graylog" : false,
+    "dry_run" : false,
+    "retrieve_instrument_from" : "default",
+    "instrument_position_in_file_path" : 3,
+    "message_to_file" : true,
+    "message_file_extension" : ".message.json",
+    "message_output" : "SOURCE_FOLDER",
+    "hdf_structure_in_metadata" : false,  // not sure if needed
+    "hdf_structure_to_file" : true,  // not sure if needed
+    "hdf_structure_file_extension" : ".hdf_structure.json",  // not sure if needed
+    "hdf_structure_output" : "SOURCE_FOLDER",  // not sure if needed
+    "local_output_folder" : "./data",
+    "compute_files_stats" : true,
+    "compute_files_hash" : true,
+    "file_hash_algorithm" : "blake2b",
+    "save_hash_in_file" : true,
+    "hash_file_extension" : "b2b",
+    "ingestor_files_folder": "ingestor",
+    "dataset_pid_prefix" : "20.500.12269",
+    "force_dataset_pid" : true, // not sure if needed
+    "use_job_id_as_dataset" : true,
+    "beautify_metadata_keys" : false,
+    "metadata_levels_separator": " "  // not sure if needed
   }
 }
