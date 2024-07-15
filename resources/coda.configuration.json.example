@@ -53,7 +53,7 @@
       "type": "string[]"
     }
     "acquisition_team_members": {
-      "source": "VALUES:join_with_space:<acquisition_team_members>",
+      "source": "VALUE:join_with_space:<acquisition_team_members>",
       "type": "string"
     }
   },

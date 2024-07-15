@@ -1,22 +1,35 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 # import scippnexus as snx
+import datetime
 import json
 import pathlib
+import h5py
+import os
 
 from scicat_configuration import (
     build_background_ingestor_arg_parser,
-    build_scicat_background_ingester_config,
+    build_scicat_background_ingester_config, BackgroundIngestorConfig,
 )
 from scicat_logging import build_logger
 from system_helpers import exit_at_exceptions
 
 
+
 def list_schema_files(schemas_folder):
-    return os.path.dirlist(schemas_folder)
+    """
+    return the list of the metadata schema configuration available in the folder provided
+    valid metadata schema configuration ends with imsc.json
+    imsc = ingestor metadata schema configuration
+    """
+    return [file for file in os.listdir(schemas_folder) if file.endswith("imsc.json") and not file.startswith(".")]
 
 
 def select_applicable_schema(nexus_file, nxs, schemas):
+    """
+    This function evaluate which metadata schema configuration is applicable to this file.
+    Order of the schemas matters and first schema that is suitable is selected.
+    """
     for schema in schemas.values():
         if isinstance(schema['selector'], str):
             selector_list = schema['selector'].split(':')
@@ -43,6 +56,67 @@ def select_applicable_schema(nexus_file, nxs, schemas):
                 return schema
 
     raise Exception("No applicable metadata schema configuration found!!")
+
+def extract_variables_values(
+        variables: dict,
+        h5file,
+        config: BackgroundIngestorConfig
+) -> dict:
+    values = {}
+
+    # loop on all the variables defined
+    for variable in variables.keys():
+        source = variables[variable]["source"].split(":")
+        value = ""
+        if source[0] == "NXS":
+            # extract value from nexus file
+            # we need to address path entry/user_*/name
+            value = h5file[source[1]][...]
+        elif source[0] == "SC":
+            # build url
+            url = replace_variables_values(
+                config[""]["scicat_url"] + source[1],
+                values
+            )
+            # retrieve value from SciCat
+            response = requests.get(
+                url,
+                headers = {
+                    "token": config[""]["token"]
+                }
+            )
+            # extract value
+            value = response.json()[source[2]]
+        elif source[0] == "VALUE":
+            # the value is the one indicated
+            # there might be some substitution needed
+            value = replace_variables_values(
+                source[2],
+                values
+            )
+            if source[1] == "":
+                pass
+            elif source[1] == "join_with_space":
+                value = ", ".join(value)
+        else:
+            raise Exception("Invalid variable source configuration")
+
+        if variables[variable]["type"] == "string":
+            value = str(value)
+        elif variables[variable]["type"] == "string[]":
+            value = [str(v) for v in value]
+        elif variables[variable]["type"] == "integer":
+            value = int(value)
+        elif variables[variable]["type"] == "float":
+            value = float(value)
+        elif variables[variable]["type"] == "date" and isinstance(value,int):
+            value = datetime.datetime.fromtimestamp(value).isoformat()
+        elif variables[variable]["type"] == "date" and isinstance(value,str):
+            value = datetime.datetime.fromisoformat(value).isoformat()
+
+        values[variable] = value
+
+    return values
 
 
 def main() -> None:
@@ -81,15 +155,15 @@ def main() -> None:
         done_writing_message = json.load(done_writing_message_file.open())
         logger.info(done_writing_message)
 
-        # open nexus file
-        nxs = snx.File(nexus_file)
+        # open nexus file with h5py
+        h5file = h5py.File(nexus_file)
 
         # load instrument metadata configuration
-        metadata_schema = select_applicable_schema(nexus_file, nxs, schemas)
+        metadata_schema = select_applicable_schema(nexus_file, h5file, schemas)
 
         # define variables values
-        variables_values = assign_variables_values(
-            metadata_schema['variables'], nxs, config
+        variables_values = extract_variables_values(
+            metadata_schema['variables'], h5file, config
         )
 
         # create b2blake hash of all the files
