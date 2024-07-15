@@ -5,56 +5,74 @@
   "selector": "filename:starts_with:/ess/data/coda",
   "variables" : {
     "pid": {
-      "source": "NXS:/entry/entry_identifier_uuid",
-      "type": "string"
+      "source": "NXS",
+      "path": "/entry/entry_identifier_uuid",
+      "value_type": "string"
     },
     "proposal_id": {
-      "source": "NXS:/entry/experiment_identifier",
-      "type": "string",
+      "source": "NXS",
+      "path": ""/entry/experiment_identifier",
+      "value_type": "string",
     },
     "pi_firstname": {
-      "source": "SC:proposals/<proposal_id>:pi_firstname",
-      "type": "string"
+      "source": "SC",
+      "url": "proposals/<proposal_id>",
+      "field" : "pi_firstname",
+      "value_type": "string"
     },
     "pi_lastname": {
-      "source": "SC:proposals/<proposal_id>:pi_lastname",
-      "type": "string"
+      "source": "SC",
+      "url": "proposals/<proposal_id>",
+      "field": ":pi_lastname",
+      "value_type": "string"
     },
     "pi_email": {
-      "source": "SC:proposals/<proposal_id>:pi_email",
-      "type": "string"
+      "source": "SC",
+      "url": "proposals/<proposal_id>",
+      "field": "pi_email",
+      "value_type": "string"
     },
     "dataset_name": {
-      "source": "NXS:/entry/title",
-      "type": "string"
+      "source": "NXS"
+      "path": ""/entry/title",
+      "value_type": "string"
     },
     "instrument_name": {
-      "source": "NXS:/entry/instrument/name",
-      "type": "string",
+      "source": "NXS",
+      "path": ""/entry/instrument/name",
+      "value_type": "string",
     },
     "instrument_id": {
-      "source": "SC:instruments?filter=%7B%22where%22%20%3A%20%7B%20%22name%22%20%3A%20%22coda%22%20%7D%20%7D:id",
-      "type": "string"
+      "source": "SC",
+      "url": "instruments?filter=%7B%22where%22%20%3A%20%7B%20%22name%22%20%3A%20%22coda%22%20%7D%20%7D"
+      "field": "id",
+      "value_type": "string"
     },
     "start_time": {
-      "source": "NXS:/entry/start_time",
-      "type": "date"
+      "source": "NXS",
+      "path": ""/entry/start_time",
+      "value_type": "date"
     },
     "end_time": {
-      "source": "NXS:/entry/end_time",
-      "type": "date"
+      "source": "NXS",
+      "path": "/entry/end_time",
+      "value_type": "date"
     },
     "run_number": {
-      "source": "NXS:/entry/entry_identifier",
-      "type": "integer"
+      "source": "NXS",
+      "path": ""/entry/entry_identifier",
+      "value_type": "integer"
     },
     "acquisition_team_members_list": {
-      "source": "NXS:/entry/user_*/name",
-      "type": "string[]"
+      "source": "NXS",
+      "path" : "/entry/user_*/name",
+      "value_type": "string[]"
     }
     "acquisition_team_members": {
-      "source": "VALUE:join_with_space:<acquisition_team_members>",
-      "type": "string"
+      "source": "VALUE",
+      "operator" : "join_with_space"
+      "value" : "<acquisition_team_members>",
+      "value_type": "string"
     }
   },
   "schema": {

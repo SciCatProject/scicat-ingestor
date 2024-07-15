@@ -66,16 +66,16 @@ def extract_variables_values(
 
     # loop on all the variables defined
     for variable in variables.keys():
-        source = variables[variable]["source"].split(":")
+        source = variables[variable]["source"]
         value = ""
-        if source[0] == "NXS":
+        if source == "NXS":
             # extract value from nexus file
             # we need to address path entry/user_*/name
-            value = h5file[source[1]][...]
-        elif source[0] == "SC":
+            value = h5file[variables[variable]["path"]][...]
+        elif source == "SC":
             # build url
             url = replace_variables_values(
-                config[""]["scicat_url"] + source[1],
+                config[""]["scicat_url"] + variables[variable]["url"],
                 values
             )
             # retrieve value from SciCat
@@ -86,32 +86,33 @@ def extract_variables_values(
                 }
             )
             # extract value
-            value = response.json()[source[2]]
-        elif source[0] == "VALUE":
+            value = response.json()[variables[variable]["field"]]
+        elif source == "VALUE":
             # the value is the one indicated
             # there might be some substitution needed
             value = replace_variables_values(
-                source[2],
+                variables[variable]["value"],
                 values
             )
-            if source[1] == "":
-                pass
-            elif source[1] == "join_with_space":
-                value = ", ".join(value)
+            if "operator" in variables[variable].keys() and variables[variable]["operator"]:
+                operator = variables[variable]["operator"]
+                if operator == "join_with_space":
+                    value = ", ".join(value)
         else:
             raise Exception("Invalid variable source configuration")
 
-        if variables[variable]["type"] == "string":
+        value_type = variables[variable]["value_type"]
+        if  value_type == "string":
             value = str(value)
-        elif variables[variable]["type"] == "string[]":
+        elif value_type == "string[]":
             value = [str(v) for v in value]
-        elif variables[variable]["type"] == "integer":
+        elif value_type == "integer":
             value = int(value)
-        elif variables[variable]["type"] == "float":
+        elif value_type == "float":
             value = float(value)
-        elif variables[variable]["type"] == "date" and isinstance(value,int):
+        elif value_type == "date" and isinstance(value,int):
             value = datetime.datetime.fromtimestamp(value).isoformat()
-        elif variables[variable]["type"] == "date" and isinstance(value,str):
+        elif value_type == "date" and isinstance(value,str):
             value = datetime.datetime.fromisoformat(value).isoformat()
 
         values[variable] = value
