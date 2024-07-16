@@ -33,7 +33,8 @@ dependencies = [
   "ess-streaming-data-types",
   "requests",
   "rich",
-  "graypy"
+  "graypy",
+  "h5py",
 ]
 
 dynamic = ["version"]
