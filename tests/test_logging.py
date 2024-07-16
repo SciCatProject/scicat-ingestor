@@ -2,8 +2,11 @@ import pathlib
 
 import pytest
 from scicat_configuration import (
+    DatasetOptions,
+    FileHandlingOptions,
     GraylogOptions,
     IngesterConfig,
+    IngestionOptions,
     RunOptions,
     kafkaOptions,
 )
@@ -28,6 +31,10 @@ def scicat_config(tmp_path: pathlib.Path) -> IngesterConfig:
         ),
         kafka_options=kafkaOptions(),
         graylog_options=GraylogOptions(),
+        ingestion_options=IngestionOptions(
+            file_handling_options=FileHandlingOptions(),
+            dataset_options=DatasetOptions(),
+        ),
     )
 
 

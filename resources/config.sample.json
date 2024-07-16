@@ -9,7 +9,12 @@
     "ssl_ca_location": "FULL_PATH_TO_CERTIFICATE_FILE",
     "individual_message_commit": true,
     "enable_auto_commit": true,
-    "auto_offset_reset": "earliest"
+    "auto_offset_reset": "earliest",
+    "message_saving_options": {
+      "message_to_file": true,
+      "message_file_extension": "message.json",
+      "message_output": "SOURCE_FOLDER"
+    }
   },
   "user_office": {
     "host": "https://useroffice.host",
@@ -52,11 +57,6 @@
     "schemas_directory": "schemas",
     "retrieve_instrument_from": "default",
     "instrument_position_in_file_path": 3,
-    "message_saving_options": {
-      "message_to_file": true,
-      "message_file_extension": "message.json",
-      "message_output": "SOURCE_FOLDER"
-    },
     "file_handling_options": {
       "hdf_structure_in_metadata": false,
       "hdf_structure_to_file": true,

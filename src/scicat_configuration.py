@@ -207,6 +207,19 @@ class RunOptions:
     graylog: bool = False
 
 
+@dataclass(frozen=True)
+class MessageSavingOptions:
+    message_to_file: bool = True
+    """Save messages to a file."""
+    message_file_extension: str = "message.json"
+    """Message file extension."""
+    message_output: str = "SOURCE_FOLDER"
+    """Output directory for messages."""
+
+
+DEFAULT_MESSAGE_SAVING_OPTIONS = MessageSavingOptions()
+
+
 @dataclass
 class kafkaOptions:
     """KafkaOptions dataclass to store the configuration options.
@@ -235,64 +248,20 @@ class kafkaOptions:
     """Enable Kafka auto commit."""
     auto_offset_reset: str = "earliest"
     """Kafka auto offset reset."""
+    message_saving_options: MessageSavingOptions = DEFAULT_MESSAGE_SAVING_OPTIONS
+    """Message saving options."""
 
-
-@dataclass
-class IngesterConfig:
-    original_dict: Mapping
-    """Original configuration dictionary in the json file."""
-    run_options: RunOptions
-    """Merged configuration dictionary with command line arguments."""
-    kafka_options: kafkaOptions
-    """Kafka configuration options read from files."""
-    graylog_options: GraylogOptions
-    """Graylog configuration options for streaming logs."""
-
-    def to_dict(self) -> dict:
-        """Return the configuration as a dictionary."""
-
-        return asdict(
-            IngesterConfig(
-                _recursive_deepcopy(
-                    self.original_dict
-                ),  # asdict does not support MappingProxyType
-                self.run_options,
-                self.kafka_options,
-                self.graylog_options,
-            )
+    @classmethod
+    def from_configurations(cls, config: dict) -> "kafkaOptions":
+        """Create kafkaOptions from a dictionary."""
+        return cls(
+            **{
+                **config,
+                "message_saving_options": MessageSavingOptions(
+                    **config.get("message_saving_options", {})
+                ),
+            },
         )
-
-
-def build_scicat_ingester_config(input_args: argparse.Namespace) -> IngesterConfig:
-    """Merge configuration from the configuration file and input arguments."""
-    config_dict = _load_config(input_args.config_file)
-    run_option_dict = _merge_run_options(config_dict, vars(input_args))
-
-    # Wrap configuration in a dataclass
-    return IngesterConfig(
-        original_dict=_freeze_dict_items(config_dict),
-        run_options=RunOptions(**run_option_dict),
-        kafka_options=kafkaOptions(**config_dict.setdefault("kafka", {})),
-        graylog_options=GraylogOptions(**config_dict.setdefault("graylog", {})),
-    )
-
-
-@dataclass
-class SingleRunOptions:
-    nexus_file: str
-    """Full path of the input nexus file to be ingested."""
-    done_writing_message_file: str
-    """Full path of the done writing message file that match the ``nexus_file``."""
-
-
-@dataclass
-class MessageSavingOptions:
-    message_to_file: bool = True
-    """Save messages to a file."""
-    message_file_extension: str = "message.json"
-    """Message file extension."""
-    message_output: str = "SOURCE_FOLDER"
-    """Output directory for messages."""
 
 
 @dataclass
@@ -321,7 +290,6 @@ class DatasetOptions:
 
 @dataclass
 class IngestionOptions:
-    message_saving_options: MessageSavingOptions
     file_handling_options: FileHandlingOptions
     dataset_options: DatasetOptions
     schema_directory: str = "schemas"
@@ -332,7 +300,6 @@ class IngestionOptions:
     def from_configurations(cls, config: dict) -> "IngestionOptions":
         """Create IngestionOptions from a dictionary."""
         return cls(
-            MessageSavingOptions(**config.get("message_saving_options", {})),
             FileHandlingOptions(**config.get("file_handling_options", {})),
             DatasetOptions(**config.get("dataset_options", {})),
             schema_directory=config.get("schema_directory", "schemas"),
@@ -344,11 +311,65 @@ class IngestionOptions:
 
 
 @dataclass
+class IngesterConfig:
+    original_dict: Mapping
+    """Original configuration dictionary in the json file."""
+    run_options: RunOptions
+    """Merged configuration dictionary with command line arguments."""
+    kafka_options: kafkaOptions
+    """Kafka configuration options read from files."""
+    graylog_options: GraylogOptions
+    """Graylog configuration options for streaming logs."""
+    ingestion_options: IngestionOptions
+    """Ingestion configuration options for background ingestor."""
+
+    def to_dict(self) -> dict:
+        """Return the configuration as a dictionary."""
+
+        return asdict(
+            IngesterConfig(
+                _recursive_deepcopy(
+                    self.original_dict
+                ),  # asdict does not support MappingProxyType
+                self.run_options,
+                self.kafka_options,
+                self.graylog_options,
+                self.ingestion_options,
+            )
+        )
+
+
+def build_scicat_ingester_config(input_args: argparse.Namespace) -> IngesterConfig:
+    """Merge configuration from the configuration file and input arguments."""
+    config_dict = _load_config(input_args.config_file)
+    run_option_dict = _merge_run_options(config_dict, vars(input_args))
+
+    # Wrap configuration in a dataclass
+    return IngesterConfig(
+        original_dict=_freeze_dict_items(config_dict),
+        run_options=RunOptions(**run_option_dict),
+        kafka_options=kafkaOptions.from_configurations(
+            config_dict.setdefault("kafka", {})
+        ),
+        graylog_options=GraylogOptions(**config_dict.setdefault("graylog", {})),
+        ingestion_options=IngestionOptions.from_configurations(
+            config_dict.setdefault("ingestion_options", {})
+        ),
+    )
+
+
+@dataclass
+class SingleRunOptions:
+    nexus_file: str
+    """Full path of the input nexus file to be ingested."""
+    done_writing_message_file: str
+    """Full path of the done writing message file that match the ``nexus_file``."""
+
+
+@dataclass
 class BackgroundIngestorConfig(IngesterConfig):
     single_run_options: SingleRunOptions
     """Single run configuration options for background ingestor."""
-    ingestion_options: IngestionOptions
-    """Ingestion configuration options for background ingestor."""
 
     def to_dict(self) -> dict:
         """Return the configuration as a dictionary."""
@@ -361,8 +382,8 @@ class BackgroundIngestorConfig(IngesterConfig):
                 self.run_options,
                 self.kafka_options,
                 self.graylog_options,
-                self.single_run_options,
                 self.ingestion_options,
+                self.single_run_options,
             )
         )
 
@@ -379,12 +400,13 @@ def build_scicat_background_ingester_config(
     }
     run_option_dict = _merge_run_options(config_dict, input_args_dict)
     ingestion_option_dict = config_dict.setdefault("ingestion_options", {})
+    kafka_option_dict = config_dict.setdefault("kafka", {})
 
     # Wrap configuration in a dataclass
     return BackgroundIngestorConfig(
         original_dict=_freeze_dict_items(config_dict),
         run_options=RunOptions(**run_option_dict),
-        kafka_options=kafkaOptions(**config_dict.setdefault("kafka", {})),
+        kafka_options=kafkaOptions.from_configurations(kafka_option_dict),
         single_run_options=SingleRunOptions(**single_run_option_dict),
         graylog_options=GraylogOptions(**config_dict.setdefault("graylog", {})),
         ingestion_options=IngestionOptions.from_configurations(ingestion_option_dict),
