@@ -62,18 +62,18 @@
       "hdf_structure_to_file": true,
       "hdf_structure_file_extension": ".hdf_structure.json",
       "hdf_structure_output": "SOURCE_FOLDER",
-      "local_output_folder": "./data",
-      "compute_files_stats": true,
-      "compute_files_hash": true,
+      "local_output_directory": "data",
+      "compute_file_stats": true,
+      "compute_file_hash": true,
       "file_hash_algorithm": "blake2b",
-      "save_hash_in_file": true,
+      "save_file_hash": true,
       "hash_file_extension": "b2b",
       "ingestor_files_directory": "ingestor"
     },
     "dataset_options": {
       "force_dataset_pid": true,
       "dataset_pid_prefix": "20.500.12269",
-      "use_job_id_as_dataset": true,
+      "use_job_id_as_dataset_id": true,
       "beautify_metadata_keys": false,
       "metadata_levels_separator": " "
     }

@@ -83,8 +83,8 @@ def build_main_arg_parser() -> argparse.ArgumentParser:
         default=False,
     )
     group.add_argument(
-        "--log-filepath-prefix",
-        dest="log_filepath_prefix",
+        "--file-log-base-name",
+        dest="file_log_base_name",
         help="Prefix of the log file path",
         default=".scicat_ingestor_log",
     )
@@ -116,7 +116,7 @@ def build_main_arg_parser() -> argparse.ArgumentParser:
     )
     group.add_argument(
         "--logging-level",
-        dest="log_level",
+        dest="logging_level",
         help="Logging level",
         default="INFO",
         type=str,
@@ -196,11 +196,11 @@ class RunOptions:
     config_file: str
     verbose: bool
     file_log: bool
-    log_filepath_prefix: str
+    file_log_base_name: str
     file_log_timestamp: bool
     system_log: bool
     log_message_prefix: str
-    log_level: str
+    logging_level: str
     check_by_job_id: bool
     system_log_facility: str | None = None
     pyscicat: str | None = None
@@ -221,6 +221,14 @@ class kafkaOptions:
     """Kafka consumer group ID."""
     bootstrap_servers: list[str] | str = "localhost:9092"
     """List of Kafka bootstrap servers. Multiple servers can be separated by commas."""
+    sasl_mechanism: str = "PLAIN"
+    """Kafka SASL mechanism."""
+    sasl_username: str = ""
+    """Kafka SASL username."""
+    sasl_password: str = ""
+    """Kafka SASL password."""
+    ssl_ca_location: str = ""
+    """Kafka SSL CA location."""
     individual_message_commit: bool = False
     """Commit for each topic individually."""
     enable_auto_commit: bool = True
@@ -294,7 +302,7 @@ class FileHandlingOptions:
     hdf_structure_file_extension: str = "hdf_structure.json"  # Not sure if needed
     hdf_structure_output: str = "SOURCE_FOLDER"  # Not sure if needed
     local_output_directory: str = "data"
-    compute_files_stats: bool = True
+    compute_file_stats: bool = True
     compute_file_hash: bool = True
     file_hash_algorithm: str = "blake2b"
     save_file_hash: bool = True
@@ -305,7 +313,7 @@ class FileHandlingOptions:
 @dataclass
 class DatasetOptions:
     force_dataset_pid: bool = True  # Not sure if needed
-    dataset_id_prefix: str = "20.500.12269"
+    dataset_pid_prefix: str = "20.500.12269"
     use_job_id_as_dataset_id: bool = True
     beautify_metadata_keys: bool = False
     metadata_levels_separator: str = " "
