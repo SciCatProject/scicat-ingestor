@@ -4,63 +4,27 @@
 import datetime
 import json
 import pathlib
-import h5py
-import os
 
+import h5py
+import requests
 from scicat_configuration import (
+    BackgroundIngestorConfig,
     build_background_ingestor_arg_parser,
-    build_scicat_background_ingester_config, BackgroundIngestorConfig,
+    build_scicat_background_ingester_config,
 )
 from scicat_logging import build_logger
+from scicat_metadata import collect_schemas, select_applicable_schema
 from system_helpers import exit_at_exceptions
 
 
+def replace_variables_values(url: str, values: dict) -> str:
+    for key, value in values.items():
+        url = url.replace("{" + key + "}", str(value))
+    return url
 
-def list_schema_files(schemas_folder):
-    """
-    return the list of the metadata schema configuration available in the folder provided
-    valid metadata schema configuration ends with imsc.json
-    imsc = ingestor metadata schema configuration
-    """
-    return [file for file in os.listdir(schemas_folder) if file.endswith("imsc.json") and not file.startswith(".")]
-
-
-def select_applicable_schema(nexus_file, nxs, schemas):
-    """
-    This function evaluate which metadata schema configuration is applicable to this file.
-    Order of the schemas matters and first schema that is suitable is selected.
-    """
-    for schema in schemas.values():
-        if isinstance(schema['selector'], str):
-            selector_list = schema['selector'].split(':')
-            selector = {
-                "operand_1": selector_list[0],
-                "operation": selector_list[1],
-                "operand_2": selector_list[2],
-            }
-        elif isinstance(schema['selector'], dict):
-            selector = schema['selector']
-        else:
-            raise Exception("Invalid type for schema selector")
-
-        if selector['operand_1'] in [
-            "filename",
-            "data_file",
-            "nexus_file",
-            "data_file_name",
-        ]:
-            selector['operand_1_value'] = nexus_file
-
-        if selector['operation'] == "starts_with":
-            if selector['operand_1_value'].startswith(selector['operand_2']):
-                return schema
-
-    raise Exception("No applicable metadata schema configuration found!!")
 
 def extract_variables_values(
-        variables: dict,
-        h5file,
-        config: BackgroundIngestorConfig
+    variables: dict, h5file, config: BackgroundIngestorConfig
 ) -> dict:
     values = {}
 
@@ -75,26 +39,24 @@ def extract_variables_values(
         elif source == "SC":
             # build url
             url = replace_variables_values(
-                config[""]["scicat_url"] + variables[variable]["url"],
-                values
+                config[""]["scicat_url"] + variables[variable]["url"], values
             )
             # retrieve value from SciCat
             response = requests.get(
                 url,
-                headers = {
-                    "token": config[""]["token"]
-                }
+                headers={"token": config[""]["token"]},
+                timeout=10,  # TODO: decide timeout
             )
             # extract value
             value = response.json()[variables[variable]["field"]]
         elif source == "VALUE":
             # the value is the one indicated
             # there might be some substitution needed
-            value = replace_variables_values(
-                variables[variable]["value"],
-                values
-            )
-            if "operator" in variables[variable].keys() and variables[variable]["operator"]:
+            value = replace_variables_values(variables[variable]["value"], values)
+            if (
+                "operator" in variables[variable].keys()
+                and variables[variable]["operator"]
+            ):
                 operator = variables[variable]["operator"]
                 if operator == "join_with_space":
                     value = ", ".join(value)
@@ -102,7 +64,7 @@ def extract_variables_values(
             raise Exception("Invalid variable source configuration")
 
         value_type = variables[variable]["value_type"]
-        if  value_type == "string":
+        if value_type == "string":
             value = str(value)
         elif value_type == "string[]":
             value = [str(v) for v in value]
@@ -110,9 +72,9 @@ def extract_variables_values(
             value = int(value)
         elif value_type == "float":
             value = float(value)
-        elif value_type == "date" and isinstance(value,int):
-            value = datetime.datetime.fromtimestamp(value).isoformat()
-        elif value_type == "date" and isinstance(value,str):
+        elif value_type == "date" and isinstance(value, int):
+            value = datetime.datetime.fromtimestamp(value, tz=datetime.UTC).isoformat()
+        elif value_type == "date" and isinstance(value, str):
             value = datetime.datetime.fromisoformat(value).isoformat()
 
         values[variable] = value
@@ -120,11 +82,19 @@ def extract_variables_values(
     return values
 
 
+def prepare_scicat_dataset(schema, values): ...
+def create_scicat_dataset(dataset): ...
+def create_scicat_origdatablock(
+    scicat_dataset_pid, nexus_file=None, done_writing_message_file=None
+): ...
+
+
 def main() -> None:
     """Main entry point of the app."""
     arg_parser = build_background_ingestor_arg_parser()
     arg_namespace = arg_parser.parse_args()
     config = build_scicat_background_ingester_config(arg_namespace)
+    ingestion_options = config.ingestion_options
     logger = build_logger(config)
 
     # Log the configuration as dictionary so that it is easier to read from the logs
@@ -133,13 +103,8 @@ def main() -> None:
     )
     logger.info(config.to_dict())
 
-    # load metadata schema configurations
-    # list files in schema folders
-    schemas = {}
-    for schema_file in list_schema_files():
-        with open(schema_file, 'r') as fh:
-            current_schema = json.load(fh)
-            schemas[current_schema['id']] = current_schema
+    # Collect all metadata schema configurations
+    schemas = collect_schemas(ingestion_options.schema_directory)
 
     with exit_at_exceptions(logger, daemon=False):
         nexus_file = pathlib.Path(config.single_run_options.nexus_file)
@@ -175,10 +140,11 @@ def main() -> None:
         )
 
         # create dataset in scicat
-        scicat_dataset_pid = create_Scicat_dataset(scicat_dataset)
+        scicat_dataset_pid = create_scicat_dataset(scicat_dataset)
 
         # create and populate scicat origdatablock entry
         # with files and hashes previously computed
+
         scicat_origdatablock = create_scicat_origdatablock(
             scicat_dataset_pid, nexus_file, done_writing_message_file
         )
@@ -187,3 +153,4 @@ def main() -> None:
         scicat_origdatablock_id = create_scicat_origdatablock(scicat_origdatablock)
 
         # return successful code
+        return scicat_origdatablock_id

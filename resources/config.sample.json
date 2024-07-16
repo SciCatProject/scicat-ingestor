@@ -45,20 +45,20 @@
     "log_message_prefix": "SFI",
     "check_by_job_id": true,
     "pyscicat": null,
-    "graylog": false,
-    "dry_run": false
-  },
+    "graylog": false
+    },
   "ingestion_options": {
-    "schemas_directories": "schemas",
+    "dry_run": false,
+    "schemas_directory": "schemas",
     "retrieve_instrument_from": "default",
     "instrument_position_in_file_path": 3,
     "message_saving_options": {
       "message_to_file": true,
-      "message_file_extension": ".message.json",
+      "message_file_extension": "message.json",
       "message_output": "SOURCE_FOLDER"
     },
-    "hdf_structure_in_metadata": false,
     "file_handling_options": {
+      "hdf_structure_in_metadata": false,
       "hdf_structure_to_file": true,
       "hdf_structure_file_extension": ".hdf_structure.json",
       "hdf_structure_output": "SOURCE_FOLDER",
