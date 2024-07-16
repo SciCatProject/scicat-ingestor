@@ -15,8 +15,15 @@ def build_logger(config: IngesterConfig) -> logging.Logger:
     # Build logger and formatter
     logger = logging.getLogger('esd extract parameters')
     formatter = logging.Formatter(
-        run_options.log_message_prefix
-        + '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        " - ".join(
+            (
+                run_options.log_message_prefix,
+                '%(asctime)s',
+                '%(name)s',
+                '%(levelname)s',
+                '%(message)s',
+            )
+        )
     )
 
     # Add FileHandler

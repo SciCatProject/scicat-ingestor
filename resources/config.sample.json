@@ -44,7 +44,7 @@
     "file_log" : false,
     "file_log_base_name" : "scicat_ingestor_log",
     "file_log_timestamp" : false,
-    "loggin_level" : "INFO",
+    "logging_level" : "INFO",
     "system_log" : false,
     "system_log_facility" : "mail",
     "log_message_prefix" : " SFI ",

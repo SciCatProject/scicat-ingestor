@@ -119,7 +119,11 @@ def build_main_arg_parser() -> argparse.ArgumentParser:
         default=" SFI: ",
     )
     group.add_argument(
-        "--log-level", dest="log_level", help="Logging level", default="INFO", type=str
+        "--logging-level",
+        dest="log_level",
+        help="Logging level",
+        default="INFO",
+        type=str,
     )
     group.add_argument(
         "--check-by-job-id",
