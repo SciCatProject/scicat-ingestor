@@ -73,6 +73,16 @@
       "operator" : "join_with_space"
       "value" : "<acquisition_team_members>",
       "value_type": "string"
+    },
+    "owner_group": {
+      "source": "VALUE",
+      "value": "ess_proposal_<proposal_id>",
+      "value_type": "string"
+    },
+    "access_groups": {
+      "source": "VALUE",
+      "value": ["scientific information management systems group"],
+      "value_type": "string[]"
     }
   },
   "schema": {
@@ -116,7 +126,13 @@
       "field_type": "high_level",
       "machine_name": "ownerEmail",
       "value": "<pi_email>",
-      "type": "string"
+      "type": "email"
+    },
+    "contact_email": {
+      "field_type": "high_level",
+      "machine_name": "contactEmail",
+      "value": "<pi_email>",
+      "type": "email"
     },
     "instrument_id": {
       "field_type": "high_level",
@@ -127,7 +143,7 @@
     "location": {
       "field_type": "high_level",
       "machine_name": "location",
-      "source": "ESS:CODA:<instrument_name>",
+      "value": "ESS:CODA:<instrument_name>",
       "type": "string"
     },
     "start_time": {
@@ -164,6 +180,18 @@
       "human_name": "Acquisition Team Members",
       "values": "<acquisition_team_members>",
       "type": "string"
+    },
+    "owner_group": {
+      "field_type": "high_level",
+      "machine_name": "ownerGroup",
+      "value": "<owner_group>",
+      "type": "string"
+    },
+    "access_groups": {
+      "field_type": "high_level",
+      "machine_name": "accessGroups",
+      "value": "<access_groups>",
+      "type": "string[]"
     }
   }
 }
