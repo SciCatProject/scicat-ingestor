@@ -107,30 +107,31 @@ def main() -> None:
     schemas = collect_schemas(ingestion_options.schema_directory)
 
     with exit_at_exceptions(logger, daemon=False):
-        nexus_file = pathlib.Path(config.single_run_options.nexus_file)
-        logger.info("Nexus file to be ingested : ")
-        logger.info(nexus_file)
-
-        done_writing_message_file = pathlib.Path(
-            config.single_run_options.done_writing_message_file
+        logger.info(
+            "Nexus file to be ingested : %s",
+            (nexus_file_path := pathlib.Path(config.single_run_options.nexus_file)),
         )
-        logger.info("Done writing message file linked to nexus file : ")
-        logger.info(done_writing_message_file)
+        logger.info(
+            "Done writing message file linked to nexus file : %s",
+            (
+                done_writing_message_file := pathlib.Path(
+                    config.single_run_options.done_writing_message_file
+                )
+            ),
+        )
 
         # open and read done writing message input file
-        done_writing_message = json.load(done_writing_message_file.open())
-        logger.info(done_writing_message)
+        logger.info(json.load(done_writing_message_file.open()))
 
         # open nexus file with h5py
-        h5file = h5py.File(nexus_file)
+        with h5py.File(nexus_file_path) as h5file:
+            # load instrument metadata configuration
+            metadata_schema = select_applicable_schema(nexus_file_path, h5file, schemas)
 
-        # load instrument metadata configuration
-        metadata_schema = select_applicable_schema(nexus_file, h5file, schemas)
-
-        # define variables values
-        variables_values = extract_variables_values(
-            metadata_schema['variables'], h5file, config
-        )
+            # define variables values
+            variables_values = extract_variables_values(
+                metadata_schema['variables'], h5file, config
+            )
 
         # create b2blake hash of all the files
 
@@ -146,7 +147,7 @@ def main() -> None:
         # with files and hashes previously computed
 
         scicat_origdatablock = create_scicat_origdatablock(
-            scicat_dataset_pid, nexus_file, done_writing_message_file
+            scicat_dataset_pid, nexus_file_path, done_writing_message_file
         )
 
         # create origdatablock in scicat
