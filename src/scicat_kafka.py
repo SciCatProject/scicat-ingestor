@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 import logging
+import pathlib
 from collections.abc import Generator
 
 from confluent_kafka import Consumer
-from scicat_configuration import kafkaOptions
+from scicat_configuration import MessageSavingOptions, kafkaOptions
 from streaming_data_types import deserialise_wrdn
 from streaming_data_types.finished_writing_wrdn import (
     FILE_IDENTIFIER as WRDN_FILE_IDENTIFIER,
@@ -133,3 +134,35 @@ def wrdn_messages(
                 yield _deserialise_wrdn(message_value, logger)
             else:
                 yield None
+
+
+def compose_message_path(
+    *,
+    target_dir: pathlib.Path,
+    nexus_file_path: pathlib.Path,
+    message_saving_options: MessageSavingOptions,
+) -> pathlib.Path:
+    """Compose the message path based on the nexus file path and configuration."""
+
+    return target_dir / (
+        pathlib.Path(
+            ".".join(
+                (
+                    nexus_file_path.stem,
+                    message_saving_options.message_file_extension.removeprefix("."),
+                )
+            )
+        )
+    )
+
+
+def save_message_to_file(
+    *,
+    message: WritingFinished,
+    message_file_path: pathlib.Path,
+) -> None:
+    """Dump the ``message`` into ``message_file_path``."""
+    import json
+
+    with message_file_path.open("w") as fh:
+        json.dump(message, fh)
