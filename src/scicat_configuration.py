@@ -22,15 +22,11 @@ def _load_config(config_file: Any) -> dict:
 
 def _merge_run_options(config_dict: dict, input_args_dict: dict) -> dict:
     """Merge configuration from the configuration file and input arguments."""
-    import copy
 
-    # Overwrite deep-copied options with command line arguments
-    run_option_dict: dict = copy.deepcopy(config_dict.setdefault("options", {}))
-    for arg_name, arg_value in input_args_dict.items():
-        if arg_value is not None:
-            run_option_dict[arg_name] = arg_value
-
-    return run_option_dict
+    return {
+        **config_dict.setdefault("options", {}),
+        **{key: value for key, value in input_args_dict.items() if value is not None},
+    }
 
 
 def _freeze_dict_items(d: dict) -> MappingProxyType:
@@ -87,8 +83,8 @@ def build_main_arg_parser() -> argparse.ArgumentParser:
         default=False,
     )
     group.add_argument(
-        "--log-filepath-prefix",
-        dest="log_filepath_prefix",
+        "--file-log-base-name",
+        dest="file_log_base_name",
         help="Prefix of the log file path",
         default=".scicat_ingestor_log",
     )
@@ -119,7 +115,11 @@ def build_main_arg_parser() -> argparse.ArgumentParser:
         default=" SFI: ",
     )
     group.add_argument(
-        "--log-level", dest="log_level", help="Logging level", default="INFO", type=str
+        "--logging-level",
+        dest="logging_level",
+        help="Logging level",
+        default="INFO",
+        type=str,
     )
     group.add_argument(
         "--check-by-job-id",
@@ -196,15 +196,28 @@ class RunOptions:
     config_file: str
     verbose: bool
     file_log: bool
-    log_filepath_prefix: str
+    file_log_base_name: str
     file_log_timestamp: bool
     system_log: bool
     log_message_prefix: str
-    log_level: str
+    logging_level: str
     check_by_job_id: bool
     system_log_facility: str | None = None
     pyscicat: str | None = None
     graylog: bool = False
+
+
+@dataclass(frozen=True)
+class MessageSavingOptions:
+    message_to_file: bool = True
+    """Save messages to a file."""
+    message_file_extension: str = "message.json"
+    """Message file extension."""
+    message_output: str = "SOURCE_FOLDER"
+    """Output directory for messages."""
+
+
+DEFAULT_MESSAGE_SAVING_OPTIONS = MessageSavingOptions()
 
 
 @dataclass
@@ -221,12 +234,80 @@ class kafkaOptions:
     """Kafka consumer group ID."""
     bootstrap_servers: list[str] | str = "localhost:9092"
     """List of Kafka bootstrap servers. Multiple servers can be separated by commas."""
+    sasl_mechanism: str = "PLAIN"
+    """Kafka SASL mechanism."""
+    sasl_username: str = ""
+    """Kafka SASL username."""
+    sasl_password: str = ""
+    """Kafka SASL password."""
+    ssl_ca_location: str = ""
+    """Kafka SSL CA location."""
     individual_message_commit: bool = False
     """Commit for each topic individually."""
     enable_auto_commit: bool = True
     """Enable Kafka auto commit."""
     auto_offset_reset: str = "earliest"
     """Kafka auto offset reset."""
+    message_saving_options: MessageSavingOptions = DEFAULT_MESSAGE_SAVING_OPTIONS
+    """Message saving options."""
+
+    @classmethod
+    def from_configurations(cls, config: dict) -> "kafkaOptions":
+        """Create kafkaOptions from a dictionary."""
+        return cls(
+            **{
+                **config,
+                "message_saving_options": MessageSavingOptions(
+                    **config.get("message_saving_options", {})
+                ),
+            },
+        )
+
+
+@dataclass
+class FileHandlingOptions:
+    hdf_structure_in_metadata: bool = False  # Not sure if needed
+    hdf_structure_to_file: bool = True  # Not sure if needed
+    hdf_structure_file_extension: str = "hdf_structure.json"  # Not sure if needed
+    hdf_structure_output: str = "SOURCE_FOLDER"  # Not sure if needed
+    local_output_directory: str = "data"
+    compute_file_stats: bool = True
+    compute_file_hash: bool = True
+    file_hash_algorithm: str = "blake2b"
+    save_file_hash: bool = True
+    hash_file_extension: str = "b2b"
+    ingestor_files_directory: str = "ingestor"
+
+
+@dataclass
+class DatasetOptions:
+    force_dataset_pid: bool = True  # Not sure if needed
+    dataset_pid_prefix: str = "20.500.12269"
+    use_job_id_as_dataset_id: bool = True
+    beautify_metadata_keys: bool = False
+    metadata_levels_separator: str = " "
+
+
+@dataclass
+class IngestionOptions:
+    file_handling_options: FileHandlingOptions
+    dataset_options: DatasetOptions
+    schema_directory: str = "schemas"
+    retrieve_instrument_from: str = "default"
+    instrument_position_in_file_path: int = 3
+
+    @classmethod
+    def from_configurations(cls, config: dict) -> "IngestionOptions":
+        """Create IngestionOptions from a dictionary."""
+        return cls(
+            FileHandlingOptions(**config.get("file_handling_options", {})),
+            DatasetOptions(**config.get("dataset_options", {})),
+            schema_directory=config.get("schema_directory", "schemas"),
+            retrieve_instrument_from=config.get("retrieve_instrument_from", "default"),
+            instrument_position_in_file_path=config.get(
+                "instrument_position_in_file_path", 3
+            ),
+        )
 
 
 @dataclass
@@ -239,6 +320,8 @@ class IngesterConfig:
     """Kafka configuration options read from files."""
     graylog_options: GraylogOptions
     """Graylog configuration options for streaming logs."""
+    ingestion_options: IngestionOptions
+    """Ingestion configuration options for background ingestor."""
 
     def to_dict(self) -> dict:
         """Return the configuration as a dictionary."""
@@ -251,6 +334,7 @@ class IngesterConfig:
                 self.run_options,
                 self.kafka_options,
                 self.graylog_options,
+                self.ingestion_options,
             )
         )
 
@@ -264,8 +348,13 @@ def build_scicat_ingester_config(input_args: argparse.Namespace) -> IngesterConf
     return IngesterConfig(
         original_dict=_freeze_dict_items(config_dict),
         run_options=RunOptions(**run_option_dict),
-        kafka_options=kafkaOptions(**config_dict.setdefault("kafka", {})),
+        kafka_options=kafkaOptions.from_configurations(
+            config_dict.setdefault("kafka", {})
+        ),
         graylog_options=GraylogOptions(**config_dict.setdefault("graylog", {})),
+        ingestion_options=IngestionOptions.from_configurations(
+            config_dict.setdefault("ingestion_options", {})
+        ),
     )
 
 
@@ -293,6 +382,7 @@ class BackgroundIngestorConfig(IngesterConfig):
                 self.run_options,
                 self.kafka_options,
                 self.graylog_options,
+                self.ingestion_options,
                 self.single_run_options,
             )
         )
@@ -309,12 +399,15 @@ def build_scicat_background_ingester_config(
         "done_writing_message_file": input_args_dict.pop("done_writing_message_file"),
     }
     run_option_dict = _merge_run_options(config_dict, input_args_dict)
+    ingestion_option_dict = config_dict.setdefault("ingestion_options", {})
+    kafka_option_dict = config_dict.setdefault("kafka", {})
 
     # Wrap configuration in a dataclass
     return BackgroundIngestorConfig(
         original_dict=_freeze_dict_items(config_dict),
         run_options=RunOptions(**run_option_dict),
-        kafka_options=kafkaOptions(**config_dict.setdefault("kafka", {})),
+        kafka_options=kafkaOptions.from_configurations(kafka_option_dict),
         single_run_options=SingleRunOptions(**single_run_option_dict),
         graylog_options=GraylogOptions(**config_dict.setdefault("graylog", {})),
+        ingestion_options=IngestionOptions.from_configurations(ingestion_option_dict),
     )

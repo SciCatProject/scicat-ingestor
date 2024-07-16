@@ -15,13 +15,20 @@ def build_logger(config: IngesterConfig) -> logging.Logger:
     # Build logger and formatter
     logger = logging.getLogger('esd extract parameters')
     formatter = logging.Formatter(
-        run_options.log_message_prefix
-        + '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        " - ".join(
+            (
+                run_options.log_message_prefix,
+                '%(asctime)s',
+                '%(name)s',
+                '%(levelname)s',
+                '%(message)s',
+            )
+        )
     )
 
     # Add FileHandler
     if run_options.file_log:
-        file_name_components = [run_options.log_filepath_prefix]
+        file_name_components = [run_options.file_log_base_name]
         if run_options.file_log_timestamp:
             file_name_components.append(
                 datetime.datetime.now(datetime.UTC).strftime('%Y%m%d%H%M%S%f')
@@ -47,9 +54,9 @@ def build_logger(config: IngesterConfig) -> logging.Logger:
         logger.addHandler(graylog_handler)
 
     # Set the level and formatter for all handlers
-    logger.setLevel(run_options.log_level)
+    logger.setLevel(run_options.logging_level)
     for handler in logger.handlers:
-        handler.setLevel(run_options.log_level)
+        handler.setLevel(run_options.logging_level)
         handler.setFormatter(formatter)
 
     # Add StreamHandler
@@ -57,6 +64,6 @@ def build_logger(config: IngesterConfig) -> logging.Logger:
     if run_options.verbose:
         from rich.logging import RichHandler
 
-        logger.addHandler(RichHandler(level=run_options.log_level))
+        logger.addHandler(RichHandler(level=run_options.logging_level))
 
     return logger
