@@ -24,8 +24,7 @@
   "proposalId": "{{ proposal_id }}",
   "ownerGroup": "{{ owner_group }}",
   "accessGroups": [
-    {% for access_group in access_groups %}
-    "{{ access_group }}"{% if not loop.last %},{% endif %}
-    {% endfor %}
+    {% for access_group in access_groups %}"{{ access_group }}"{% if not loop.last %},
+    {% endif %}{% endfor %}
   ]
 }
