@@ -1,8 +1,8 @@
 {
-  "id" : "715ce7ba-3f91-11ef-932f-37a5c6fd60b1"
-  "name" : "Coda Metadata Schema"
-  "instrument": "coda",
-  "selector": "filename:starts_with:/ess/data/coda",
+  "id" : "891322f6-437a-11ef-980a-7bdc756bd0b3"
+  "name" : "Loki Metadata Schema"
+  "instrument": "loki",
+  "selector": "filename:starts_with:/ess/data/dream",
   "variables" : {
     "pid": {
       "source": "NXS",
@@ -44,7 +44,7 @@
     },
     "instrument_id": {
       "source": "SC",
-      "url": "instruments?filter=%7B%22where%22%20%3A%20%7B%20%22name%22%20%3A%20%22coda%22%20%7D%20%7D"
+      "url": "instruments?filter=%7B%22where%22%20%3A%20%7B%20%22name%22%20%3A%20%22<instrument_name>%22%20%7D%20%7D"
       "field": "id",
       "value_type": "string"
     },
@@ -143,7 +143,7 @@
     "location": {
       "field_type": "high_level",
       "machine_name": "location",
-      "value": "ESS:CODA:<instrument_name>",
+      "value": "ESS:<instrument_name>",
       "type": "string"
     },
     "start_time": {

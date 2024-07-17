@@ -1,9 +1,9 @@
 {
-  "id" : "715ce7ba-3f91-11ef-932f-37a5c6fd60b1"
-  "name" : "Coda Metadata Schema"
-  "instrument": "coda",
-  "selector": "filename:starts_with:/ess/data/coda",
-  "variables" : {
+  "id": c5bed39a-4379-11ef-ba5a-ffbc783163b6
+  "name" : "Generic metadata schema"
+  "instrument" : "",
+  "selector" : "filename:starts_with:/ess/data",
+ "variables" : {
     "pid": {
       "source": "NXS",
       "path": "/entry/entry_identifier_uuid",
@@ -74,7 +74,7 @@
       "value" : "<acquisition_team_members>",
       "value_type": "string"
     },
-    "owner_group": {
+        "owner_group": {
       "source": "VALUE",
       "value": "ess_proposal_<proposal_id>",
       "value_type": "string"
