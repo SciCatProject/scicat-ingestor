@@ -23,20 +23,20 @@ def replace_variables_values(url: str, values: dict) -> str:
         url = url.replace("{" + key + "}", str(value))
     return url
 
-def convert_to_type(input_value, value_type: string) :
+def convert_to_type(input_value, value_type: str) :
     output_value = None
     if value_type == "string":
-        output_value = str(value)
+        output_value = str(input_value)
     elif value_type == "string[]":
-        output_value = [str(v) for v in value]
+        output_value = [str(v) for v in input_value]
     elif value_type == "integer":
-        output_value = int(value)
+        output_value = int(input_value)
     elif value_type == "float":
-        output_value = float(value)
-    elif value_type == "date" and isinstance(value, int):
-        output_value = datetime.datetime.fromtimestamp(value, tz=datetime.UTC).isoformat()
-    elif value_type == "date" and isinstance(value, str):
-        output_value = datetime.datetime.fromisoformat(value).isoformat()
+        output_value = float(input_value)
+    elif value_type == "date" and isinstance(input_value, int):
+        output_value = datetime.datetime.fromtimestamp(input_value, tz=datetime.UTC).isoformat()
+    elif value_type == "date" and isinstance(input_value, str):
+        output_value = datetime.datetime.fromisoformat(input_value).isoformat()
     else
         raise Exception("Invalid value type")
     return output_value
