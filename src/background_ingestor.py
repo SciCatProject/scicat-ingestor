@@ -4,6 +4,7 @@
 import datetime
 import json
 import pathlib
+from urllib.parse import urljoin
 
 import h5py
 import requests
@@ -21,6 +22,24 @@ def replace_variables_values(url: str, values: dict) -> str:
     for key, value in values.items():
         url = url.replace("{" + key + "}", str(value))
     return url
+
+def convert_to_type(input_value, value_type: string) :
+    output_value = None
+    if value_type == "string":
+        output_value = str(value)
+    elif value_type == "string[]":
+        output_value = [str(v) for v in value]
+    elif value_type == "integer":
+        output_value = int(value)
+    elif value_type == "float":
+        output_value = float(value)
+    elif value_type == "date" and isinstance(value, int):
+        output_value = datetime.datetime.fromtimestamp(value, tz=datetime.UTC).isoformat()
+    elif value_type == "date" and isinstance(value, str):
+        output_value = datetime.datetime.fromisoformat(value).isoformat()
+    else
+        raise Exception("Invalid value type")
+    return output_value
 
 
 def extract_variables_values(
@@ -45,7 +64,7 @@ def extract_variables_values(
             response = requests.get(
                 url,
                 headers={"token": config[""]["token"]},
-                timeout=10,  # TODO: decide timeout
+                timeout=10,  # TODO: decide timeout. Maybe from configuration?
             )
             # extract value
             value = response.json()[variables[variable]["field"]]
@@ -63,27 +82,128 @@ def extract_variables_values(
         else:
             raise Exception("Invalid variable source configuration")
 
-        value_type = variables[variable]["value_type"]
-        if value_type == "string":
-            value = str(value)
-        elif value_type == "string[]":
-            value = [str(v) for v in value]
-        elif value_type == "integer":
-            value = int(value)
-        elif value_type == "float":
-            value = float(value)
-        elif value_type == "date" and isinstance(value, int):
-            value = datetime.datetime.fromtimestamp(value, tz=datetime.UTC).isoformat()
-        elif value_type == "date" and isinstance(value, str):
-            value = datetime.datetime.fromisoformat(value).isoformat()
-
-        values[variable] = value
+        values[variable] = convert_to_type(value,variables[variable]["value_type"])
 
     return values
 
 
-def prepare_scicat_dataset(schema, values): ...
-def create_scicat_dataset(dataset): ...
+def prepare_scicat_dataset(metadata_schema, values):
+    """
+    Prepare scicat dataset as dictionary ready to be sent over to scicat as a POST request
+
+    This is an example:
+    {
+  "pid": "20.500.12269/e3690b21-ee8c-40d6-9409-6b6fdca776d2",
+  "datasetName": "this is a dataset",
+  "description": "this is the description of the dataset",
+  "principalInvestigator": "Massimiliano Novelli",
+  "creationLocation": "ESS:CODA",
+  "scientificMetadata": {
+    "run_number": {
+      "value": 18856,
+      "unit": "",
+      "human_name": "Run Number",
+      "type": "integer"
+    },
+    "sample_temperature": {
+      "value": 20.4,
+      "unit": "C",
+      "human_name": "Sample Temperature",
+      "type": "quantity"
+    },
+    "start_time" : {
+      "value" : "2024-07-16T09:30:12.987Z",
+      "unit" : "",
+      "human_name" : "Start Time",
+      "type" : "date"
+    }
+  },
+  "owner": "Massimiliano Novelli",
+  "ownerEmail": "max.novelli@ess.eu",
+  "sourceFolder": "/ess/data/coda/2024/616254",
+  "contactEmail": "max.novelli@ess.eu",
+  "creationTime": "2024-07-16T10:00:00.000Z",
+  "type": "raw",
+  "techniques": [
+    {
+      "pid": "http://purl.org/pan-science/PaNET/PaNET01155",
+      "names": "absorption and phase contrast nanotomography"
+    }
+  ],
+  "instrumentId": "20.500.12269/765b3dc3-f658-410e-b371-04dd1adcd520",
+  "sampleId": "bd31725a-dbfd-4c32-87db-1c1ebe61e5ca",
+  "proposalId": "616254",
+  "ownerGroup": "ess_proposal_616254",
+  "accessGroups": [
+    "scientific information management systems group"
+  ]
+}
+    """
+    schema = metadata_schema["schema"]
+    dataset = {}
+    scientific_metadata = {
+        'ingestor_metadata_schema_id' : {
+            "value": metadata_schema["id"],
+            "unit": "",
+            "human_name": "Ingestor Metadata Schema Id",
+            "type": "string"
+        }
+    }
+    for key, field in schema.items():
+        machine_name = field["machine_name"]
+        field_type = field["type"]
+        if field["field_type"] == "high_level":
+            dataset[machine_name] = convert_to_type(
+                replace_variables_values(field["value"],values),
+                field_type
+            )
+        elif field["field_type"] == "scientific_metadata":
+            scientific_metadata[machine_name] = {
+                "value" : convert_to_type(
+                    replace_variables_values(field["value"],values),
+                    field_type
+                ),
+                "unit" : "",
+                "human_name" : field["human_name"] if "human_name" is in field.keys() and field["human_name"] else machine_name,
+                "type" : field_type
+            }
+        else:
+            raise Exception("Metadata schema field type invalid")
+
+    dataset["scientific_metadata"] = scientific_metadata
+
+    return dataset
+
+
+def create_scicat_dataset(dataset,config):
+    """
+    Execute a POST request to scicat to create a dataset
+    """
+    response = requests.request(
+        method="POST",
+        url=urljoin(config["scicat_url"], "datasets"),
+        json=dataset,
+        headers=config["scicat_headers"],
+        timeout=config["timeout_seconds"],
+        stream=False,
+        verify=True,
+    )
+
+    result = response.json()
+    if response.ok:
+
+    else:
+        err = result.get("error", {})
+        raise Exception(f"Error creating new dataset: {err}")
+
+    logger.info(
+        "Dataset create successfully. Dataset pid: %s",
+        result['pid']
+    )
+    return result
+
+def prepare_files_list(nexus_file,done_writing_message_file,config): ...
+def prepare_scicat_origdatablock(files_list,config): ...
 def create_scicat_origdatablock(
     scicat_dataset_pid, nexus_file=None, done_writing_message_file=None
 ): ...
@@ -133,19 +253,20 @@ def main() -> None:
                 metadata_schema['variables'], h5file, config
             )
 
-        # create b2blake hash of all the files
+        # create files list with b2blake hash of all the files
+        files_list = prepare_files_list(nexus_file_path,done_writing_message_file,config)
 
         # create and populate scicat dataset entry
         scicat_dataset = prepare_scicat_dataset(
-            metadata_schema['schema'], variables_values
+            metadata_schema, variables_values
         )
 
         # create dataset in scicat
-        scicat_dataset_pid = create_scicat_dataset(scicat_dataset)
+        scicat_dataset = create_scicat_dataset(scicat_dataset,config)
+        scicat_dataset_pid = scicat_dataset["pid"]
 
         # create and populate scicat origdatablock entry
         # with files and hashes previously computed
-
         scicat_origdatablock = create_scicat_origdatablock(
             scicat_dataset_pid, nexus_file_path, done_writing_message_file
         )
