@@ -3,7 +3,7 @@
   "size": {{ dataset_size }},
   "chkAlg": "{{ check_algorithm }}",
   "dataFileList": [
-    {% for data_file_desc in data_file_desc_list %}"{{ data_file_desc }}"{% if not loop.last %},
+    {% for data_file_desc in data_file_desc_list %}{{ data_file_desc }}{% if not loop.last %},
     {% endif %}{% endfor %}
   ]
 }

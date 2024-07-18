@@ -4,7 +4,11 @@ import datetime
 from types import MappingProxyType
 from typing import Any
 
-from scicat_schemas import load_dataset_schema_template
+from scicat_schemas import (
+    load_dataset_schema_template,
+    load_origdatablock_schema_template,
+    load_single_datafile_template,
+)
 
 
 def to_string(value: Any) -> str:
@@ -51,7 +55,7 @@ def convert_to_type(input_value: Any, dtype_desc: str) -> Any:
     return converter(input_value)
 
 
-def build_dataset_schema(
+def build_dataset_description(
     *,
     nxs_dataset_pid: str,
     dataset_name: str,
@@ -93,4 +97,40 @@ def build_dataset_schema(
         proposal_id=proposal_id,
         owner_group=owner_group,
         access_groups=access_groups,
+    )
+
+
+def build_single_datafile_description(
+    *,
+    file_absolute_path: str,
+    file_size: int,
+    datetime_isoformat: str,
+    checksum: str,
+    uid: str,
+    gid: str,
+    perm: str,
+) -> str:
+    return load_single_datafile_template().render(
+        file_absolute_path=file_absolute_path,
+        file_size=file_size,
+        datetime_isoformat=datetime_isoformat,
+        checksum=checksum,
+        uid=uid,
+        gid=gid,
+        perm=perm,
+    )
+
+
+def build_orig_datablock_description(
+    *,
+    nxs_dataset_pid: str,
+    dataset_size: int,
+    check_algorithm: str,
+    data_file_desc_list: list[str],
+) -> str:
+    return load_origdatablock_schema_template().render(
+        nxs_dataset_pid=nxs_dataset_pid,
+        dataset_size=dataset_size,
+        check_algorithm=check_algorithm,
+        data_file_desc_list=data_file_desc_list,
     )
