@@ -4,8 +4,7 @@ import datetime
 from types import MappingProxyType
 from typing import Any
 
-from jinja2 import Template
-from scicat_path_helpers import get_dataset_schema_template_path
+from scicat_schemas import load_dataset_schema_template
 
 
 def to_string(value: Any) -> str:
@@ -74,7 +73,7 @@ def build_dataset_schema(
     owner_group: str,
     access_groups: list[str],
 ) -> str:
-    return Template(get_dataset_schema_template_path().read_text()).render(
+    return load_dataset_schema_template().render(
         nxs_dataset_pid=nxs_dataset_pid,
         dataset_name=dataset_name,
         dataset_description=dataset_description,
