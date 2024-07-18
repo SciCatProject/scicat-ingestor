@@ -57,6 +57,7 @@ def convert_to_type(input_value: Any, dtype_desc: str) -> Any:
 
 def build_dataset_description(
     *,
+    dataset_pid_prefix: str,
     nxs_dataset_pid: str,
     dataset_name: str,
     dataset_description: str,
@@ -78,6 +79,7 @@ def build_dataset_description(
     access_groups: list[str],
 ) -> str:
     return load_dataset_schema_template().render(
+        dataset_pid_prefix=dataset_pid_prefix,
         nxs_dataset_pid=nxs_dataset_pid,
         dataset_name=dataset_name,
         dataset_description=dataset_description,
@@ -105,10 +107,10 @@ def build_single_datafile_description(
     file_absolute_path: str,
     file_size: int,
     datetime_isoformat: str,
-    checksum: str,
     uid: str,
     gid: str,
     perm: str,
+    checksum: str = "",
 ) -> str:
     return load_single_datafile_template().render(
         file_absolute_path=file_absolute_path,
@@ -123,12 +125,14 @@ def build_single_datafile_description(
 
 def build_orig_datablock_description(
     *,
+    dataset_pid_prefix: str,
     nxs_dataset_pid: str,
     dataset_size: int,
     check_algorithm: str,
     data_file_desc_list: list[str],
 ) -> str:
     return load_origdatablock_schema_template().render(
+        dataset_pid_prefix=dataset_pid_prefix,
         nxs_dataset_pid=nxs_dataset_pid,
         dataset_size=dataset_size,
         check_algorithm=check_algorithm,
