@@ -1,7 +1,55 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
+import datetime
+from types import MappingProxyType
+from typing import Any
+
 from jinja2 import Template
 from scicat_path_helpers import get_dataset_schema_template_path
+
+
+def to_string(value: Any) -> str:
+    return str(value)
+
+
+def to_string_array(value: list[Any]) -> list[str]:
+    return [str(v) for v in value]
+
+
+def to_integer(value: Any) -> int:
+    return int(value)
+
+
+def to_float(value: Any) -> float:
+    return float(value)
+
+
+def to_date(value: Any) -> str | None:
+    if isinstance(value, str):
+        return datetime.datetime.fromisoformat(value).isoformat()
+    elif isinstance(value, int | float):
+        return datetime.datetime.fromtimestamp(value, tz=datetime.UTC).isoformat()
+    return None
+
+
+_DtypeConvertingMap = MappingProxyType(
+    {
+        "string": to_string,
+        "string[]": to_string_array,
+        "integer": to_integer,
+        "float": to_float,
+        "date": to_date,
+    }
+)
+
+
+def convert_to_type(input_value: Any, dtype_desc: str) -> Any:
+    if (converter := _DtypeConvertingMap.get(dtype_desc)) is None:
+        raise ValueError(
+            "Invalid dtype description. Must be one of: ",
+            "string, string[], integer, float, date.\nGot: {dtype_desc}",
+        )
+    return converter(input_value)
 
 
 def build_dataset_schema(

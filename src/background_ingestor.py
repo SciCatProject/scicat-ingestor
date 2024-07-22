@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 # import scippnexus as snx
-import datetime
 import json
+import logging
 import pathlib
+from urllib.parse import urljoin
 
 import h5py
 import requests
@@ -12,6 +13,7 @@ from scicat_configuration import (
     build_background_ingestor_arg_parser,
     build_scicat_background_ingester_config,
 )
+from scicat_dataset import convert_to_type
 from scicat_logging import build_logger
 from scicat_metadata import collect_schemas, select_applicable_schema
 from system_helpers import exit_at_exceptions
@@ -45,7 +47,7 @@ def extract_variables_values(
             response = requests.get(
                 url,
                 headers={"token": config[""]["token"]},
-                timeout=10,  # TODO: decide timeout
+                timeout=10,  # TODO: decide timeout. Maybe from configuration?
             )
             # extract value
             value = response.json()[variables[variable]["field"]]
@@ -63,27 +65,76 @@ def extract_variables_values(
         else:
             raise Exception("Invalid variable source configuration")
 
-        value_type = variables[variable]["value_type"]
-        if value_type == "string":
-            value = str(value)
-        elif value_type == "string[]":
-            value = [str(v) for v in value]
-        elif value_type == "integer":
-            value = int(value)
-        elif value_type == "float":
-            value = float(value)
-        elif value_type == "date" and isinstance(value, int):
-            value = datetime.datetime.fromtimestamp(value, tz=datetime.UTC).isoformat()
-        elif value_type == "date" and isinstance(value, str):
-            value = datetime.datetime.fromisoformat(value).isoformat()
-
-        values[variable] = value
+        values[variable] = convert_to_type(value, variables[variable]["value_type"])
 
     return values
 
 
-def prepare_scicat_dataset(schema, values): ...
-def create_scicat_dataset(dataset): ...
+def prepare_scicat_dataset(metadata_schema, values):
+    """Prepare scicat dataset as dictionary ready to be ``POST``ed."""
+    schema: dict = metadata_schema["schema"]
+    dataset = {}
+    scientific_metadata = {
+        'ingestor_metadata_schema_id': {
+            "value": metadata_schema["id"],
+            "unit": "",
+            "human_name": "Ingestor Metadata Schema Id",
+            "type": "string",
+        }
+    }
+    for field in schema.values():
+        machine_name = field["machine_name"]
+        field_type = field["type"]
+        if field["field_type"] == "high_level":
+            dataset[machine_name] = convert_to_type(
+                replace_variables_values(field["value"], values), field_type
+            )
+        elif field["field_type"] == "scientific_metadata":
+            scientific_metadata[machine_name] = {
+                "value": convert_to_type(
+                    replace_variables_values(field["value"], values), field_type
+                ),
+                "unit": "",
+                "human_name": field["human_name"]
+                if field.get("human_name", None)
+                else machine_name,
+                "type": field_type,
+            }
+        else:
+            raise Exception("Metadata schema field type invalid")
+
+    dataset["scientific_metadata"] = scientific_metadata
+
+    return dataset
+
+
+def create_scicat_dataset(dataset: str, config: dict, logger: logging.Logger) -> dict:
+    """
+    Execute a POST request to scicat to create a dataset
+    """
+    response = requests.request(
+        method="POST",
+        url=urljoin(config["scicat_url"], "datasets"),
+        json=dataset,
+        headers=config["scicat_headers"],
+        timeout=config["timeout_seconds"],
+        stream=False,
+        verify=True,
+    )
+
+    result = response.json()
+    if response.ok:
+        ...
+    else:
+        err = result.get("error", {})
+        raise Exception(f"Error creating new dataset: {err}")
+
+    logger.info("Dataset create successfully. Dataset pid: %s", result['pid'])
+    return result
+
+
+def prepare_files_list(nexus_file, done_writing_message_file, config): ...
+def prepare_scicat_origdatablock(files_list, config): ...
 def create_scicat_origdatablock(
     scicat_dataset_pid, nexus_file=None, done_writing_message_file=None
 ): ...
@@ -133,19 +184,18 @@ def main() -> None:
                 metadata_schema['variables'], h5file, config
             )
 
-        # create b2blake hash of all the files
+        # create files list with b2blake hash of all the files
+        _ = prepare_files_list(nexus_file_path, done_writing_message_file, config)
 
         # create and populate scicat dataset entry
-        scicat_dataset = prepare_scicat_dataset(
-            metadata_schema['schema'], variables_values
-        )
+        scicat_dataset = prepare_scicat_dataset(metadata_schema, variables_values)
 
         # create dataset in scicat
-        scicat_dataset_pid = create_scicat_dataset(scicat_dataset)
+        scicat_dataset = create_scicat_dataset(scicat_dataset, config)
+        scicat_dataset_pid = scicat_dataset["pid"]
 
         # create and populate scicat origdatablock entry
         # with files and hashes previously computed
-
         scicat_origdatablock = create_scicat_origdatablock(
             scicat_dataset_pid, nexus_file_path, done_writing_message_file
         )
