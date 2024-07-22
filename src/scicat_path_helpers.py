@@ -13,17 +13,3 @@ def select_target_directory(
         return file_path.parent / pathlib.Path(fh_options.ingestor_files_directory)
     else:
         return pathlib.Path(fh_options.local_output_directory)
-
-
-def get_dataset_schema_template_path() -> pathlib.Path:
-    """Get the path to the dataset schema template."""
-    return pathlib.Path(__file__).parent / pathlib.Path(
-        "scicat_schemas/dataset.schema.json.jinja"
-    )
-
-
-def get_origdatablock_schema_template_path() -> pathlib.Path:
-    """Get the path to the dataset schema template."""
-    return pathlib.Path(__file__).parent / pathlib.Path(
-        "scicat_schemas/origdatablock.schema.json.jinja"
-    )

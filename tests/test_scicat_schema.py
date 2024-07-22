@@ -2,6 +2,24 @@
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 
 
+def test_single_datafile_template_loading() -> None:
+    from scicat_schemas.load_template import load_single_datafile_template
+
+    assert load_single_datafile_template() is not None
+
+
+def test_dataset_schema_template_loading() -> None:
+    from scicat_schemas.load_template import load_dataset_schema_template
+
+    assert load_dataset_schema_template() is not None
+
+
+def test_origdatablock_schema_template_loading() -> None:
+    from scicat_schemas.load_template import load_origdatablock_schema_template
+
+    assert load_origdatablock_schema_template() is not None
+
+
 _example_scientific_metadata = """"run_number": {
       "value": 18856,
       "unit": "",
