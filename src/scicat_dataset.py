@@ -9,7 +9,7 @@ from scicat_configuration import FileHandlingOptions
 from scicat_schemas import (
     load_dataset_schema_template,
     load_origdatablock_schema_template,
-    load_single_datafile_template,
+    load_datafilelist_item_schema_template,
 )
 
 
@@ -164,12 +164,9 @@ def _calculate_checksum(file_path: pathlib.Path, algorithm_name: str) -> str:
 def build_single_data_file_desc(
     file_path: pathlib.Path, config: FileHandlingOptions
 ) -> dict[str, Any]:
-    """Build the description of a single data file."""
-    import datetime
-    import json
-
-    from scicat_schemas import load_single_datafile_template
-
+    """
+    Build the description of a single data file.
+    """
     single_file_template = load_single_datafile_template()
 
     return json.loads(

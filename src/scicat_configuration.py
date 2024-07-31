@@ -2,7 +2,7 @@
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 import argparse
 from collections.abc import Mapping
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from types import MappingProxyType
 from typing import Any
 
@@ -20,12 +20,19 @@ def _load_config(config_file: Any) -> dict:
     return {}
 
 
-def _merge_run_options(config_dict: dict, input_args_dict: dict) -> dict:
+def _merge_config_options(
+        config_dict: dict,
+        input_args_dict: dict,
+        keys: list[str] | None = None
+) -> dict:
     """Merge configuration from the configuration file and input arguments."""
+
+    if keys == None:
+        keys = config_dict.keys();
 
     return {
         **config_dict.setdefault("options", {}),
-        **{key: value for key, value in input_args_dict.items() if value is not None},
+        **{key: input_args_dict[key] for key in keys if input_args_dict[key] is not None},
     }
 
 
@@ -52,7 +59,7 @@ def _recursive_deepcopy(obj: Any) -> dict:
     return copied
 
 
-def build_main_arg_parser() -> argparse.ArgumentParser:
+def build_online_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
 
     group = parser.add_argument_group("Scicat Ingestor Options")
@@ -66,6 +73,13 @@ def build_main_arg_parser() -> argparse.ArgumentParser:
         dest="config_file",
         help="Configuration file name. Default: config.20240405.json",
         type=str,
+    )
+    group.add_argument(
+        "-d", "--dry-run",
+        dest="dry_run",
+        help="Dry run. Does not produce any output file nor modify entry in SciCat",
+        action="store_true",
+        default=False,
     )
     group.add_argument(
         "-v",
@@ -129,13 +143,6 @@ def build_main_arg_parser() -> argparse.ArgumentParser:
         default=True,
     )
     group.add_argument(
-        "--pyscicat",
-        dest="pyscicat",
-        help="Location where a specific version of pyscicat is available",
-        default=None,
-        type=str,
-    )
-    group.add_argument(
         "--graylog",
         dest="graylog",
         help="Use graylog for additional logs",
@@ -145,9 +152,9 @@ def build_main_arg_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def build_background_ingestor_arg_parser() -> argparse.ArgumentParser:
-    parser = build_main_arg_parser()
-    group = parser.add_argument_group('Scicat Background Ingestor Options')
+def build_offline_ingestor_arg_parser() -> argparse.ArgumentParser:
+    parser = build_online_arg_parser()
+    group = parser.add_argument_group('Scicat Offline Ingestor Options')
 
     group.add_argument(
         '-f',
@@ -178,51 +185,33 @@ def build_background_ingestor_arg_parser() -> argparse.ArgumentParser:
 
 
 @dataclass
-class GraylogOptions:
-    host: str = ""
-    port: str = ""
-    facility: str = "scicat.ingestor"
-
-
-@dataclass
-class RunOptions:
-    """RunOptions dataclass to store the configuration options.
+class LoggingOptions:
+    """
+    LoggingOptions dataclass to store the configuration options.
 
     Most of options don't have default values because they are expected
     to be set by the user either in the configuration file or through
     command line arguments.
     """
 
-    config_file: str
     verbose: bool
     file_log: bool
     file_log_base_name: str
     file_log_timestamp: bool
-    system_log: bool
-    log_message_prefix: str
     logging_level: str
-    check_by_job_id: bool
+    log_message_prefix: str
+    system_log: bool
     system_log_facility: str | None = None
-    pyscicat: str | None = None
     graylog: bool = False
-
-
-@dataclass(frozen=True)
-class MessageSavingOptions:
-    message_to_file: bool = True
-    """Save messages to a file."""
-    message_file_extension: str = "message.json"
-    """Message file extension."""
-    message_output: str = "SOURCE_FOLDER"
-    """Output directory for messages."""
-
-
-DEFAULT_MESSAGE_SAVING_OPTIONS = MessageSavingOptions()
+    graylog_host: str = ""
+    graylog_port: str = ""
+    graylog_facility: str = "scicat.ingestor"
 
 
 @dataclass
-class kafkaOptions:
-    """KafkaOptions dataclass to store the configuration options.
+class KafkaOptions:
+    """
+    KafkaOptions dataclass to store the configuration options.
 
     Default values are provided as they are not
     expected to be set by command line arguments.
@@ -248,161 +237,170 @@ class kafkaOptions:
     """Enable Kafka auto commit."""
     auto_offset_reset: str = "earliest"
     """Kafka auto offset reset."""
-    message_saving_options: MessageSavingOptions = DEFAULT_MESSAGE_SAVING_OPTIONS
-    """Message saving options."""
 
     @classmethod
-    def from_configurations(cls, config: dict) -> "kafkaOptions":
+    def from_configurations(cls, config: dict) -> "KafkaOptions":
         """Create kafkaOptions from a dictionary."""
-        return cls(
-            **{
-                **config,
-                "message_saving_options": MessageSavingOptions(
-                    **config.get("message_saving_options", {})
-                ),
-            },
-        )
+        return cls(**config)
 
 
 @dataclass
 class FileHandlingOptions:
-    local_output_directory: str = "data"
-    compute_file_stats: bool = True
-    compute_file_hash: bool = True
+    compute_file_stats: bool = False
+    compute_file_hash: bool = False
     file_hash_algorithm: str = "blake2b"
-    save_file_hash: bool = True
+    save_file_hash: bool = False
     hash_file_extension: str = "b2b"
     ingestor_files_directory: str = "../ingestor"
-
-
-@dataclass
-class DatasetOptions:
-    force_dataset_pid: bool = True  # Not sure if needed
-    dataset_pid_prefix: str = "20.500.12269"
-    use_job_id_as_dataset_id: bool = True
-    beautify_metadata_keys: bool = False
-    metadata_levels_separator: str = " "
-
+    message_to_file: bool = True
+    message_file_extension: str = "message.json"
 
 @dataclass
 class IngestionOptions:
-    file_handling_options: FileHandlingOptions
-    dataset_options: DatasetOptions
-    schema_directory: str = "schemas"
-    retrieve_instrument_from: str = "default"
-    instrument_position_in_file_path: int = 3
+    file_handling: FileHandlingOptions
+    dry_run: bool = False
+    schemas_directory: str = "schemas"
 
     @classmethod
     def from_configurations(cls, config: dict) -> "IngestionOptions":
         """Create IngestionOptions from a dictionary."""
         return cls(
             FileHandlingOptions(**config.get("file_handling_options", {})),
-            DatasetOptions(**config.get("dataset_options", {})),
-            schema_directory=config.get("schema_directory", "schemas"),
-            retrieve_instrument_from=config.get("retrieve_instrument_from", "default"),
-            instrument_position_in_file_path=config.get(
-                "instrument_position_in_file_path", 3
-            ),
+            dry_run=config.get("dry_run", False),
+            schemas_directory=config.get("schemas_directory", "schemas"),
         )
 
 
 @dataclass
-class IngestorConfig:
+class DatasetOptions:
+    check_by_job_id: bool = True,
+    allow_dataset_pid: bool = True,
+    dataset_pid_prefix: str = "20.500.12269",
+    default_instrument_id: str = "",
+    default_instrument_name: str = "",
+    default_proposal_id: str = "",
+    default_ownerGroup: str = "",
+    default_accessGroups: list[str] = field(default_factory=list)
+
+    @classmethod
+    def from_configurations(cls, config: dict) -> "DatasetOptions":
+        """Create DatasetOptions from a dictionary."""
+        return cls(**config)
+
+
+@dataclass
+class SciCatOptions:
+    host: str = ""
+    token: str = ""
+    headers: dict = field(default_factory=dict)
+    timeout: int = 0
+    stream: bool = True
+    verify: bool = False
+
+    @classmethod
+    def from_configurations(cls, config: dict) -> "SciCatOptions":
+        """Create SciCatOptions from a dictionary."""
+        options = cls(**config)
+        options.headers = {
+            "Authorization": "Bearer {}".format(options.token)
+        }
+        return options
+
+
+@dataclass
+class OnlineIngestorConfig:
     original_dict: Mapping
     """Original configuration dictionary in the json file."""
-    run_options: RunOptions
-    """Merged configuration dictionary with command line arguments."""
-    kafka_options: kafkaOptions
-    """Kafka configuration options read from files."""
-    graylog_options: GraylogOptions
-    """Graylog configuration options for streaming logs."""
-    ingestion_options: IngestionOptions
-    """Ingestion configuration options for background ingestor."""
+    dataset: DatasetOptions
+    kafka: KafkaOptions
+    logging: LoggingOptions
+    ingestion: IngestionOptions
+    scicat: SciCatOptions
 
     def to_dict(self) -> dict:
         """Return the configuration as a dictionary."""
 
         return asdict(
-            IngestorConfig(
+            OnlineIngestorConfig(
                 _recursive_deepcopy(
                     self.original_dict
                 ),  # asdict does not support MappingProxyType
-                self.run_options,
-                self.kafka_options,
-                self.graylog_options,
-                self.ingestion_options,
+                self.dataset,
+                self.kafka,
+                self.logging,
+                self.ingestion,
+                self.scicat,
             )
         )
 
 
-def build_scicat_ingestor_config(input_args: argparse.Namespace) -> IngestorConfig:
+def build_scicat_online_ingestor_config(input_args: argparse.Namespace) -> OnlineIngestorConfig:
     """Merge configuration from the configuration file and input arguments."""
     config_dict = _load_config(input_args.config_file)
-    run_option_dict = _merge_run_options(config_dict, vars(input_args))
+    logging_dict = _merge_config_options(config_dict.setdefault("logging",{}), vars(input_args))
+    ingestion_dict = _merge_config_options(config_dict.setdefault("ingestion",{}), vars(input_args), ["dry-run"])
 
     # Wrap configuration in a dataclass
-    return IngestorConfig(
+    return OnlineIngestorConfig(
         original_dict=_freeze_dict_items(config_dict),
-        run_options=RunOptions(**run_option_dict),
-        kafka_options=kafkaOptions.from_configurations(
-            config_dict.setdefault("kafka", {})
-        ),
-        graylog_options=GraylogOptions(**config_dict.setdefault("graylog", {})),
-        ingestion_options=IngestionOptions.from_configurations(
-            config_dict.setdefault("ingestion_options", {})
-        ),
+        dataset=DatasetOptions(**config_dict.setdefault("dataset",{})),
+        ingestion=IngestionOptions.from_configurations(ingestion_dict),
+        kafka=KafkaOptions(**config_dict.setdefault("kafka", {})),
+        logging=LoggingOptions(**logging_dict),
+        scicat=SciCatOptions(**config_dict.setdefault("scicat", {})),
     )
 
 
 @dataclass
-class SingleRunOptions:
+class OfflineRunOptions:
     nexus_file: str
     """Full path of the input nexus file to be ingested."""
     done_writing_message_file: str
     """Full path of the done writing message file that match the ``nexus_file``."""
 
 @dataclass
-class BackgroundIngestorConfig(IngestorConfig):
-    single_run_options: SingleRunOptions
+class OfflineIngestorConfig(OnlineIngestorConfig):
+    offline_run: OfflineRunOptions
     """Single run configuration options for background ingestor."""
 
     def to_dict(self) -> dict:
         """Return the configuration as a dictionary."""
 
         return asdict(
-            BackgroundIngestorConfig(
+            OfflineIngestorConfig(
                 _recursive_deepcopy(
                     self.original_dict
                 ),  # asdict does not support MappingProxyType
-                self.run_options,
-                self.kafka_options,
-                self.graylog_options,
-                self.ingestion_options,
-                self.single_run_options,
+                self.dataset,
+                self.kafka,
+                self.logging,
+                self.ingestion,
+                self.scicat,
+                self.offline_run,
             )
         )
 
 
-def build_scicat_background_ingester_config(
+def build_scicat_offline_ingestor_config(
     input_args: argparse.Namespace,
-) -> BackgroundIngestorConfig:
+) -> OfflineIngestorConfig:
     """Merge configuration from the configuration file and input arguments."""
     config_dict = _load_config(input_args.config_file)
     input_args_dict = vars(input_args)
-    single_run_option_dict = {
+    logging_dict = _merge_config_options(config_dict.setdefault("logging",{}), input_args_dict)
+    ingestion_dict = _merge_config_options(config_dict.setdefault("ingestion",{}), input_args_dict, ["dry-run"])
+    offline_run_option_dict = {
         "nexus_file": input_args_dict.pop("nexus_file"),
         "done_writing_message_file": input_args_dict.pop("done_writing_message_file"),
     }
-    run_option_dict = _merge_run_options(config_dict, input_args_dict)
-    ingestion_option_dict = config_dict.setdefault("ingestion_options", {})
-    kafka_option_dict = config_dict.setdefault("kafka", {})
 
     # Wrap configuration in a dataclass
-    return BackgroundIngestorConfig(
+    return OfflineIngestorConfig(
         original_dict=_freeze_dict_items(config_dict),
-        run_options=RunOptions(**run_option_dict),
-        kafka_options=kafkaOptions.from_configurations(kafka_option_dict),
-        single_run_options=SingleRunOptions(**single_run_option_dict),
-        graylog_options=GraylogOptions(**config_dict.setdefault("graylog", {})),
-        ingestion_options=IngestionOptions.from_configurations(ingestion_option_dict),
+        dataset=DatasetOptions(**config_dict.setdefault("dataset",{})),
+        ingestion=IngestionOptions.from_configurations(ingestion_dict),
+        kafka=KafkaOptions(**config_dict.setdefault("kafka", {})),
+        logging=LoggingOptions(**logging_dict),
+        scicat=SciCatOptions(**config_dict.setdefault("scicat", {})),
+        offline_run=OfflineRunOptions(**offline_run_option_dict),
     )

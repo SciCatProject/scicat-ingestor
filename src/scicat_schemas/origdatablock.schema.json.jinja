@@ -1,9 +1,9 @@
 {
-  "datasetId": "{{ dataset_pid }}",
-  "size": {{ dataset_size }},
-  "chkAlg": "{{ check_algorithm }}",
+  "datasetId": "{{ datasetId }}",
+  "size": {{ size }},
+  "chkAlg": "{{ chkAlg }}",
   "dataFileList": [
-    {% for data_file_desc in data_file_desc_list %}{{ data_file_desc }}{% if not loop.last %},
+    {% for dataFileList_item in dataFileList %}{{ dataFileList_item }}{% if not loop.last %},
     {% endif %}{% endfor %}
   ]
 }

@@ -1,30 +1,30 @@
 {
-  "pid": "{{ dataset_pid }}",
-  "datasetName": "{{ dataset_name }}",
-  "description": "{{ dataset_description }}",
-  "principalInvestigator": "{{ principal_investigator }}",
-  "creationLocation": "{{ facility }}:{{ environment }}",
+  "pid": "{{ pid }}",
+  "datasetName": "{{ datasetName }}",
+  "description": "{{ datasetDescription }}",
+  "principalInvestigator": "{{ principalInvestigator }}",
+  "creationLocation": "{{ creationLocation }}",
   "scientificMetadata": {
-    {{ scientific_metadata }}
+    {{ scientificMetadata }}
   },
   "owner": "{{ owner }}",
-  "ownerEmail": "{{ owner_email }}",
-  "sourceFolder": "{{ source_folder }}",
-  "contactEmail": "{{ contact_email }}",
-  "creationTime": "{{ iso_creation_time }}",
+  "ownerEmail": "{{ ownerEmail }}",
+  "sourceFolder": "{{ sourceFolder }}",
+  "contactEmail": "{{ contactEmail }}",
+  "creationTime": "{{ creationTime }}",
   "type": "raw",
+  {% if techniques }{% for technique in techniques }
   "techniques": [
     {
-      "pid": "{{ technique_pid }}",
-      "names": "{{ technique_name }}"
+      "pid": "{{ technique.pid }}",
+      "names": "{{ technique.name }}"
     }
-  ],
-  "instrumentId": "{{ instrument_id }}",
-  "sampleId": "{{ sample_id }}",
-  "proposalId": "{{ proposal_id }}",
-  "ownerGroup": "{{ owner_group }}",
+  ]{% endif %}{% endfor %},
+  "instrumentId": "{{ instrumentId }}",
+  "sampleId": "{{ sampleId }}",
+  "proposalId": "{{ proposalId }}",
+  "ownerGroup": "{{ ownerGroup }}",
   "accessGroups": [
-    {% for access_group in access_groups %}"{{ access_group }}"{% if not loop.last %},
-    {% endif %}{% endfor %}
+    {% for accessGroup in accessGroups %}"{{ accessGroup }}"{% if not loop.last %},{% endif %}{% endfor %}
   ]
 }

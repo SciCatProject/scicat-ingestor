@@ -1,9 +1,0 @@
-{
-    "path": "{{ file_absolute_path }}",
-    "size": {{ file_size }},
-    "time": "{{ datetime_isoformat }}",{% if checksum %}
-    "chk": "{{ checksum }}",
-    {% endif %}"uid": "{{ uid }}",
-    "gid": "{{ gid }}",
-    "perm": "{{ perm }}"
-}
