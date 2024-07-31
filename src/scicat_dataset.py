@@ -1,10 +1,16 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 import datetime
+import pathlib
 from types import MappingProxyType
 from typing import Any
 
-from scicat_schemas import load_dataset_schema_template
+from scicat_configuration import FileHandlingOptions
+from scicat_schemas import (
+    load_dataset_schema_template,
+    load_origdatablock_schema_template,
+    load_single_datafile_template,
+)
 
 
 def to_string(value: Any) -> str:
@@ -51,8 +57,9 @@ def convert_to_type(input_value: Any, dtype_desc: str) -> Any:
     return converter(input_value)
 
 
-def build_dataset_schema(
+def build_dataset_instance(
     *,
+    dataset_pid_prefix: str,
     nxs_dataset_pid: str,
     dataset_name: str,
     dataset_description: str,
@@ -74,6 +81,7 @@ def build_dataset_schema(
     access_groups: list[str],
 ) -> str:
     return load_dataset_schema_template().render(
+        dataset_pid_prefix=dataset_pid_prefix,
         nxs_dataset_pid=nxs_dataset_pid,
         dataset_name=dataset_name,
         dataset_description=dataset_description,
@@ -93,4 +101,132 @@ def build_dataset_schema(
         proposal_id=proposal_id,
         owner_group=owner_group,
         access_groups=access_groups,
+    )
+
+
+def build_single_datafile_instance(
+    *,
+    file_absolute_path: str,
+    file_size: int,
+    datetime_isoformat: str,
+    uid: str,
+    gid: str,
+    perm: str,
+    checksum: str = "",
+) -> str:
+    return load_single_datafile_template().render(
+        file_absolute_path=file_absolute_path,
+        file_size=file_size,
+        datetime_isoformat=datetime_isoformat,
+        checksum=checksum,
+        uid=uid,
+        gid=gid,
+        perm=perm,
+    )
+
+
+def build_origdatablock_instance(
+    *,
+    dataset_pid_prefix: str,
+    nxs_dataset_pid: str,
+    dataset_size: int,
+    check_algorithm: str,
+    data_file_desc_list: list[str],
+) -> str:
+    return load_origdatablock_schema_template().render(
+        dataset_pid_prefix=dataset_pid_prefix,
+        nxs_dataset_pid=nxs_dataset_pid,
+        dataset_size=dataset_size,
+        check_algorithm=check_algorithm,
+        data_file_desc_list=data_file_desc_list,
+    )
+
+
+def _calculate_checksum(file_path: pathlib.Path, algorithm_name: str) -> str:
+    """Calculate the checksum of a file."""
+    import hashlib
+
+    if not algorithm_name == "b2blake":
+        raise ValueError(
+            "Only b2blake hash algorithm is supported for now. Got: ",
+            f"{algorithm_name}",
+        )
+
+    chk = hashlib.new(algorithm_name, usedforsecurity=False)
+    buffer = memoryview(bytearray(128 * 1024))
+    with open(file_path, "rb", buffering=0) as file:
+        for n in iter(lambda: file.readinto(buffer), 0):
+            chk.update(buffer[:n])
+
+    return chk.hexdigest()
+
+
+def build_single_data_file_desc(
+    file_path: pathlib.Path, config: FileHandlingOptions
+) -> dict[str, Any]:
+    """Build the description of a single data file."""
+    import datetime
+    import json
+
+    from scicat_schemas import load_single_datafile_template
+
+    single_file_template = load_single_datafile_template()
+
+    return json.loads(
+        single_file_template.render(
+            file_absolute_path=file_path.absolute(),
+            file_size=(file_stats := file_path.stat()).st_size,
+            datetime_isoformat=datetime.datetime.fromtimestamp(
+                file_stats.st_ctime, tz=datetime.UTC
+            ).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+            chk=_calculate_checksum(file_path, config.file_hash_algorithm),
+            uid=str(file_stats.st_uid),
+            gid=str(file_stats.st_gid),
+            perm=oct(file_stats.st_mode),
+        )
+    )
+
+
+def _build_hash_file_path(
+    *,
+    original_file_path: str,
+    ingestor_files_directory: str,
+    hash_file_extension: str,
+) -> pathlib.Path:
+    """Build the path for the hash file."""
+    original_path = pathlib.Path(original_file_path)
+    dir_path = pathlib.Path(ingestor_files_directory)
+    file_name = ".".join([original_path.name, hash_file_extension])
+    return dir_path / pathlib.Path(file_name)
+
+
+def save_and_build_single_hash_file_desc(
+    original_file_desciption: dict, config: FileHandlingOptions
+) -> dict:
+    """Save the hash of the file and build the description."""
+    import datetime
+    import json
+
+    from scicat_schemas import load_single_datafile_template
+
+    single_file_template = load_single_datafile_template()
+    file_hash: str = original_file_desciption["chk"]
+    hash_path = _build_hash_file_path(
+        original_file_path=original_file_desciption["path"],
+        ingestor_files_directory=config.ingestor_files_directory,
+        hash_file_extension=config.hash_file_extension,
+    )
+    hash_path.write_text(file_hash)
+
+    return json.loads(
+        single_file_template.render(
+            file_absolute_path=hash_path.absolute(),
+            file_size=(file_stats := hash_path.stat()).st_size,
+            datetime_isoformat=datetime.datetime.fromtimestamp(
+                file_stats.st_ctime, tz=datetime.UTC
+            ).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+            uid=str(file_stats.st_uid),
+            gid=str(file_stats.st_gid),
+            perm=oct(file_stats.st_mode),
+        )
     )

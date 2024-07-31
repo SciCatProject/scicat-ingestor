@@ -13,3 +13,12 @@ def select_target_directory(
         return file_path.parent / pathlib.Path(fh_options.ingestor_files_directory)
     else:
         return pathlib.Path(fh_options.local_output_directory)
+
+
+def compose_checksum_file_path(
+    fh_options: FileHandlingOptions, file_path: pathlib.Path
+) -> pathlib.Path:
+    """Compose the path for the checksum file."""
+    return pathlib.Path(fh_options.ingestor_files_directory) / pathlib.Path(
+        file_path.name + fh_options.hash_file_extension
+    )
