@@ -81,7 +81,7 @@ _example_dataset_schema = (
 def test_dataset_schema_rendering() -> None:
     import json
 
-    from scicat_dataset import build_dataset_description
+    from scicat_dataset import build_dataset_instance
 
     dataset_schema = build_dataset_description(
         dataset_pid_prefix="12.234.34567",
@@ -128,7 +128,7 @@ _example_file_description_1 = """
 def test_single_file_description_rendering() -> None:
     import json
 
-    from scicat_dataset import build_single_datafile_description
+    from scicat_dataset import build_single_datafile_instance
 
     file_description = build_single_datafile_description(
         file_absolute_path="/ess/data/coda/2024/616254/0001.nxs",
@@ -158,7 +158,7 @@ _example_file_description_2 = """
 def test_single_file_description_rendering_no_checksum() -> None:
     import json
 
-    from scicat_dataset import build_single_datafile_description
+    from scicat_dataset import build_single_datafile_instance
 
     file_description = build_single_datafile_description(
         file_absolute_path="/ess/data/coda/2024/616254/0002.nxs",
@@ -209,7 +209,7 @@ _example_orig_datablock = (
 def test_orig_datablock_rendering() -> None:
     import json
 
-    from scicat_dataset import build_orig_datablock_description
+    from scicat_dataset import build_orig_datablock_instance
 
     orig_datablock = build_orig_datablock_description(
         dataset_pid_prefix="20.500.12269",
