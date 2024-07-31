@@ -104,7 +104,7 @@ def build_dataset_instance(
     )
 
 
-def build_single_datafile_description(
+def build_single_datafile_instance(
     *,
     file_absolute_path: str,
     file_size: int,
@@ -125,7 +125,7 @@ def build_single_datafile_description(
     )
 
 
-def build_orig_datablock_description(
+def build_origdatablock_instance(
     *,
     dataset_pid_prefix: str,
     nxs_dataset_pid: str,
