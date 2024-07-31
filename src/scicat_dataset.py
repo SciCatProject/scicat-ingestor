@@ -125,17 +125,15 @@ def build_single_datafile_instance(
     )
 
 
-def build_origdatablock_instance(
+def build_orig_datablock_instance(
     *,
-    dataset_pid_prefix: str,
-    nxs_dataset_pid: str,
+    dataset_pid: str,
     dataset_size: int,
     check_algorithm: str,
     data_file_desc_list: list[str],
 ) -> str:
     return load_origdatablock_schema_template().render(
-        dataset_pid_prefix=dataset_pid_prefix,
-        nxs_dataset_pid=nxs_dataset_pid,
+        dataset_pid=dataset_pid,
         dataset_size=dataset_size,
         check_algorithm=check_algorithm,
         data_file_desc_list=data_file_desc_list,

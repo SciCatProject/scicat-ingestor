@@ -83,7 +83,7 @@ def test_dataset_schema_rendering() -> None:
 
     from scicat_dataset import build_dataset_instance
 
-    dataset_schema = build_dataset_description(
+    dataset_schema = build_dataset_instance(
         dataset_pid_prefix="12.234.34567",
         nxs_dataset_pid="e3690b21-ee8c-40d6-9409-6b6fdca776d2",
         dataset_name="this is a dataset",
@@ -130,7 +130,7 @@ def test_single_file_description_rendering() -> None:
 
     from scicat_dataset import build_single_datafile_instance
 
-    file_description = build_single_datafile_description(
+    file_description = build_single_datafile_instance(
         file_absolute_path="/ess/data/coda/2024/616254/0001.nxs",
         file_size=1231231,
         datetime_isoformat="2024-07-16T10:00:00.000Z",
@@ -160,7 +160,7 @@ def test_single_file_description_rendering_no_checksum() -> None:
 
     from scicat_dataset import build_single_datafile_instance
 
-    file_description = build_single_datafile_description(
+    file_description = build_single_datafile_instance(
         file_absolute_path="/ess/data/coda/2024/616254/0002.nxs",
         file_size=1231231,
         datetime_isoformat="2024-07-16T10:00:00.000Z",
@@ -211,9 +211,8 @@ def test_orig_datablock_rendering() -> None:
 
     from scicat_dataset import build_orig_datablock_instance
 
-    orig_datablock = build_orig_datablock_description(
-        dataset_pid_prefix="20.500.12269",
-        nxs_dataset_pid="53fd2786-3729-11ef-83e5-fa163e9aae0a",
+    orig_datablock = build_orig_datablock_instance(
+        dataset_pid="20.500.12269/53fd2786-3729-11ef-83e5-fa163e9aae0a",
         dataset_size=446630741,
         check_algorithm="blake2b",
         data_file_desc_list=[
