@@ -58,17 +58,13 @@
     "retrieve_instrument_from": "default",
     "instrument_position_in_file_path": 3,
     "file_handling_options": {
-      "hdf_structure_in_metadata": false,
-      "hdf_structure_to_file": true,
-      "hdf_structure_file_extension": ".hdf_structure.json",
-      "hdf_structure_output": "SOURCE_FOLDER",
       "local_output_directory": "data",
       "compute_file_stats": true,
       "compute_file_hash": true,
       "file_hash_algorithm": "blake2b",
       "save_file_hash": true,
       "hash_file_extension": "b2b",
-      "ingestor_files_directory": "ingestor"
+      "ingestor_files_directory": "../ingestor"
     },
     "dataset_options": {
       "force_dataset_pid": true,

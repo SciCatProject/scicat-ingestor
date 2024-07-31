@@ -136,24 +136,24 @@ def wrdn_messages(
                 yield None
 
 
-def compose_message_path(
-    *,
-    target_dir: pathlib.Path,
-    nexus_file_path: pathlib.Path,
-    message_saving_options: MessageSavingOptions,
-) -> pathlib.Path:
-    """Compose the message path based on the nexus file path and configuration."""
-
-    return target_dir / (
-        pathlib.Path(
-            ".".join(
-                (
-                    nexus_file_path.stem,
-                    message_saving_options.message_file_extension.removeprefix("."),
-                )
-            )
-        )
-    )
+# def compose_message_path(
+#     *,
+#     target_dir: pathlib.Path,
+#     nexus_file_path: pathlib.Path,
+#     message_saving_options: MessageSavingOptions,
+# ) -> pathlib.Path:
+#     """Compose the message path based on the nexus file path and configuration."""
+#
+#     return target_dir / (
+#         pathlib.Path(
+#             ".".join(
+#                 (
+#                     nexus_file_path.stem,
+#                     message_saving_options.message_file_extension.removeprefix("."),
+#                 )
+#             )
+#         )
+#     )
 
 
 def save_message_to_file(

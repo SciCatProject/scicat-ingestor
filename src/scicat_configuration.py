@@ -266,17 +266,13 @@ class kafkaOptions:
 
 @dataclass
 class FileHandlingOptions:
-    hdf_structure_in_metadata: bool = False  # Not sure if needed
-    hdf_structure_to_file: bool = True  # Not sure if needed
-    hdf_structure_file_extension: str = "hdf_structure.json"  # Not sure if needed
-    hdf_structure_output: str = "SOURCE_FOLDER"  # Not sure if needed
     local_output_directory: str = "data"
     compute_file_stats: bool = True
     compute_file_hash: bool = True
     file_hash_algorithm: str = "blake2b"
     save_file_hash: bool = True
     hash_file_extension: str = "b2b"
-    ingestor_files_directory: str = "ingestor"
+    ingestor_files_directory: str = "../ingestor"
 
 
 @dataclass
@@ -311,7 +307,7 @@ class IngestionOptions:
 
 
 @dataclass
-class IngesterConfig:
+class IngestorConfig:
     original_dict: Mapping
     """Original configuration dictionary in the json file."""
     run_options: RunOptions
@@ -327,7 +323,7 @@ class IngesterConfig:
         """Return the configuration as a dictionary."""
 
         return asdict(
-            IngesterConfig(
+            IngestorConfig(
                 _recursive_deepcopy(
                     self.original_dict
                 ),  # asdict does not support MappingProxyType
@@ -339,13 +335,13 @@ class IngesterConfig:
         )
 
 
-def build_scicat_ingester_config(input_args: argparse.Namespace) -> IngesterConfig:
+def build_scicat_ingestor_config(input_args: argparse.Namespace) -> IngestorConfig:
     """Merge configuration from the configuration file and input arguments."""
     config_dict = _load_config(input_args.config_file)
     run_option_dict = _merge_run_options(config_dict, vars(input_args))
 
     # Wrap configuration in a dataclass
-    return IngesterConfig(
+    return IngestorConfig(
         original_dict=_freeze_dict_items(config_dict),
         run_options=RunOptions(**run_option_dict),
         kafka_options=kafkaOptions.from_configurations(
@@ -365,9 +361,8 @@ class SingleRunOptions:
     done_writing_message_file: str
     """Full path of the done writing message file that match the ``nexus_file``."""
 
-
 @dataclass
-class BackgroundIngestorConfig(IngesterConfig):
+class BackgroundIngestorConfig(IngestorConfig):
     single_run_options: SingleRunOptions
     """Single run configuration options for background ingestor."""
 
