@@ -57,7 +57,7 @@ def convert_to_type(input_value: Any, dtype_desc: str) -> Any:
     return converter(input_value)
 
 
-def build_dataset_description(
+def build_dataset_instance(
     *,
     dataset_pid_prefix: str,
     nxs_dataset_pid: str,
