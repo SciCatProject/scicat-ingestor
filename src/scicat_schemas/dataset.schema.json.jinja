@@ -1,0 +1,30 @@
+{
+  "pid": "{{ dataset_pid }}",
+  "datasetName": "{{ dataset_name }}",
+  "description": "{{ dataset_description }}",
+  "principalInvestigator": "{{ principal_investigator }}",
+  "creationLocation": "{{ facility }}:{{ environment }}",
+  "scientificMetadata": {
+    {{ scientific_metadata }}
+  },
+  "owner": "{{ owner }}",
+  "ownerEmail": "{{ owner_email }}",
+  "sourceFolder": "{{ source_folder }}",
+  "contactEmail": "{{ contact_email }}",
+  "creationTime": "{{ iso_creation_time }}",
+  "type": "raw",
+  "techniques": [
+    {
+      "pid": "{{ technique_pid }}",
+      "names": "{{ technique_name }}"
+    }
+  ],
+  "instrumentId": "{{ instrument_id }}",
+  "sampleId": "{{ sample_id }}",
+  "proposalId": "{{ proposal_id }}",
+  "ownerGroup": "{{ owner_group }}",
+  "accessGroups": [
+    {% for access_group in access_groups %}"{{ access_group }}"{% if not loop.last %},
+    {% endif %}{% endfor %}
+  ]
+}

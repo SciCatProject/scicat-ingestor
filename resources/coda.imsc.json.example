@@ -101,7 +101,7 @@
     "proposal_id": {
       "field_type": "high_level",
       "machine_name": "proposalId",
-      "value": "proposal_id",
+      "value": "<proposal_id>",
       "type": "string",
     },
     "dataset_name": {
