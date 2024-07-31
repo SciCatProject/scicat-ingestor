@@ -13,7 +13,11 @@ from scicat_configuration import (
     build_background_ingestor_arg_parser,
     build_scicat_background_ingester_config,
 )
-from scicat_dataset import convert_to_type
+from scicat_dataset import (
+    build_single_data_file_desc,
+    convert_to_type,
+    save_and_build_single_hash_file_desc,
+)
 from scicat_logging import build_logger
 from scicat_metadata import collect_schemas, select_applicable_schema
 from system_helpers import exit_at_exceptions
@@ -133,7 +137,6 @@ def create_scicat_dataset(dataset: str, config: dict, logger: logging.Logger) ->
     return result
 
 
-def prepare_files_list(nexus_file, done_writing_message_file, config): ...
 def prepare_scicat_origdatablock(files_list, config): ...
 def create_scicat_origdatablock(
     scicat_dataset_pid, nexus_file=None, done_writing_message_file=None
@@ -146,6 +149,7 @@ def main() -> None:
     arg_namespace = arg_parser.parse_args()
     config = build_scicat_background_ingester_config(arg_namespace)
     ingestion_options = config.ingestion_options
+    file_handling_options = ingestion_options.file_handling_options
     logger = build_logger(config)
 
     # Log the configuration as dictionary so that it is easier to read from the logs
@@ -184,8 +188,24 @@ def main() -> None:
                 metadata_schema['variables'], h5file, config
             )
 
-        # create files list with b2blake hash of all the files
-        _ = prepare_files_list(nexus_file_path, done_writing_message_file, config)
+        # Collect data-file descriptions
+        data_file_list = [
+            build_single_data_file_desc(nexus_file_path, file_handling_options),
+            build_single_data_file_desc(
+                done_writing_message_file, file_handling_options
+            ),
+            # TODO: Add nexus structure file
+        ]
+        # Create hash of all the files if needed
+        if file_handling_options.save_file_hash:
+            data_file_list += [
+                save_and_build_single_hash_file_desc(
+                    data_file_dict, file_handling_options
+                )
+                for data_file_dict in data_file_list
+            ]
+        # Collect all data-files and hash-files descriptions
+        _ = [json.dumps(file_dict, indent=2) for file_dict in data_file_list]
 
         # create and populate scicat dataset entry
         scicat_dataset = prepare_scicat_dataset(metadata_schema, variables_values)
