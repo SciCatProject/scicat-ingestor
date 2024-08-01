@@ -3,14 +3,13 @@
   "id": "",
   "dataset": {
     "check_by_job_id": true,
-    "use_job_id_as_dataset_id": true,
-    "generate_dataset_pid": true,
+    "allow_dataset_pid": true,
+    "generate_dataset_pid": false,
     "dataset_pid_prefix": "20.500.12269",
     "default_instrument_id": "ID_OF_FALLBACK_INSTRUMENT",
-    "default_instrument_name": "FALLBACK_INSTRUMENT_NAME",
     "default_proposal_id": "DEFAULT_PROPOSAL_ID",
-    "default_ownerGroup": "DEFAULT_OWNER_GROUP",
-    "default_accessGroups": [
+    "default_owner_group": "DEFAULT_OWNER_GROUP",
+    "default_access_groups": [
       "ACCESS_GROUP_1"
     ]
   },

@@ -275,12 +275,12 @@ class IngestionOptions:
 class DatasetOptions:
     check_by_job_id: bool = True,
     allow_dataset_pid: bool = True,
+    generate_dataset_pid: bool = False,
     dataset_pid_prefix: str = "20.500.12269",
     default_instrument_id: str = "",
-    default_instrument_name: str = "",
     default_proposal_id: str = "",
-    default_ownerGroup: str = "",
-    default_accessGroups: list[str] = field(default_factory=list)
+    default_owner_group: str = "",
+    default_access_groups: list[str] = field(default_factory=list)
 
     @classmethod
     def from_configurations(cls, config: dict) -> "DatasetOptions":

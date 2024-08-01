@@ -26,7 +26,7 @@ from scicat_kafka import (
 )
 from scicat_logging import build_logger
 from scicat_path_helpers import compose_ingestor_output_file_path, compose_ingestor_directory
-from system_helpers import exit_at_exceptions
+from system_helpers import online_ingestor_exit_at_exceptions
 
 
 def dump_message_to_file_if_needed(
@@ -66,7 +66,7 @@ def main() -> None:
     # Often used options
     message_saving_options = config.kafka_options.message_saving_options
 
-    with exit_at_exceptions(logger):
+    with online_ingestor_exit_at_exceptions(logger):
         # Kafka consumer
         if (consumer := build_consumer(config.kafka_options, logger)) is None:
             raise RuntimeError("Failed to build the Kafka consumer")

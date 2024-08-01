@@ -7,6 +7,7 @@ import hashlib
 import json
 import logging
 import pathlib
+import uuid
 from urllib.parse import urljoin
 import os
 
@@ -14,19 +15,17 @@ import h5py
 import pytz
 import requests
 from scicat_configuration import (
-    BackgroundIngestorConfig,
-    build_background_ingestor_arg_parser,
-    build_scicat_background_ingester_config,
+    OfflineIngestorConfig,
+    build_offline_ingestor_arg_parser,
+    build_scicat_offline_ingestor_config,
 )
 from scicat_dataset import (
-    build_single_data_file_desc,
     convert_to_type,
-    save_and_build_single_hash_file_desc,
 )
 from scicat_logging import build_logger
 from scicat_metadata import collect_schemas, select_applicable_schema
 from src.scicat_path_helpers import compose_ingestor_directory, compose_ingestor_output_file_path
-from system_helpers import exit_at_exceptions
+from system_helpers import offline_ingestor_exit_at_exceptions, exit
 
 
 def replace_variables_values(url: str, values: dict) -> str:
@@ -36,7 +35,7 @@ def replace_variables_values(url: str, values: dict) -> str:
 
 
 def extract_variables_values(
-    variables: dict, h5file, config: BackgroundIngestorConfig
+    variables: dict, h5file, config: OfflineIngestorConfig
 ) -> dict:
     values = {}
 
@@ -122,7 +121,7 @@ def _create_datafilelist_item(
         "time": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.000Z"),
     }
 
-    if config.ingestion_options.compute_files_stats and file_full_path.exists():
+    if config.ingestion.compute_files_stats and file_full_path.exists():
         logger.info("create_datafilelist_item: reading file stats from disk")
         stats = file_full_path.stat()
         datafiles_item = {
@@ -147,17 +146,17 @@ def _compute_file_checksum_if_needed(
     checksum = ""
     datafiles_item = {}
 
-    if config.ingestion_options.compute_files_hash and os.path.exists(file_full_path):
+    if config.ingestion.compute_files_hash and os.path.exists(file_full_path):
         logger.info("create_datafiles_entry: computing hash of the file from disk")
-        checksum = _compute_file_checksum(file_full_path, config.ingestion_options.file_hash_algorithm)
+        checksum = _compute_file_checksum(file_full_path, config.ingestion.file_hash_algorithm)
 
-        if config.ingstion_options.save_hash_in_file:
+        if config.ingstion.save_hash_in_file:
 
             # file path for hash file
             hash_file_full_path = compose_ingestor_output_file_path(
                 ingestor_directory,
                 file_full_path.stem,
-                config.ingestion_options.hash_file_extension)
+                config.ingestion.hash_file_extension)
             logger.info("create_datafiles_entry: saving hash in file {}".format(hash_file_full_path))
 
             # save hash in file
@@ -199,7 +198,7 @@ def _create_datafiles_list(
     if datafiles_hash_item:
         datafiles_list.append(datafiles_hash_item)
 
-    if config.kafka_options.message_saving_options.message_to_file:
+    if config.ingestion.file_handling.message_to_file:
         logger.info("create_datafiles_list: adding done writing message file {}".format(done_writing_message_file_path))
         datafiles_list.append(
             _create_datafilelist_item(done_writing_message_file_path, config, logger)
@@ -216,10 +215,11 @@ def _create_datafiles_list(
 
     return datafiles_list
 
-def _prepare_scicat_dataset(metadata_schema, values):
+def _prepare_scicat_dataset(metadata_schema, values, config, logger):
     """
     Prepare scicat dataset as dictionary ready to be ``POST``ed.
     """
+    logger.info("_prepare_scicat_dataset: Preparing scicat dataset structure")
     schema: dict = metadata_schema["schema"]
     dataset = {}
 
@@ -254,24 +254,49 @@ def _prepare_scicat_dataset(metadata_schema, values):
 
     dataset["scientific_metadata"] = scientific_metadata
 
+    # now check that the configuration setting shave been respected
+    if not config.dataset.allow_dataset_pid and "pid" in dataset.keys():
+        logger.info("_prepare_scicat_dataset: Pid not allowed by configuration")
+        del dataset["pid"]
+    if config.dataset.generate_dataset_pid:
+        logger.info("_prepare_scicat_dataset: Auto generating pid by configuration")
+        dataset["pid"] = str(uuid.uuid4())
+
+    if "instrumentId" not in dataset.keys() or not dataset["instrumentId"]:
+        logger.info("_prepare_scicat_dataset: Assigning default instrument id: {}".format(config.dataset.default_instrument_id))
+        dataset["instrumentId"] = config.dataset.default_instrument_id
+
+    if "proposalId" not in dataset.keys() or not dataset["proposalId"]:
+        logger.info("_prepare_scicat_dataset: Assigning default proposal id: {}".format(config.dataset.default_proposal_id))
+        dataset["proposalId"] = config.dataset.default_proposal_id
+
+    if "ownerGroup" not in dataset.keys() or not dataset["ownerGroup"]:
+        logger.info("_prepare_scicat_dataset: Assigning default ownerGroup: {}".format(config.dataset.default_owner_group))
+        dataset["ownerGroup"] = config.dataset.default_owner_group
+
+    if "accessGroups" not in dataset.keys() or not dataset["accessGroups"]:
+        logger.info("_prepare_scicat_dataset: Assigning default accessGroups: {}".format(json.dumps(config.dataset.default_access_groups)))
+        dataset["accessGroups"] = config.dataset.default_access_groups
+
+    logger.info("_prepare_scicat_dataset: Scicat dataset: {}".format(json.dumps(dataset)))
     return dataset
 
 
 def _create_scicat_dataset(
         dataset: dict,
-        config: dict,
+        config,
         logger: logging.Logger
 ) -> dict:
     """
     Execute a POST request to scicat to create a dataset
     """
-    logger.info("create_scicat_dataset: Sending POST request to create new dataset")
+    logger.info("_create_scicat_dataset: Sending POST request to create new dataset")
     response = requests.request(
         method="POST",
-        url=urljoin(config["scicat_url"], "datasets"),
+        url=urljoin(config.scicat.host, "datasets"),
         json=dataset,
-        headers=config["scicat_headers"],
-        timeout=config["timeout_seconds"],
+        headers=config.scicat.headers,
+        timeout=config.scicat.timeout,
         stream=False,
         verify=True,
     )
@@ -279,16 +304,63 @@ def _create_scicat_dataset(
     result = response.json()
     if not response.ok:
         err = result.get("error", {})
-        logger.info(f"create_scicat_dataset: Failed to create new dataset. Error {err}")
+        logger.info(f"_create_scicat_dataset: Failed to create new dataset. Error {err}")
         raise Exception(f"Error creating new dataset: {err}")
 
-    logger.info("create_scicat_dataset: Dataset create successfully. Dataset pid: %s", result['pid'])
+    logger.info("_create_scicat_dataset: Dataset created successfully. Dataset pid: %s", result['pid'])
     return result
 
 
+def _prepare_scicat_origdatablock(
+        scicat_dataset,
+        datafileslist,
+        config,
+        logger
+):
+    """
+    Create local copy of the orig datablock to send to scicat
+    """
+    logger.info("_prepare_scicat_origdatablock: Preparing scicat origdatablock structure")
+    origdatablock = {
+        "ownerGroup": scicat_dataset["ownerGroup"],
+        "accessGroups": scicat_dataset["accessGroups"],
+        "size": sum([item["size"] for item in datafileslist]),
+        "chkAlg": config.ingestion.file_hash_algorithm,
+        "dataFileList": datafileslist,
+        "datasetId": scicat_dataset["pid"],
+    }
+
+    logger.info("_prepare_scicat_origdatablock: Scicat origdatablock: {}".format(json.dumps(origdatablock)))
+    return origdatablock
+
+
 def _create_scicat_origdatablock(
-    scicat_dataset_pid, nexus_file=None, done_writing_message_file=None
-): ...
+        origdatablock: dict,
+        config,
+        logger: logging.Logger
+) -> dict:
+    """
+    Execute a POST request to scicat to create a new origdatablock
+    """
+    logger.info("_create_scicat_origdatablock: Sending POST request to create new origdatablock")
+    response = requests.request(
+        method="POST",
+        url=urljoin(config.scicat.host, "origdatablocks"),
+        json=origdatablock,
+        headers=config.scicat.headers,
+        timeout=config.scicat.timeout,
+        stream=False,
+        verify=True,
+    )
+
+    result = response.json()
+    if not response.ok:
+        err = result.get("error", {})
+        logger.info(f"_create_scicat_origdatablock: Failed to create new origdatablock. Error {err}")
+        raise Exception(f"Error creating new origdatablock: {err}")
+
+    logger.info("_create_scicat_origdatablock: Origdatablock created successfully. Origdatablock pid: %s", result['_id'])
+    return result
 
 
 def _define_dataset_source_folder(
@@ -325,11 +397,11 @@ def _prepare_origdatablock_datafilelist(
 
 def main() -> None:
     """Main entry point of the app."""
-    arg_parser = build_background_ingestor_arg_parser()
+    arg_parser = build_offline_ingestor_arg_parser()
     arg_namespace = arg_parser.parse_args()
-    config = build_scicat_background_ingester_config(arg_namespace)
-    ingestion_options = config.ingestion_options
-    file_handling_options = ingestion_options.file_handling_options
+    config = build_scicat_offline_ingestor_config(arg_namespace)
+    ingestion_options = config.ingestion
+    file_handling_options = ingestion_options.file_handling
     logger = build_logger(config)
 
     # Log the configuration as dictionary so that it is easier to read from the logs
@@ -339,18 +411,18 @@ def main() -> None:
     logger.info(config.to_dict())
 
     # Collect all metadata schema configurations
-    schemas = collect_schemas(ingestion_options.schema_directory)
+    schemas = collect_schemas(ingestion_options.schemas_directory)
 
-    with exit_at_exceptions(logger, daemon=False):
-        nexus_file_path = pathlib.Path(config.single_run_options.nexus_file)
+    with offline_ingestor_exit_at_exceptions(logger):
+        nexus_file_path = pathlib.Path(config.offline_run.nexus_file)
         logger.info(
             "Nexus file to be ingested : %s",
             nexus_file_path,
         )
         done_writing_message_file_path = pathlib.Path()
-        if config.kafka_options.message_saving_options.message_to_file:
+        if config.ingestion.file_handling.message_to_file:
             done_writing_message_file_path = pathlib.Path(
-                config.single_run_options.done_writing_message_file)
+                config.offline_run.done_writing_message_file)
             logger.info(
                 "Done writing message file linked to nexus file : %s",
                 done_writing_message_file_path
@@ -361,7 +433,7 @@ def main() -> None:
 
         # define which is the directory where the ingestor should save the files it creates, if any is created
         ingestor_directory = compose_ingestor_directory(
-            config.ingestion_options.file_handling_options,
+            config.ingestion.file_handling,
             nexus_file_path
         )
 
@@ -416,21 +488,35 @@ def main() -> None:
         )
 
         # create and populate scicat dataset entry
-        scicat_dataset = _prepare_scicat_dataset(metadata_schema, variables_values)
+        local_dataset = _prepare_scicat_dataset(
+            metadata_schema,
+            variables_values,
+            config,
+            logger
+        )
 
         # create dataset in scicat
-        scicat_dataset = _create_scicat_dataset(scicat_dataset, config)
-        scicat_dataset_pid = scicat_dataset["pid"]
+        scicat_dataset = _create_scicat_dataset(
+            local_dataset,
+            config,
+            logger
+        )
 
         # create and populate scicat origdatablock entry
         # with files and hashes previously computed
-        scicat_origdatablock = _create_scicat_origdatablock(
-            scicat_dataset_pid,
-            origdatablock_datafiles_list
+        local_origdatablock = _prepare_scicat_origdatablock(
+            scicat_dataset,
+            origdatablock_datafiles_list,
+            config,
+            logger
         )
 
         # create origdatablock in scicat
-        scicat_origdatablock_id = create_scicat_origdatablock(scicat_origdatablock)
+        scicat_origdatablock = _create_scicat_origdatablock(
+            local_origdatablock,
+            config,
+            logger
+        )
 
-        # return successful code
-        return scicat_origdatablock_id
+        # check one more time if we successfully created the entries in scicat
+        exit(logger, unexpected=(bool(scicat_dataset) and bool(scicat_origdatablock)))
