@@ -215,13 +215,19 @@ def _create_datafiles_list(
 
     return datafiles_list
 
-def _prepare_scicat_dataset(metadata_schema, values, config, logger):
+def _prepare_scicat_dataset(
+        metadata_schema: dict,
+        values: dict,
+        datafilelist: list[dict],
+        config,
+        logger
+):
     """
     Prepare scicat dataset as dictionary ready to be ``POST``ed.
     """
     logger.info("_prepare_scicat_dataset: Preparing scicat dataset structure")
     schema: dict = metadata_schema["schema"]
-    dataset = {}
+    dataset: dict = {}
 
     scientific_metadata = {
         'ingestor_metadata_schema_id': {
@@ -278,6 +284,10 @@ def _prepare_scicat_dataset(metadata_schema, values, config, logger):
         logger.info("_prepare_scicat_dataset: Assigning default accessGroups: {}".format(json.dumps(config.dataset.default_access_groups)))
         dataset["accessGroups"] = config.dataset.default_access_groups
 
+    dataset["size"] = len(datafilelist)
+    dataset["numberOfFiles"] = sum([item["size"] for item in datafilelist])
+    dataset["isPublished"] = False
+
     logger.info("_prepare_scicat_dataset: Scicat dataset: {}".format(json.dumps(dataset)))
     return dataset
 
@@ -313,7 +323,7 @@ def _create_scicat_dataset(
 
 def _prepare_scicat_origdatablock(
         scicat_dataset,
-        datafileslist,
+        datafilelist,
         config,
         logger
 ):
@@ -324,9 +334,9 @@ def _prepare_scicat_origdatablock(
     origdatablock = {
         "ownerGroup": scicat_dataset["ownerGroup"],
         "accessGroups": scicat_dataset["accessGroups"],
-        "size": sum([item["size"] for item in datafileslist]),
+        "size": sum([item["size"] for item in datafilelist]),
         "chkAlg": config.ingestion.file_hash_algorithm,
-        "dataFileList": datafileslist,
+        "dataFileList": datafilelist,
         "datasetId": scicat_dataset["pid"],
     }
 
@@ -491,6 +501,7 @@ def main() -> None:
         local_dataset = _prepare_scicat_dataset(
             metadata_schema,
             variables_values,
+            datafilelist,
             config,
             logger
         )

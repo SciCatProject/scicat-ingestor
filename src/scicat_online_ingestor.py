@@ -5,6 +5,7 @@
 import importlib.metadata
 import logging
 import pathlib
+import subprocess
 
 try:
     __version__ = importlib.metadata.version(__package__ or __name__)
@@ -14,9 +15,9 @@ except importlib.metadata.PackageNotFoundError:
 del importlib
 
 from scicat_configuration import (
-    MessageSavingOptions,
-    build_main_arg_parser,
-    build_scicat_ingestor_config,
+    build_online_arg_parser,
+    build_scicat_online_ingestor_config,
+    FileHandlingOptions,
 )
 from scicat_kafka import (
     WritingFinished,
@@ -33,11 +34,11 @@ def dump_message_to_file_if_needed(
     *,
     logger: logging.Logger,
     message_file_path: pathlib.Path,
-    message_saving_options: MessageSavingOptions,
+    file_handling_options: FileHandlingOptions,
     message: WritingFinished,
 ) -> None:
     """Dump the message to a file according to the configuration."""
-    if not message_saving_options.message_to_file:
+    if not file_handling_options.message_to_file:
         logger.info("Message saving to file is disabled. Skipping saving message.")
         return
     elif not message_file_path.parent.exists():
@@ -52,24 +53,38 @@ def dump_message_to_file_if_needed(
     logger.info("Message file saved")
 
 
+def _individual_message_commit(offline_ingestors, consumer, logger):
+    logger.info("{} offline ingestors running".format(len(offline_ingestors)))
+    for job_id, job_item in offline_ingestors.items():
+        result = job_item["proc"].poll()
+        if result is not None:
+            logger.info("Offline ingestor for job id {} ended with result {}".format(job_id,result))
+            if result == 0:
+                logger.info("Executing commit for message with job id {}".format(job_id))
+                consumer.commit(message=job_item["message"])
+            logger.info("Removed ingestor for message with job id {} from queue".format(job_id))
+            offline_ingestors.pop(job_id)
+
+
 def main() -> None:
     """Main entry point of the app."""
-    arg_parser = build_main_arg_parser()
+    arg_parser = build_online_arg_parser()
     arg_namespace = arg_parser.parse_args()
-    config = build_scicat_ingestor_config(arg_namespace)
+    config = build_scicat_online_ingestor_config(arg_namespace)
     logger = build_logger(config)
 
     # Log the configuration as dictionary so that it is easier to read from the logs
     logger.info('Starting the Scicat online Ingestor with the following configuration:')
     logger.info(config.to_dict())
 
-    # Often used options
-    message_saving_options = config.kafka_options.message_saving_options
-
     with online_ingestor_exit_at_exceptions(logger):
         # Kafka consumer
-        if (consumer := build_consumer(config.kafka_options, logger)) is None:
+        if (consumer := build_consumer(config.kafka, logger)) is None:
             raise RuntimeError("Failed to build the Kafka consumer")
+
+        # this is the dictionary that contains the list of offline ingestor running
+        offline_ingestors: dict = {}
+
 
         # Receive messages
         for message in wrdn_messages(consumer, logger):
@@ -78,22 +93,26 @@ def main() -> None:
             # Check if we have received a WRDN message.
             # ``message: None | WritingFinished``
             if message:
+                # extract job id
+                job_id = message.job_id
                 # Extract nexus file path from the message.
                 nexus_file_path = pathlib.Path(message.file_name)
                 ingestor_directory = compose_ingestor_directory(
-                    config.ingestion_options.file_handling_options,
+                    config.ingestion.file_handling,
                     nexus_file_path
+                )
+                done_writing_message_file_path = compose_ingestor_output_file_path(
+                    ingestor_directory=ingestor_directory,
+                    file_name=nexus_file_path.stem,
+                    file_extension=config.ingestion.file_handling.message_file_extension,
                 )
                 dump_message_to_file_if_needed(
                     logger=logger,
-                    message_saving_options=message_saving_options,
+                    file_handling_options=config.ingestion.file_handling,
                     message=message,
-                    message_file_path=compose_ingestor_output_file_path(
-                        ingestor_directory=ingestor_directory,
-                        file_name=nexus_file_path.stem,
-                        file_extension=message_saving_options.message_file_extension,
-                    ),
+                    message_file_path=done_writing_message_file_path,
                 )
+
                 # instantiate a new process and runs background ingestor
                 # on the nexus file
                 # use open process and wait for outcome
@@ -105,11 +124,32 @@ def main() -> None:
                     -m message_file_path  # optional depending on the
                                           # message_saving_options.message_output
                 """
+                cmd = [
+                    config.ingestion.offline_ingestor_executable,
+                    "-c",
+                    arg_namespace.config_file,
+                    "-f",
+                    nexus_file_path,
+                    "-j",
+                    job_id
+                ]
+                if config.ingestion.file_handling.message_to_file:
+                    cmd += [
+                        "-m",
+                        done_writing_message_file_path
+                    ]
+                proc = subprocess.Popen(cmd)
+                # save info about the background process
+                offline_ingestors[job_id] = {
+                    "proc" : proc,
+                    "message": message,
+                }
 
                 # if background process is successful
                 # check if we need to commit the individual message
-                """
-                if config.kafka_options.individual_message_commit \
-                    and background_process is successful:
-                    consumer.commit(message=message)
-                """
+                if config.kafka.individual_message_commit:
+                    _individual_message_commit(
+                        offline_ingestors,
+                        consumer,
+                        logger)
+                

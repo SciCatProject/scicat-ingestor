@@ -260,6 +260,7 @@ class IngestionOptions:
     file_handling: FileHandlingOptions
     dry_run: bool = False
     schemas_directory: str = "schemas"
+    offline_ingestor_executable: str = "./scicat_offline_ingestor.py"
 
     @classmethod
     def from_configurations(cls, config: dict) -> "IngestionOptions":
