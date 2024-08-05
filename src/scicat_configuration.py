@@ -211,6 +211,9 @@ class IngestionOptions:
     offline_ingestor_executable: str = "background_ingestor"
     schemas_directory: str = "schemas"
     file_handling: FileHandlingOptions = field(default_factory=FileHandlingOptions)
+    check_if_dataset_exists_by_pid: bool = False,
+    check_if_dataset_exists_by_metadata: bool = False,
+    check_if_dataset_exists_by_metadata_key: str = "",
 
 
 def default_access_groups() -> list[str]:
@@ -219,7 +222,6 @@ def default_access_groups() -> list[str]:
 
 @dataclass(kw_only=True)
 class DatasetOptions:
-    check_by_job_id: bool = True
     allow_dataset_pid: bool = True
     generate_dataset_pid: bool = False
     dataset_pid_prefix: str = "20.500.12269"
@@ -237,13 +239,6 @@ class SciCatOptions:
     timeout: int = 0
     stream: bool = True
     verify: bool = False
-
-    @classmethod
-    def from_configurations(cls, config: dict) -> "SciCatOptions":
-        """Create SciCatOptions from a dictionary."""
-        options = cls(**config)
-        options.headers = {"Authorization": f"Bearer {options.token}"}
-        return options
 
 
 @dataclass(kw_only=True)
