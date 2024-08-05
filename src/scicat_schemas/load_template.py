@@ -5,7 +5,9 @@ import pathlib
 from jinja2 import Template
 
 _CUR_DIR = pathlib.Path(__file__).parent
-_DATAFILELIST_ITEM_SCHEMA_TEMPLATE_PATH = _CUR_DIR / pathlib.Path("datafilelist_item.schema.json.jinja")
+_DATAFILELIST_ITEM_SCHEMA_TEMPLATE_PATH = _CUR_DIR / pathlib.Path(
+    "datafilelist_item.schema.json.jinja"
+)
 _DATASET_SCHEMA_TEMPLATE_PATH = _CUR_DIR / pathlib.Path("dataset.schema.json.jinja")
 _ORIGDATABLOCK_SCHEMA_TEMPLATE_PATH = _CUR_DIR / pathlib.Path(
     "origdatablock.schema.json.jinja"

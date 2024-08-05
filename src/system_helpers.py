@@ -32,9 +32,10 @@ def online_ingestor_exit_at_exceptions(
             logger.info("Finished successfully.")
             exit(logger, unexpected=False)
 
+
 @contextmanager
 def offline_ingestor_exit_at_exceptions(
-        logger: logging.Logger
+    logger: logging.Logger,
 ) -> Generator[None, None, None]:
     """
     manage exceptions specifically for offline ingestor

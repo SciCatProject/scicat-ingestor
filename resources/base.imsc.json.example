@@ -3,7 +3,7 @@
   "name" : "Generic metadata schema"
   "instrument" : "",
   "selector" : "filename:starts_with:/ess/data",
- "variables" : {
+  "variables" : {
     "pid": {
       "source": "NXS",
       "path": "/entry/entry_identifier_uuid",
