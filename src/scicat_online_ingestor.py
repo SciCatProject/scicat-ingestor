@@ -15,9 +15,9 @@ except importlib.metadata.PackageNotFoundError:
 del importlib
 
 from scicat_configuration import (
+    FileHandlingOptions,
     build_online_arg_parser,
     build_scicat_online_ingestor_config,
-    FileHandlingOptions,
 )
 from scicat_kafka import (
     WritingFinished,
@@ -26,7 +26,10 @@ from scicat_kafka import (
     wrdn_messages,
 )
 from scicat_logging import build_logger
-from scicat_path_helpers import compose_ingestor_output_file_path, compose_ingestor_directory
+from scicat_path_helpers import (
+    compose_ingestor_directory,
+    compose_ingestor_output_file_path,
+)
 from system_helpers import online_ingestor_exit_at_exceptions
 
 
@@ -53,16 +56,20 @@ def dump_message_to_file_if_needed(
     logger.info("Message file saved")
 
 
-def _individual_message_commit(offline_ingestors, consumer, logger):
-    logger.info("{} offline ingestors running".format(len(offline_ingestors)))
+def _individual_message_commit(offline_ingestors, consumer, logger: logging.Logger):
+    logger.info("%s offline ingestors running", len(offline_ingestors))
     for job_id, job_item in offline_ingestors.items():
         result = job_item["proc"].poll()
         if result is not None:
-            logger.info("Offline ingestor for job id {} ended with result {}".format(job_id,result))
+            logger.info(
+                "Offline ingestor for job id %s ended with result %s", job_id, result
+            )
             if result == 0:
-                logger.info("Executing commit for message with job id {}".format(job_id))
+                logger.info("Executing commit for message with job id %s", job_id)
                 consumer.commit(message=job_item["message"])
-            logger.info("Removed ingestor for message with job id {} from queue".format(job_id))
+            logger.info(
+                "Removed ingestor for message with job id %s from queue", job_id
+            )
             offline_ingestors.pop(job_id)
 
 
@@ -85,7 +92,6 @@ def main() -> None:
         # this is the dictionary that contains the list of offline ingestor running
         offline_ingestors: dict = {}
 
-
         # Receive messages
         for message in wrdn_messages(consumer, logger):
             logger.info("Processing message: %s", message)
@@ -98,8 +104,7 @@ def main() -> None:
                 # Extract nexus file path from the message.
                 nexus_file_path = pathlib.Path(message.file_name)
                 ingestor_directory = compose_ingestor_directory(
-                    config.ingestion.file_handling,
-                    nexus_file_path
+                    config.ingestion.file_handling, nexus_file_path
                 )
                 done_writing_message_file_path = compose_ingestor_output_file_path(
                     ingestor_directory=ingestor_directory,
@@ -131,25 +136,18 @@ def main() -> None:
                     "-f",
                     nexus_file_path,
                     "-j",
-                    job_id
+                    job_id,
                 ]
                 if config.ingestion.file_handling.message_to_file:
-                    cmd += [
-                        "-m",
-                        done_writing_message_file_path
-                    ]
-                proc = subprocess.Popen(cmd)
+                    cmd += ["-m", done_writing_message_file_path]
+                proc = subprocess.Popen(cmd)  #  noqa: S603
                 # save info about the background process
                 offline_ingestors[job_id] = {
-                    "proc" : proc,
+                    "proc": proc,
                     "message": message,
                 }
 
                 # if background process is successful
                 # check if we need to commit the individual message
                 if config.kafka.individual_message_commit:
-                    _individual_message_commit(
-                        offline_ingestors,
-                        consumer,
-                        logger)
-                
+                    _individual_message_commit(offline_ingestors, consumer, logger)
