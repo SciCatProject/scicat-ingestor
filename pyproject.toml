@@ -46,8 +46,8 @@ dynamic = ["version"]
 "Source" = "https://github.com/ScicatProject/scicat-filewriter-ingest"
 
 [project.scripts]
-scicat_ingestor = "scicat_ingestor:main"
-background_ingestor = "background_ingestor:main"
+scicat_ingestor = "scicat_online_ingestor:main"
+background_ingestor = "scicat_offline_ingestor:main"
 
 [project.entry-points."scicat_ingestor.metadata_extractor"]
 max = "numpy:max"
