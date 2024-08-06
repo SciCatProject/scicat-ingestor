@@ -3,13 +3,11 @@
 # import scippnexus as snx
 import copy
 import datetime
-import hashlib
 import json
 import logging
 import os
 import pathlib
 import uuid
-from typing import Any
 from urllib.parse import urljoin
 
 import h5py
@@ -78,29 +76,6 @@ def extract_variables_values(
         values[variable] = convert_to_type(value, variables[variable]["value_type"])
 
     return values
-
-
-def _new_hash(algorithm: str) -> Any:
-    try:
-        return hashlib.new(algorithm, usedforsecurity=False)
-    except TypeError:
-        # Fallback for Python < 3.9
-        return hashlib.new(algorithm)
-
-
-def _compute_file_checksum(file_full_path: pathlib.Path, algorithm: str) -> str:
-    """
-    Compute the checksum of a file using specified algorithm.
-    :param file_full_path:
-    :param algorithm:
-    :return:
-    """
-    chk = _new_hash(algorithm)
-    buffer = memoryview(bytearray(128 * 1024))
-    with file_full_path.open("rb", buffering=0) as file:
-        for n in iter(lambda: file.readinto(buffer), 0):
-            chk.update(buffer[:n])
-    return chk.hexdigest()  # type: ignore[no-any-return]
 
 
 def _create_datafilelist_item(file_full_path: pathlib.Path, config, logger):
