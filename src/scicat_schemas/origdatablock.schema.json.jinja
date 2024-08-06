@@ -1,9 +1,0 @@
-{
-  "datasetId": "{{ datasetId }}",
-  "size": {{ size }},
-  "chkAlg": "{{ chkAlg }}",
-  "dataFileList": [
-    {% for dataFileList_item in dataFileList %}{{ dataFileList_item }}{% if not loop.last %},
-    {% endif %}{% endfor %}
-  ]
-}
