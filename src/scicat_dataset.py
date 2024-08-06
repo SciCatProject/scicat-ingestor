@@ -205,9 +205,9 @@ def save_and_build_single_hash_file_desc(
     import datetime
     import json
 
-    from scicat_schemas import load_single_datafile_template
+    from scicat_schemas import load_datafilelist_item_schema_template
 
-    single_file_template = load_single_datafile_template()
+    single_file_template = load_datafilelist_item_schema_template()
     file_hash: str = original_file_desciption["chk"]
     hash_path = _build_hash_file_path(
         original_file_path=original_file_desciption["path"],

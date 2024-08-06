@@ -24,12 +24,11 @@ from scicat_dataset import (
 )
 from scicat_logging import build_logger
 from scicat_metadata import collect_schemas, select_applicable_schema
-from system_helpers import exit, offline_ingestor_exit_at_exceptions
-
-from src.scicat_path_helpers import (
+from scicat_path_helpers import (
     compose_ingestor_directory,
     compose_ingestor_output_file_path,
 )
+from system_helpers import exit, offline_ingestor_exit_at_exceptions
 
 
 def replace_variables_values(url: str, values: dict) -> str:
