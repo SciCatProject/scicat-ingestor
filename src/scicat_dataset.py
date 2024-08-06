@@ -183,7 +183,10 @@ def _save_hash_file(
 
 
 def create_data_file_list(
-    file_list: list[pathlib.Path],
+    *,
+    nexus_file: pathlib.Path,
+    done_writing_message_file: pathlib.Path | None = None,
+    nexus_structure_file: pathlib.Path | None = None,
     ingestor_directory: pathlib.Path,
     config: FileHandlingOptions,
     logger: logging.Logger,
@@ -193,11 +196,18 @@ def create_data_file_list(
 
     Params
     ------
-    file_list:
-        Paths to the files that will be ingested
-        - nexus_file(mandatory)
-        - done_writing_message_file(optional)
-        - nexus_structure_file(optional)
+    nexus_file:
+        Path to the NeXus file.
+    done_writing_message_file:
+        Path to the "done writing" message file.
+    nexus_structure_file:
+        Path to the NeXus structure file.
+    ingestor_directory:
+        Path to the directory where the files will be saved.
+    config:
+        Configuration related to the file handling.
+    logger:
+        Logger instance.
 
     """
     from functools import partial
@@ -208,7 +218,14 @@ def create_data_file_list(
         compute_file_stats=config.compute_file_stats,
     )
 
-    # Collect default data-file items
+    # Collect the files that will be ingested
+    file_list = [nexus_file]
+    if done_writing_message_file is not None:
+        file_list.append(done_writing_message_file)
+    if nexus_structure_file is not None:
+        file_list.append(nexus_structure_file)
+
+    # Create the list of the files
     data_file_list = []
     for minimum_file_path in file_list:
         logger.info("Adding file %s to the datafiles list", minimum_file_path)

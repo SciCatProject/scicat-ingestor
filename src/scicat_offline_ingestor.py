@@ -326,7 +326,7 @@ def main() -> None:
     arg_namespace = arg_parser.parse_args()
     config = build_scicat_offline_ingestor_config(arg_namespace)
     ingestion_options = config.ingestion
-    file_handling_options = ingestion_options.file_handling
+    fh_options = ingestion_options.file_handling
     logger = build_logger(config)
 
     # Log the configuration as dictionary so that it is easier to read from the logs
@@ -344,26 +344,10 @@ def main() -> None:
             "Nexus file to be ingested : %s",
             nexus_file_path,
         )
-        data_file_paths = [nexus_file_path]
-        done_writing_message_file_path = pathlib.Path()
-        if config.ingestion.file_handling.message_to_file:
-            done_writing_message_file_path = pathlib.Path(
-                config.offline_run.done_writing_message_file
-            )
-            logger.info(
-                "Done writing message file linked to nexus file : %s",
-                done_writing_message_file_path,
-            )
-
-            # log done writing message input file
-            logger.info(json.load(done_writing_message_file_path.open()))
-            data_file_paths.append(done_writing_message_file_path)
 
         # define which is the directory where the ingestor should save
         # the files it creates, if any is created
-        ingestor_directory = compose_ingestor_directory(
-            config.ingestion.file_handling, nexus_file_path
-        )
+        ingestor_directory = compose_ingestor_directory(fh_options, nexus_file_path)
 
         # open nexus file with h5py
         with h5py.File(nexus_file_path) as h5file:
@@ -377,7 +361,11 @@ def main() -> None:
 
         # Collect data-file descriptions
         data_file_list = create_data_file_list(
-            data_file_paths, ingestor_directory, file_handling_options, logger
+            nexus_file=nexus_file_path,
+            ingestor_directory=ingestor_directory,
+            config=fh_options,
+            logger=logger,
+            # TODO: add done_writing_message_file and nexus_structure_file
         )
 
         dataset_source_folder = _define_dataset_source_folder(data_file_list)
