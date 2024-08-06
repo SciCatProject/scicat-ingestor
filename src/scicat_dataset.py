@@ -4,12 +4,14 @@ import datetime
 import logging
 import pathlib
 import uuid
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass
 from types import MappingProxyType
 from typing import Any
 
-from scicat_configuration import DatasetOptions, FileHandlingOptions
+import h5py
+from scicat_communication import retrieve_value_from_scicat
+from scicat_configuration import DatasetOptions, FileHandlingOptions, SciCatOptions
 from scicat_metadata import (
     HIGH_LEVEL_METADATA_TYPE,
     SCIENTIFIC_METADATA_TYPE,
@@ -61,6 +63,45 @@ def convert_to_type(input_value: Any, dtype_desc: str) -> Any:
             "string, string[], integer, float, date.\nGot: {dtype_desc}",
         )
     return converter(input_value)
+
+
+_OPERATOR_REGISTRY = MappingProxyType(
+    {
+        "DO_NOTHING": lambda value: value,
+        "join_with_space": lambda value: ", ".join(value),
+    }
+)
+
+
+def _get_operator(operator: str | None) -> Callable:
+    return _OPERATOR_REGISTRY.get(operator or "DO_NOTHING", lambda _: _)
+
+
+def extract_variables_values(
+    variables: dict[str, dict], h5file: h5py.File, config: SciCatOptions
+) -> dict:
+    variable_map = {}
+    for variable_name, variable_recipe in variables.items():
+        if (source := variable_recipe["source"]) == "NXS":
+            value = h5file[variable_recipe["path"]][...]
+        elif source == "SC":
+            value = retrieve_value_from_scicat(
+                config=config,
+                variable_url=render_variable_value(
+                    variable_recipe["url"], variable_map
+                ),
+                field_name=variable_recipe["field"],
+            )
+        elif source == "VALUE":
+            value = _get_operator(variable_recipe.get("operator"))(
+                render_variable_value(variable_recipe["value"], variable_map)
+            )
+        else:
+            raise Exception("Invalid variable source: ", source)
+        variable_map[variable_name] = convert_to_type(
+            value, variable_recipe["value_type"]
+        )
+    return variable_map
 
 
 @dataclass(kw_only=True)

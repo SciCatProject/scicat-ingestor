@@ -11,71 +11,19 @@ from urllib.parse import urljoin
 import h5py
 import requests
 from scicat_configuration import (
-    OfflineIngestorConfig,
     build_offline_ingestor_arg_parser,
     build_scicat_offline_ingestor_config,
 )
 from scicat_dataset import (
-    convert_to_type,
     create_data_file_list,
     create_scicat_dataset_instance,
+    extract_variables_values,
     scicat_dataset_to_dict,
 )
 from scicat_logging import build_logger
 from scicat_metadata import collect_schemas, select_applicable_schema
 from scicat_path_helpers import compose_ingestor_directory
 from system_helpers import exit, offline_ingestor_exit_at_exceptions
-
-
-def replace_variables_values(url: str, values: dict) -> str:
-    for key, value in values.items():
-        url = url.replace("{" + key + "}", str(value))
-    return url
-
-
-def extract_variables_values(
-    variables: dict, h5file, config: OfflineIngestorConfig
-) -> dict:
-    values = {}
-
-    # loop on all the variables defined
-    for variable in variables.keys():
-        source = variables[variable]["source"]
-        value = ""
-        if source == "NXS":
-            # extract value from nexus file
-            # we need to address path entry/user_*/name
-            value = h5file[variables[variable]["path"]][...]
-        elif source == "SC":
-            # build url
-            url = replace_variables_values(
-                config[""]["scicat_url"] + variables[variable]["url"], values
-            )
-            # retrieve value from SciCat
-            response = requests.get(
-                url,
-                headers={"token": config[""]["token"]},
-                timeout=10,  # TODO: decide timeout. Maybe from configuration?
-            )
-            # extract value
-            value = response.json()[variables[variable]["field"]]
-        elif source == "VALUE":
-            # the value is the one indicated
-            # there might be some substitution needed
-            value = replace_variables_values(variables[variable]["value"], values)
-            if (
-                "operator" in variables[variable].keys()
-                and variables[variable]["operator"]
-            ):
-                operator = variables[variable]["operator"]
-                if operator == "join_with_space":
-                    value = ", ".join(value)
-        else:
-            raise Exception("Invalid variable source configuration")
-
-        values[variable] = convert_to_type(value, variables[variable]["value_type"])
-
-    return values
 
 
 def _create_scicat_dataset(dataset: dict, config, logger: logging.Logger) -> dict:
@@ -235,8 +183,8 @@ def main() -> None:
             metadata_schema = select_applicable_schema(nexus_file_path, h5file, schemas)
 
             # define variables values
-            variables_values = extract_variables_values(
-                metadata_schema['variables'], h5file, config
+            variable_map = extract_variables_values(
+                metadata_schema['variables'], h5file, config.scicat
             )
 
         # Collect data-file descriptions
@@ -253,7 +201,7 @@ def main() -> None:
             create_scicat_dataset_instance(
                 metadata_schema_id=metadata_schema["id"],
                 metadata_schemas=metadata_schema["schemas"],
-                variable_map=variables_values,
+                variable_map=variable_map,
                 data_file_list=data_file_list,
                 config=config.dataset,
                 logger=logger,

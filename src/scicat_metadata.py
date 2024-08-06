@@ -86,4 +86,8 @@ def select_applicable_schema(nexus_file, nxs, schemas):
 def render_variable_value(var_value: str, variable_registry: dict) -> str:
     for var_name, var_value in variable_registry.items():
         var_value = var_value.replace("<" + var_name + ">", str(var_value))
+
+    if "<" in var_value and ">" in var_value:
+        raise Exception(f"Unresolved variable: {var_value}")
+
     return var_value
