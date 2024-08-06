@@ -2,7 +2,6 @@
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 # import scippnexus as snx
 import copy
-import datetime
 import json
 import logging
 import os
@@ -76,41 +75,6 @@ def extract_variables_values(
         values[variable] = convert_to_type(value, variables[variable]["value_type"])
 
     return values
-
-
-def _create_datafilelist_item(file_full_path: pathlib.Path, config, logger):
-    """
-    Create the matching entry in the datafiles list for the file provided
-    :param file_full_path:
-    :param config:
-    :param logger:
-    :return:
-    """
-    datafilelist_item = {
-        "path": file_full_path,
-        "size": 0,
-        "time": datetime.datetime.now(tz=datetime.UTC).strftime(
-            "%Y-%m-%dT%H:%M:%S.000Z"
-        ),
-    }
-
-    if config.ingestion.compute_files_stats and file_full_path.exists():
-        logger.info("create_datafilelist_item: reading file stats from disk")
-        stats = file_full_path.stat()
-        datafilelist_item = {
-            **datafilelist_item,
-            **{
-                "size": stats.st_size,
-                "time": datetime.datetime.fromtimestamp(
-                    stats.st_ctime, tz=datetime.UTC
-                ).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-                "uid": stats.st_uid,
-                "gid": stats.st_gid,
-                "perm": stats.st_mode,
-            },
-        }
-
-    return datafilelist_item
 
 
 def _prepare_scicat_dataset(
