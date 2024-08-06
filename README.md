@@ -128,7 +128,8 @@ class DataFileItem:
     chk: None | str = None
 
 data_file_item = {
-    k: v if (k!='chk' or v is not None)
+    k: v
     for k, v in asdict(DataFileItem('./', 1, '00:00')).items()
+    if (k!='chk' or v is not None)
 }
 ```
