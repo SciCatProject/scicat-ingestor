@@ -32,7 +32,6 @@ dependencies = [
   "ess-streaming-data-types",
   "graypy",
   "h5py",
-  "jinja2",
   "kafka-python",
   "requests",
   "rich"
