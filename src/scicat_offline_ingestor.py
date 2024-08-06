@@ -13,7 +13,6 @@ from typing import Any
 from urllib.parse import urljoin
 
 import h5py
-import pytz
 import requests
 from scicat_configuration import (
     OfflineIngestorConfig,
@@ -133,7 +132,7 @@ def _create_datafilelist_item(file_full_path: pathlib.Path, config, logger):
             **{
                 "size": stats.st_size,
                 "time": datetime.datetime.fromtimestamp(
-                    stats.st_ctime, tz=pytz.utc
+                    stats.st_ctime, tz=datetime.UTC
                 ).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                 "uid": stats.st_uid,
                 "gid": stats.st_gid,
