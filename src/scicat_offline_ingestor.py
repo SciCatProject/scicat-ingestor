@@ -3,13 +3,11 @@
 # import scippnexus as snx
 import copy
 import json
-import logging
 import os
 import pathlib
-from urllib.parse import urljoin
 
 import h5py
-import requests
+from scicat_communication import create_scicat_dataset, create_scicat_origdatablock
 from scicat_configuration import (
     build_offline_ingestor_arg_parser,
     build_scicat_offline_ingestor_config,
@@ -24,36 +22,6 @@ from scicat_logging import build_logger
 from scicat_metadata import collect_schemas, select_applicable_schema
 from scicat_path_helpers import compose_ingestor_directory
 from system_helpers import exit, offline_ingestor_exit_at_exceptions
-
-
-def _create_scicat_dataset(dataset: dict, config, logger: logging.Logger) -> dict:
-    """
-    Execute a POST request to scicat to create a dataset
-    """
-    logger.info("_create_scicat_dataset: Sending POST request to create new dataset")
-    response = requests.request(
-        method="POST",
-        url=urljoin(config.scicat.host, "datasets"),
-        json=dataset,
-        headers=config.scicat.headers,
-        timeout=config.scicat.timeout,
-        stream=False,
-        verify=True,
-    )
-
-    result = response.json()
-    if not response.ok:
-        err = result.get("error", {})
-        logger.error(
-            "_create_scicat_dataset: Failed to create new dataset. Error %s", err
-        )
-        raise Exception(f"Error creating new dataset: {err}")
-
-    logger.info(
-        "_create_scicat_dataset: Dataset created successfully. Dataset pid: %s",
-        result['pid'],
-    )
-    return result
 
 
 def _prepare_scicat_origdatablock(scicat_dataset, datafilelist, config, logger):
@@ -77,43 +45,6 @@ def _prepare_scicat_origdatablock(scicat_dataset, datafilelist, config, logger):
         json.dumps(origdatablock),
     )
     return origdatablock
-
-
-def _create_scicat_origdatablock(
-    origdatablock: dict, config, logger: logging.Logger
-) -> dict:
-    """
-    Execute a POST request to scicat to create a new origdatablock
-    """
-    logger.info(
-        "_create_scicat_origdatablock: Sending POST request to create new origdatablock"
-    )
-    response = requests.request(
-        method="POST",
-        url=urljoin(config.scicat.host, "origdatablocks"),
-        json=origdatablock,
-        headers=config.scicat.headers,
-        timeout=config.scicat.timeout,
-        stream=False,
-        verify=True,
-    )
-
-    result = response.json()
-    if not response.ok:
-        err = result.get("error", {})
-        logger.error(
-            "_create_scicat_origdatablock: Failed to create new origdatablock."
-            "Error %s",
-            err,
-        )
-        raise Exception(f"Error creating new origdatablock: {err}")
-
-    logger.info(
-        "_create_scicat_origdatablock: Origdatablock created successfully. "
-        "Origdatablock pid: %s",
-        result['_id'],
-    )
-    return result
 
 
 def _define_dataset_source_folder(datafilelist) -> pathlib.Path:
@@ -208,7 +139,9 @@ def main() -> None:
             )
         )
         # create dataset in scicat
-        scicat_dataset = _create_scicat_dataset(local_dataset, config, logger)
+        scicat_dataset = create_scicat_dataset(
+            dataset=local_dataset, config=config.scicat, logger=logger
+        )
 
         dataset_source_folder = _define_dataset_source_folder(data_file_list)
 
@@ -222,8 +155,8 @@ def main() -> None:
         )
 
         # create origdatablock in scicat
-        scicat_origdatablock = _create_scicat_origdatablock(
-            local_origdatablock, config, logger
+        scicat_origdatablock = create_scicat_origdatablock(
+            origdatablock=local_origdatablock, config=config.scicat, logger=logger
         )
 
         # check one more time if we successfully created the entries in scicat
