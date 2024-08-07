@@ -1,15 +1,16 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 import datetime
+import json
 import pathlib
 from types import MappingProxyType
 from typing import Any
 
 from scicat_configuration import FileHandlingOptions
 from scicat_schemas import (
+    load_datafilelist_item_schema_template,
     load_dataset_schema_template,
     load_origdatablock_schema_template,
-    load_datafilelist_item_schema_template,
 )
 
 
@@ -114,7 +115,7 @@ def build_single_datafile_instance(
     perm: str,
     checksum: str = "",
 ) -> str:
-    return load_single_datafile_template().render(
+    return load_datafilelist_item_schema_template().render(
         file_absolute_path=file_absolute_path,
         file_size=file_size,
         datetime_isoformat=datetime_isoformat,
@@ -167,7 +168,7 @@ def build_single_data_file_desc(
     """
     Build the description of a single data file.
     """
-    single_file_template = load_single_datafile_template()
+    single_file_template = load_datafilelist_item_schema_template()
 
     return json.loads(
         single_file_template.render(
@@ -204,9 +205,9 @@ def save_and_build_single_hash_file_desc(
     import datetime
     import json
 
-    from scicat_schemas import load_single_datafile_template
+    from scicat_schemas import load_datafilelist_item_schema_template
 
-    single_file_template = load_single_datafile_template()
+    single_file_template = load_datafilelist_item_schema_template()
     file_hash: str = original_file_desciption["chk"]
     hash_path = _build_hash_file_path(
         original_file_path=original_file_desciption["path"],

@@ -21,18 +21,20 @@ def _load_config(config_file: Any) -> dict:
 
 
 def _merge_config_options(
-        config_dict: dict,
-        input_args_dict: dict,
-        keys: list[str] | None = None
+    config_dict: dict, input_args_dict: dict, keys: list[str] | None = None
 ) -> dict:
     """Merge configuration from the configuration file and input arguments."""
 
-    if keys == None:
-        keys = config_dict.keys();
+    if keys is None:
+        keys = config_dict.keys()
 
     return {
         **config_dict.setdefault("options", {}),
-        **{key: input_args_dict[key] for key in keys if input_args_dict[key] is not None},
+        **{
+            key: input_args_dict[key]
+            for key in keys
+            if input_args_dict[key] is not None
+        },
     }
 
 
@@ -75,7 +77,8 @@ def build_online_arg_parser() -> argparse.ArgumentParser:
         type=str,
     )
     group.add_argument(
-        "-d", "--dry-run",
+        "-d",
+        "--dry-run",
         dest="dry_run",
         help="Dry run. Does not produce any output file nor modify entry in SciCat",
         action="store_true",
@@ -255,6 +258,7 @@ class FileHandlingOptions:
     message_to_file: bool = True
     message_file_extension: str = "message.json"
 
+
 @dataclass
 class IngestionOptions:
     file_handling: FileHandlingOptions
@@ -274,13 +278,13 @@ class IngestionOptions:
 
 @dataclass
 class DatasetOptions:
-    check_by_job_id: bool = True,
-    allow_dataset_pid: bool = True,
-    generate_dataset_pid: bool = False,
-    dataset_pid_prefix: str = "20.500.12269",
-    default_instrument_id: str = "",
-    default_proposal_id: str = "",
-    default_owner_group: str = "",
+    check_by_job_id: bool = (True,)
+    allow_dataset_pid: bool = (True,)
+    generate_dataset_pid: bool = (False,)
+    dataset_pid_prefix: str = ("20.500.12269",)
+    default_instrument_id: str = ("",)
+    default_proposal_id: str = ("",)
+    default_owner_group: str = ("",)
     default_access_groups: list[str] = field(default_factory=list)
 
     @classmethod
@@ -302,9 +306,7 @@ class SciCatOptions:
     def from_configurations(cls, config: dict) -> "SciCatOptions":
         """Create SciCatOptions from a dictionary."""
         options = cls(**config)
-        options.headers = {
-            "Authorization": "Bearer {}".format(options.token)
-        }
+        options.headers = {"Authorization": f"Bearer {options.token}"}
         return options
 
 
@@ -335,16 +337,22 @@ class OnlineIngestorConfig:
         )
 
 
-def build_scicat_online_ingestor_config(input_args: argparse.Namespace) -> OnlineIngestorConfig:
+def build_scicat_online_ingestor_config(
+    input_args: argparse.Namespace,
+) -> OnlineIngestorConfig:
     """Merge configuration from the configuration file and input arguments."""
     config_dict = _load_config(input_args.config_file)
-    logging_dict = _merge_config_options(config_dict.setdefault("logging",{}), vars(input_args))
-    ingestion_dict = _merge_config_options(config_dict.setdefault("ingestion",{}), vars(input_args), ["dry-run"])
+    logging_dict = _merge_config_options(
+        config_dict.setdefault("logging", {}), vars(input_args)
+    )
+    ingestion_dict = _merge_config_options(
+        config_dict.setdefault("ingestion", {}), vars(input_args), ["dry-run"]
+    )
 
     # Wrap configuration in a dataclass
     return OnlineIngestorConfig(
         original_dict=_freeze_dict_items(config_dict),
-        dataset=DatasetOptions(**config_dict.setdefault("dataset",{})),
+        dataset=DatasetOptions(**config_dict.setdefault("dataset", {})),
         ingestion=IngestionOptions.from_configurations(ingestion_dict),
         kafka=KafkaOptions(**config_dict.setdefault("kafka", {})),
         logging=LoggingOptions(**logging_dict),
@@ -358,6 +366,7 @@ class OfflineRunOptions:
     """Full path of the input nexus file to be ingested."""
     done_writing_message_file: str
     """Full path of the done writing message file that match the ``nexus_file``."""
+
 
 @dataclass
 class OfflineIngestorConfig(OnlineIngestorConfig):
@@ -388,8 +397,12 @@ def build_scicat_offline_ingestor_config(
     """Merge configuration from the configuration file and input arguments."""
     config_dict = _load_config(input_args.config_file)
     input_args_dict = vars(input_args)
-    logging_dict = _merge_config_options(config_dict.setdefault("logging",{}), input_args_dict)
-    ingestion_dict = _merge_config_options(config_dict.setdefault("ingestion",{}), input_args_dict, ["dry-run"])
+    logging_dict = _merge_config_options(
+        config_dict.setdefault("logging", {}), input_args_dict
+    )
+    ingestion_dict = _merge_config_options(
+        config_dict.setdefault("ingestion", {}), input_args_dict, ["dry-run"]
+    )
     offline_run_option_dict = {
         "nexus_file": input_args_dict.pop("nexus_file"),
         "done_writing_message_file": input_args_dict.pop("done_writing_message_file"),
@@ -398,7 +411,7 @@ def build_scicat_offline_ingestor_config(
     # Wrap configuration in a dataclass
     return OfflineIngestorConfig(
         original_dict=_freeze_dict_items(config_dict),
-        dataset=DatasetOptions(**config_dict.setdefault("dataset",{})),
+        dataset=DatasetOptions(**config_dict.setdefault("dataset", {})),
         ingestion=IngestionOptions.from_configurations(ingestion_dict),
         kafka=KafkaOptions(**config_dict.setdefault("kafka", {})),
         logging=LoggingOptions(**logging_dict),
