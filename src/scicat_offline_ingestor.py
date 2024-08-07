@@ -6,160 +6,24 @@ import json
 import logging
 import os
 import pathlib
-import uuid
 from urllib.parse import urljoin
 
 import h5py
 import requests
 from scicat_configuration import (
-    OfflineIngestorConfig,
     build_offline_ingestor_arg_parser,
     build_scicat_offline_ingestor_config,
 )
 from scicat_dataset import (
-    convert_to_type,
     create_data_file_list,
+    create_scicat_dataset_instance,
+    extract_variables_values,
+    scicat_dataset_to_dict,
 )
 from scicat_logging import build_logger
 from scicat_metadata import collect_schemas, select_applicable_schema
 from scicat_path_helpers import compose_ingestor_directory
 from system_helpers import exit, offline_ingestor_exit_at_exceptions
-
-
-def replace_variables_values(url: str, values: dict) -> str:
-    for key, value in values.items():
-        url = url.replace("{" + key + "}", str(value))
-    return url
-
-
-def extract_variables_values(
-    variables: dict, h5file, config: OfflineIngestorConfig
-) -> dict:
-    values = {}
-
-    # loop on all the variables defined
-    for variable in variables.keys():
-        source = variables[variable]["source"]
-        value = ""
-        if source == "NXS":
-            # extract value from nexus file
-            # we need to address path entry/user_*/name
-            value = h5file[variables[variable]["path"]][...]
-        elif source == "SC":
-            # build url
-            url = replace_variables_values(
-                config[""]["scicat_url"] + variables[variable]["url"], values
-            )
-            # retrieve value from SciCat
-            response = requests.get(
-                url,
-                headers={"token": config[""]["token"]},
-                timeout=10,  # TODO: decide timeout. Maybe from configuration?
-            )
-            # extract value
-            value = response.json()[variables[variable]["field"]]
-        elif source == "VALUE":
-            # the value is the one indicated
-            # there might be some substitution needed
-            value = replace_variables_values(variables[variable]["value"], values)
-            if (
-                "operator" in variables[variable].keys()
-                and variables[variable]["operator"]
-            ):
-                operator = variables[variable]["operator"]
-                if operator == "join_with_space":
-                    value = ", ".join(value)
-        else:
-            raise Exception("Invalid variable source configuration")
-
-        values[variable] = convert_to_type(value, variables[variable]["value_type"])
-
-    return values
-
-
-def _prepare_scicat_dataset(
-    metadata_schema: dict, values: dict, datafilelist: list[dict], config, logger
-):
-    """
-    Prepare scicat dataset as dictionary ready to be ``POST``ed.
-    """
-    logger.info("_prepare_scicat_dataset: Preparing scicat dataset structure")
-    schema: dict = metadata_schema["schema"]
-    dataset: dict = {}
-
-    scientific_metadata = {
-        'ingestor_metadata_schema_id': {
-            "value": metadata_schema["id"],
-            "unit": "",
-            "human_name": "Ingestor Metadata Schema Id",
-            "type": "string",
-        }
-    }
-    for field in schema.values():
-        machine_name = field["machine_name"]
-        field_type = field["type"]
-        if field["field_type"] == "high_level":
-            dataset[machine_name] = convert_to_type(
-                replace_variables_values(field["value"], values), field_type
-            )
-        elif field["field_type"] == "scientific_metadata":
-            scientific_metadata[machine_name] = {
-                "value": convert_to_type(
-                    replace_variables_values(field["value"], values), field_type
-                ),
-                "unit": "",
-                "human_name": field["human_name"]
-                if field.get("human_name", None)
-                else machine_name,
-                "type": field_type,
-            }
-        else:
-            raise Exception("Metadata schema field type invalid")
-
-    dataset["scientific_metadata"] = scientific_metadata
-
-    # now check that the configuration setting shave been respected
-    if not config.dataset.allow_dataset_pid and "pid" in dataset.keys():
-        logger.info("_prepare_scicat_dataset: Pid not allowed by configuration")
-        del dataset["pid"]
-    if config.dataset.generate_dataset_pid:
-        logger.info("_prepare_scicat_dataset: Auto generating pid by configuration")
-        dataset["pid"] = str(uuid.uuid4())
-
-    if "instrumentId" not in dataset.keys() or not dataset["instrumentId"]:
-        logger.info(
-            "_prepare_scicat_dataset: Assigning default instrument id: %s",
-            config.dataset.default_instrument_id,
-        )
-        dataset["instrumentId"] = config.dataset.default_instrument_id
-
-    if "proposalId" not in dataset.keys() or not dataset["proposalId"]:
-        logger.info(
-            "_prepare_scicat_dataset: Assigning default proposal id: %s",
-            config.dataset.default_proposal_id,
-        )
-        dataset["proposalId"] = config.dataset.default_proposal_id
-
-    if "ownerGroup" not in dataset.keys() or not dataset["ownerGroup"]:
-        logger.info(
-            "_prepare_scicat_dataset: Assigning default ownerGroup: %s",
-            config.dataset.default_owner_group,
-        )
-        dataset["ownerGroup"] = config.dataset.default_owner_group
-
-    if "accessGroups" not in dataset.keys() or not dataset["accessGroups"]:
-        logger.info(
-            "_prepare_scicat_dataset: Assigning default accessGroups: %s",
-            json.dumps(config.dataset.default_access_groups),
-        )
-        dataset["accessGroups"] = config.dataset.default_access_groups
-
-    dataset["size"] = len(datafilelist)
-    dataset["numberOfFiles"] = sum([item["size"] for item in datafilelist])
-    dataset["isPublished"] = False
-
-    logger.info("_prepare_scicat_dataset: Scicat dataset: %s", json.dumps(dataset))
-    return dataset
 
 
 def _create_scicat_dataset(dataset: dict, config, logger: logging.Logger) -> dict:
@@ -319,8 +183,8 @@ def main() -> None:
             metadata_schema = select_applicable_schema(nexus_file_path, h5file, schemas)
 
             # define variables values
-            variables_values = extract_variables_values(
-                metadata_schema['variables'], h5file, config
+            variable_map = extract_variables_values(
+                metadata_schema['variables'], h5file, config.scicat
             )
 
         # Collect data-file descriptions
@@ -332,20 +196,25 @@ def main() -> None:
             # TODO: add done_writing_message_file and nexus_structure_file
         )
 
+        # Create scicat dataset instance(entry)
+        local_dataset = scicat_dataset_to_dict(
+            create_scicat_dataset_instance(
+                metadata_schema_id=metadata_schema["id"],
+                metadata_schemas=metadata_schema["schemas"],
+                variable_map=variable_map,
+                data_file_list=data_file_list,
+                config=config.dataset,
+                logger=logger,
+            )
+        )
+        # create dataset in scicat
+        scicat_dataset = _create_scicat_dataset(local_dataset, config, logger)
+
         dataset_source_folder = _define_dataset_source_folder(data_file_list)
 
         origdatablock_datafiles_list = _prepare_origdatablock_datafilelist(
             data_file_list, dataset_source_folder
         )
-
-        # create and populate scicat dataset entry
-        local_dataset = _prepare_scicat_dataset(
-            metadata_schema, variables_values, data_file_list, config, logger
-        )
-
-        # create dataset in scicat
-        scicat_dataset = _create_scicat_dataset(local_dataset, config, logger)
-
         # create and populate scicat origdatablock entry
         # with files and hashes previously computed
         local_origdatablock = _prepare_scicat_origdatablock(
