@@ -5,7 +5,7 @@ import logging
 import pathlib
 import uuid
 from collections.abc import Callable, Iterable
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from types import MappingProxyType
 from typing import Any
 
@@ -108,7 +108,7 @@ def extract_variables_values(
 class TechniqueDesc:
     pid: str
     "Technique PID"
-    names: str
+    name: str
     "Technique Name"
 
 
@@ -130,7 +130,7 @@ class ScicatDataset:
     creationTime: str
     type: str = "raw"
     sampleId: str
-    techniques: list[TechniqueDesc] | None = None
+    techniques: list[TechniqueDesc] = field(default_factory=list)
     instrumentId: str | None = None
     proposalId: str | None = None
     ownerGroup: str | None = None
@@ -464,9 +464,6 @@ def create_scicat_dataset_instance(
             "Access group is not provided. Setting to default value. %s",
             scicat_dataset.accessGroup,
         )
-    if scicat_dataset.techniques is None:
-        logger.info("Techniques are not provided. Setting to empty list.")
-        scicat_dataset.techniques = []
 
     logger.info("Dataset instance is created successfully. %s", scicat_dataset)
     return scicat_dataset
