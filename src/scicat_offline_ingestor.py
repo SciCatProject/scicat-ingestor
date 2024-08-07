@@ -2,14 +2,11 @@
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 # import scippnexus as snx
 import copy
-import datetime
-import hashlib
 import json
 import logging
 import os
 import pathlib
 import uuid
-from typing import Any
 from urllib.parse import urljoin
 
 import h5py
@@ -21,13 +18,11 @@ from scicat_configuration import (
 )
 from scicat_dataset import (
     convert_to_type,
+    create_data_file_list,
 )
 from scicat_logging import build_logger
 from scicat_metadata import collect_schemas, select_applicable_schema
-from scicat_path_helpers import (
-    compose_ingestor_directory,
-    compose_ingestor_output_file_path,
-)
+from scicat_path_helpers import compose_ingestor_directory
 from system_helpers import exit, offline_ingestor_exit_at_exceptions
 
 
@@ -80,147 +75,6 @@ def extract_variables_values(
         values[variable] = convert_to_type(value, variables[variable]["value_type"])
 
     return values
-
-
-def _new_hash(algorithm: str) -> Any:
-    try:
-        return hashlib.new(algorithm, usedforsecurity=False)
-    except TypeError:
-        # Fallback for Python < 3.9
-        return hashlib.new(algorithm)
-
-
-def _compute_file_checksum(file_full_path: pathlib.Path, algorithm: str) -> str:
-    """
-    Compute the checksum of a file using specified algorithm.
-    :param file_full_path:
-    :param algorithm:
-    :return:
-    """
-    chk = _new_hash(algorithm)
-    buffer = memoryview(bytearray(128 * 1024))
-    with file_full_path.open("rb", buffering=0) as file:
-        for n in iter(lambda: file.readinto(buffer), 0):
-            chk.update(buffer[:n])
-    return chk.hexdigest()  # type: ignore[no-any-return]
-
-
-def _create_datafilelist_item(file_full_path: pathlib.Path, config, logger):
-    """
-    Create the matching entry in the datafiles list for the file provided
-    :param file_full_path:
-    :param config:
-    :param logger:
-    :return:
-    """
-    logger.info("create_datafilelist_item: adding file %s", file_full_path.absolute())
-
-    datafilelist_item = {
-        "path": file_full_path,
-        "size": 0,
-        "time": datetime.datetime.now(tz=datetime.UTC).strftime(
-            "%Y-%m-%dT%H:%M:%S.000Z"
-        ),
-    }
-
-    if config.ingestion.compute_files_stats and file_full_path.exists():
-        logger.info("create_datafilelist_item: reading file stats from disk")
-        stats = file_full_path.stat()
-        datafilelist_item = {
-            **datafilelist_item,
-            **{
-                "size": stats.st_size,
-                "time": datetime.datetime.fromtimestamp(
-                    stats.st_ctime, tz=datetime.UTC
-                ).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-                "uid": stats.st_uid,
-                "gid": stats.st_gid,
-                "perm": stats.st_mode,
-            },
-        }
-
-    return datafilelist_item
-
-
-def _compute_file_checksum_if_needed(
-    file_full_path: pathlib.Path, ingestor_directory: pathlib.Path, config, logger
-):
-    checksum = ""
-    datafiles_item = {}
-
-    if config.ingestion.compute_files_hash and os.path.exists(file_full_path):
-        logger.info("create_datafiles_entry: computing hash of the file from disk")
-        checksum = _compute_file_checksum(
-            file_full_path, config.ingestion.file_hash_algorithm
-        )
-
-        if config.ingstion.save_hash_in_file:
-            # file path for hash file
-            hash_file_full_path = compose_ingestor_output_file_path(
-                ingestor_directory,
-                file_full_path.stem,
-                config.ingestion.hash_file_extension,
-            )
-            logger.info(
-                "create_datafiles_entry: saving hash in file %s", hash_file_full_path
-            )
-
-            # save hash in file
-            with hash_file_full_path.open('w') as fh:
-                fh.write(datafiles_item['chk'])
-
-            datafiles_item = _create_datafilelist_item(
-                hash_file_full_path, config, logger
-            )
-
-    return checksum, datafiles_item
-
-
-def _create_datafiles_list(
-    nexus_file_path: pathlib.Path,
-    done_writing_message_file_path: pathlib.Path,
-    ingestor_directory: pathlib.Path,
-    config,
-    logger,
-) -> list:
-    """
-    Update the file size and creation time according to the configuration
-    :param nexus_file_path:
-    :param done_writing_message_file_path,
-    :param config,
-    :param logger
-    :return:
-    """
-
-    logger.info(
-        "create_datafiles_list: adding nexus file %s", nexus_file_path.absolute()
-    )
-    datafiles_list = [_create_datafilelist_item(nexus_file_path, config, logger)]
-    checksum, datafiles_hash_item = _compute_file_checksum_if_needed(
-        nexus_file_path, ingestor_directory, config, logger
-    )
-    if checksum:
-        datafiles_list[0]['chk'] = checksum
-    if datafiles_hash_item:
-        datafiles_list.append(datafiles_hash_item)
-
-    if config.ingestion.file_handling.message_to_file:
-        logger.info(
-            "create_datafiles_list: adding done writing message file %s",
-            done_writing_message_file_path.absolute(),
-        )
-        datafiles_list.append(
-            _create_datafilelist_item(done_writing_message_file_path, config, logger)
-        )
-        checksum, datafiles_hash_item = _compute_file_checksum_if_needed(
-            nexus_file_path, ingestor_directory, config, logger
-        )
-        if checksum:
-            datafiles_list[-1]['chk'] = checksum
-        if datafiles_hash_item:
-            datafiles_list.append(datafiles_hash_item)
-
-    return datafiles_list
 
 
 def _prepare_scicat_dataset(
@@ -436,13 +290,14 @@ def main() -> None:
     arg_namespace = arg_parser.parse_args()
     config = build_scicat_offline_ingestor_config(arg_namespace)
     ingestion_options = config.ingestion
+    fh_options = ingestion_options.file_handling
     logger = build_logger(config)
 
     # Log the configuration as dictionary so that it is easier to read from the logs
     logger.info(
-        'Starting the Scicat background Ingestor with the following configuration:'
+        'Starting the Scicat background Ingestor with the following configuration: %s',
+        config.to_dict(),
     )
-    logger.info(config.to_dict())
 
     # Collect all metadata schema configurations
     schemas = collect_schemas(ingestion_options.schemas_directory)
@@ -453,24 +308,10 @@ def main() -> None:
             "Nexus file to be ingested : %s",
             nexus_file_path,
         )
-        done_writing_message_file_path = pathlib.Path()
-        if config.ingestion.file_handling.message_to_file:
-            done_writing_message_file_path = pathlib.Path(
-                config.offline_run.done_writing_message_file
-            )
-            logger.info(
-                "Done writing message file linked to nexus file : %s",
-                done_writing_message_file_path,
-            )
-
-            # log done writing message input file
-            logger.info(json.load(done_writing_message_file_path.open()))
 
         # define which is the directory where the ingestor should save
         # the files it creates, if any is created
-        ingestor_directory = compose_ingestor_directory(
-            config.ingestion.file_handling, nexus_file_path
-        )
+        ingestor_directory = compose_ingestor_directory(fh_options, nexus_file_path)
 
         # open nexus file with h5py
         with h5py.File(nexus_file_path) as h5file:
@@ -482,46 +323,24 @@ def main() -> None:
                 metadata_schema['variables'], h5file, config
             )
 
-        # =============================================
-        # I'm not sure that using jinja templates is the right thing to do
-        # =============================================
-        # # Collect data-file descriptions
-        # data_file_list = [
-        #     build_single_data_file_desc(nexus_file_path, file_handling_options),
-        #     build_single_data_file_desc(
-        #         done_writing_message_file, file_handling_options
-        #     ),
-        #     # TODO: Add nexus structure file
-        # ]
-        # # Create hash of all the files if needed
-        # if file_handling_options.save_file_hash:
-        #     data_file_list += [
-        #         save_and_build_single_hash_file_desc(
-        #             data_file_dict, file_handling_options
-        #         )
-        #         for data_file_dict in data_file_list
-        #     ]
-        # # Collect all data-files and hash-files descriptions
-        # _ = [json.dumps(file_dict, indent=2) for file_dict in data_file_list]
-
-        # create datafilelist
-        datafilelist = _create_datafiles_list(
-            nexus_file_path,
-            done_writing_message_file_path,
-            ingestor_directory,
-            config,
-            logger,
+        # Collect data-file descriptions
+        data_file_list = create_data_file_list(
+            nexus_file=nexus_file_path,
+            ingestor_directory=ingestor_directory,
+            config=fh_options,
+            logger=logger,
+            # TODO: add done_writing_message_file and nexus_structure_file
         )
 
-        dataset_source_folder = _define_dataset_source_folder(datafilelist)
+        dataset_source_folder = _define_dataset_source_folder(data_file_list)
 
         origdatablock_datafiles_list = _prepare_origdatablock_datafilelist(
-            datafilelist, dataset_source_folder
+            data_file_list, dataset_source_folder
         )
 
         # create and populate scicat dataset entry
         local_dataset = _prepare_scicat_dataset(
-            metadata_schema, variables_values, datafilelist, config, logger
+            metadata_schema, variables_values, data_file_list, config, logger
         )
 
         # create dataset in scicat

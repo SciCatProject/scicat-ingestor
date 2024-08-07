@@ -1,17 +1,13 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 import datetime
-import json
+import logging
 import pathlib
+from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any
 
 from scicat_configuration import FileHandlingOptions
-from scicat_schemas import (
-    load_datafilelist_item_schema_template,
-    load_dataset_schema_template,
-    load_origdatablock_schema_template,
-)
 
 
 def to_string(value: Any) -> str:
@@ -58,96 +54,65 @@ def convert_to_type(input_value: Any, dtype_desc: str) -> Any:
     return converter(input_value)
 
 
-def build_dataset_instance(
-    *,
-    dataset_pid_prefix: str,
-    nxs_dataset_pid: str,
-    dataset_name: str,
-    dataset_description: str,
-    principal_investigator: str,
-    facility: str,
-    environment: str,
-    scientific_metadata: str,
-    owner: str,
-    owner_email: str,
-    source_folder: str,
-    contact_email: str,
-    iso_creation_time: str,
-    technique_pid: str,
-    technique_name: str,
-    instrument_id: str,
-    sample_id: str,
-    proposal_id: str,
-    owner_group: str,
-    access_groups: list[str],
-) -> str:
-    return load_dataset_schema_template().render(
-        dataset_pid_prefix=dataset_pid_prefix,
-        nxs_dataset_pid=nxs_dataset_pid,
-        dataset_name=dataset_name,
-        dataset_description=dataset_description,
-        principal_investigator=principal_investigator,
-        facility=facility,
-        environment=environment,
-        scientific_metadata=scientific_metadata,
-        owner=owner,
-        owner_email=owner_email,
-        source_folder=source_folder,
-        contact_email=contact_email,
-        iso_creation_time=iso_creation_time,
-        technique_pid=technique_pid,
-        technique_name=technique_name,
-        instrument_id=instrument_id,
-        sample_id=sample_id,
-        proposal_id=proposal_id,
-        owner_group=owner_group,
-        access_groups=access_groups,
-    )
+@dataclass(kw_only=True)
+class TechniqueDesc:
+    pid: str
+    "Technique PID"
+    names: str
+    "Technique Name"
 
 
-def build_single_datafile_instance(
-    *,
-    file_absolute_path: str,
-    file_size: int,
-    datetime_isoformat: str,
-    uid: str,
-    gid: str,
-    perm: str,
-    checksum: str = "",
-) -> str:
-    return load_datafilelist_item_schema_template().render(
-        file_absolute_path=file_absolute_path,
-        file_size=file_size,
-        datetime_isoformat=datetime_isoformat,
-        checksum=checksum,
-        uid=uid,
-        gid=gid,
-        perm=perm,
-    )
+@dataclass(kw_only=True)
+class ScicatDataset:
+    pid: str
+    datasetName: str
+    description: str
+    principalInvestigator: str
+    creationLocation: str
+    scientificMetadata: dict
+    owner: str
+    ownerEmail: str
+    sourceFolder: str
+    contactEmail: str
+    creationTime: str
+    type: str = "raw"
+    techniques: list[TechniqueDesc] | None = None
+    instrumentId: str
+    sampleId: str
+    proposalId: str
+    ownerGroup: str
+    accessGroup: list[str]
 
 
-def build_origdatablock_instance(
-    *,
-    dataset_pid_prefix: str,
-    nxs_dataset_pid: str,
-    dataset_size: int,
-    check_algorithm: str,
-    data_file_desc_list: list[str],
-) -> str:
-    return load_origdatablock_schema_template().render(
-        dataset_pid_prefix=dataset_pid_prefix,
-        nxs_dataset_pid=nxs_dataset_pid,
-        dataset_size=dataset_size,
-        check_algorithm=check_algorithm,
-        data_file_desc_list=data_file_desc_list,
-    )
+@dataclass(kw_only=True)
+class DataFileListItem:
+    path: str
+    "Absolute path to the file."
+    size: int | None = None
+    "Size of the single file in bytes."
+    time: str
+    chk: str | None = None
+    uid: str | None = None
+    gid: str | None = None
+    perm: str | None = None
 
 
-def _calculate_checksum(file_path: pathlib.Path, algorithm_name: str) -> str:
+@dataclass(kw_only=True)
+class OrigDataBlockInstance:
+    datasetId: str
+    size: int
+    chkAlg: str
+    dataFileList: list[DataFileListItem]
+
+
+def _calculate_checksum(file_path: pathlib.Path, algorithm_name: str) -> str | None:
     """Calculate the checksum of a file."""
     import hashlib
 
-    if not algorithm_name == "b2blake":
+    if not file_path.exists():
+        return None
+
+    if algorithm_name != "b2blake":
         raise ValueError(
             "Only b2blake hash algorithm is supported for now. Got: ",
             f"{algorithm_name}",
@@ -162,69 +127,138 @@ def _calculate_checksum(file_path: pathlib.Path, algorithm_name: str) -> str:
     return chk.hexdigest()
 
 
-def build_single_data_file_desc(
-    file_path: pathlib.Path, config: FileHandlingOptions
-) -> dict[str, Any]:
-    """
-    Build the description of a single data file.
-    """
-    single_file_template = load_datafilelist_item_schema_template()
+def _create_single_data_file_list_item(
+    *,
+    file_path: pathlib.Path,
+    calculate_checksum: bool,
+    compute_file_stats: bool,
+    file_hash_algorithm: str = "",
+) -> DataFileListItem:
+    """``DataFileListItem`` constructing helper."""
 
-    return json.loads(
-        single_file_template.render(
-            file_absolute_path=file_path.absolute(),
-            file_size=(file_stats := file_path.stat()).st_size,
-            datetime_isoformat=datetime.datetime.fromtimestamp(
+    if file_path.exists() and compute_file_stats:
+        return DataFileListItem(
+            path=file_path.absolute().as_posix(),
+            size=(file_stats := file_path.stat()).st_size,
+            time=datetime.datetime.fromtimestamp(
                 file_stats.st_ctime, tz=datetime.UTC
             ).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-            chk=_calculate_checksum(file_path, config.file_hash_algorithm),
+            chk=_calculate_checksum(file_path, file_hash_algorithm)
+            if calculate_checksum
+            else None,
             uid=str(file_stats.st_uid),
             gid=str(file_stats.st_gid),
             perm=oct(file_stats.st_mode),
         )
-    )
+    else:
+        return DataFileListItem(
+            path=file_path.absolute().as_posix(),
+            time=datetime.datetime.now(tz=datetime.UTC).strftime(
+                "%Y-%m-%dT%H:%M:%S.000Z"
+            ),
+        )
 
 
-def _build_hash_file_path(
+def _build_hash_path(
     *,
-    original_file_path: str,
-    ingestor_files_directory: str,
+    original_file_instance: DataFileListItem,
+    dir_path: pathlib.Path,
     hash_file_extension: str,
 ) -> pathlib.Path:
-    """Build the path for the hash file."""
-    original_path = pathlib.Path(original_file_path)
-    dir_path = pathlib.Path(ingestor_files_directory)
-    file_name = ".".join([original_path.name, hash_file_extension])
-    return dir_path / pathlib.Path(file_name)
+    "Compose path to the hash file."
+    file_stem = pathlib.Path(original_file_instance.path).stem
+    return dir_path / pathlib.Path(".".join([file_stem, hash_file_extension]))
 
 
-def save_and_build_single_hash_file_desc(
-    original_file_desciption: dict, config: FileHandlingOptions
-) -> dict:
-    """Save the hash of the file and build the description."""
-    import datetime
-    import json
+def _save_hash_file(
+    *,
+    original_file_instance: DataFileListItem,
+    hash_path: pathlib.Path,
+) -> None:
+    """Save the hash of the ``original_file_instance``."""
+    if original_file_instance.chk is None:
+        raise ValueError("Checksum is not provided.")
 
-    from scicat_schemas import load_datafilelist_item_schema_template
+    hash_path.write_text(original_file_instance.chk)
 
-    single_file_template = load_datafilelist_item_schema_template()
-    file_hash: str = original_file_desciption["chk"]
-    hash_path = _build_hash_file_path(
-        original_file_path=original_file_desciption["path"],
-        ingestor_files_directory=config.ingestor_files_directory,
-        hash_file_extension=config.hash_file_extension,
+
+def create_data_file_list(
+    *,
+    nexus_file: pathlib.Path,
+    done_writing_message_file: pathlib.Path | None = None,
+    nexus_structure_file: pathlib.Path | None = None,
+    ingestor_directory: pathlib.Path,
+    config: FileHandlingOptions,
+    logger: logging.Logger,
+) -> list[DataFileListItem]:
+    """
+    Create a list of ``DataFileListItem`` instances for the files provided.
+
+    Params
+    ------
+    nexus_file:
+        Path to the NeXus file.
+    done_writing_message_file:
+        Path to the "done writing" message file.
+    nexus_structure_file:
+        Path to the NeXus structure file.
+    ingestor_directory:
+        Path to the directory where the files will be saved.
+    config:
+        Configuration related to the file handling.
+    logger:
+        Logger instance.
+
+    """
+    from functools import partial
+
+    single_file_constructor = partial(
+        _create_single_data_file_list_item,
+        file_hash_algorithm=config.file_hash_algorithm,
+        compute_file_stats=config.compute_file_stats,
     )
-    hash_path.write_text(file_hash)
 
-    return json.loads(
-        single_file_template.render(
-            file_absolute_path=hash_path.absolute(),
-            file_size=(file_stats := hash_path.stat()).st_size,
-            datetime_isoformat=datetime.datetime.fromtimestamp(
-                file_stats.st_ctime, tz=datetime.UTC
-            ).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-            uid=str(file_stats.st_uid),
-            gid=str(file_stats.st_gid),
-            perm=oct(file_stats.st_mode),
+    # Collect the files that will be ingested
+    file_list = [nexus_file]
+    if done_writing_message_file is not None:
+        file_list.append(done_writing_message_file)
+    if nexus_structure_file is not None:
+        file_list.append(nexus_structure_file)
+
+    # Create the list of the files
+    data_file_list = []
+    for minimum_file_path in file_list:
+        logger.info("Adding file %s to the datafiles list", minimum_file_path)
+        new_file_item = single_file_constructor(
+            file_path=minimum_file_path,
+            calculate_checksum=config.compute_file_hash,
         )
-    )
+        data_file_list.append(new_file_item)
+        if config.save_file_hash:
+            logger.info(
+                "Computing hash of the file(%s) from disk...", minimum_file_path
+            )
+            hash_file_path = _build_hash_path(
+                original_file_instance=new_file_item,
+                dir_path=ingestor_directory,
+                hash_file_extension=config.hash_file_extension,
+            )
+            logger.info("Saving hash into a file ... %s", hash_file_path)
+            if new_file_item.chk is not None:
+                _save_hash_file(
+                    original_file_instance=new_file_item, hash_path=hash_file_path
+                )
+                data_file_list.append(
+                    single_file_constructor(
+                        file_path=hash_file_path, calculate_checksum=False
+                    )
+                )
+            else:
+                logger.warning(
+                    "File(%s) instance does not have checksum. "
+                    "Probably the file does not exist. "
+                    "Skip saving...",
+                    minimum_file_path,
+                )
+
+    return data_file_list
