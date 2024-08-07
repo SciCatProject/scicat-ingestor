@@ -5,7 +5,7 @@ import pathlib
 from collections.abc import Generator
 
 from confluent_kafka import Consumer
-from scicat_configuration import MessageSavingOptions, kafkaOptions
+from scicat_configuration import KafkaOptions
 from streaming_data_types import deserialise_wrdn
 from streaming_data_types.finished_writing_wrdn import (
     FILE_IDENTIFIER as WRDN_FILE_IDENTIFIER,
@@ -13,7 +13,7 @@ from streaming_data_types.finished_writing_wrdn import (
 from streaming_data_types.finished_writing_wrdn import WritingFinished
 
 
-def collect_consumer_options(options: kafkaOptions) -> dict:
+def collect_consumer_options(options: KafkaOptions) -> dict:
     """Build a Kafka consumer and configure it according to the ``options``."""
     from dataclasses import asdict
 
@@ -35,7 +35,7 @@ def collect_consumer_options(options: kafkaOptions) -> dict:
     return config_dict
 
 
-def collect_kafka_topics(options: kafkaOptions) -> list[str]:
+def collect_kafka_topics(options: KafkaOptions) -> list[str]:
     """Return the Kafka topics as a list."""
     if isinstance(options.topics, str):
         return options.topics.split(",")
@@ -45,7 +45,7 @@ def collect_kafka_topics(options: kafkaOptions) -> list[str]:
         raise TypeError("The topics must be a list or a comma-separated string.")
 
 
-def build_consumer(kafka_options: kafkaOptions, logger: logging.Logger) -> Consumer:
+def build_consumer(kafka_options: KafkaOptions, logger: logging.Logger) -> Consumer:
     """Build a Kafka consumer and configure it according to the ``options``."""
     consumer_options = collect_consumer_options(kafka_options)
     logger.info("Connecting to Kafka with the following parameters:")
@@ -136,24 +136,24 @@ def wrdn_messages(
                 yield None
 
 
-def compose_message_path(
-    *,
-    target_dir: pathlib.Path,
-    nexus_file_path: pathlib.Path,
-    message_saving_options: MessageSavingOptions,
-) -> pathlib.Path:
-    """Compose the message path based on the nexus file path and configuration."""
-
-    return target_dir / (
-        pathlib.Path(
-            ".".join(
-                (
-                    nexus_file_path.stem,
-                    message_saving_options.message_file_extension.removeprefix("."),
-                )
-            )
-        )
-    )
+# def compose_message_path(
+#     *,
+#     target_dir: pathlib.Path,
+#     nexus_file_path: pathlib.Path,
+#     message_saving_options: MessageSavingOptions,
+# ) -> pathlib.Path:
+#     """Compose the message path based on the nexus file path and configuration."""
+#
+#     return target_dir / (
+#         pathlib.Path(
+#             ".".join(
+#                 (
+#                     nexus_file_path.stem,
+#                     message_saving_options.message_file_extension.removeprefix("."),
+#                 )
+#             )
+#         )
+#     )
 
 
 def save_message_to_file(

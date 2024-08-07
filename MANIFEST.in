@@ -1,2 +1,0 @@
-include src/scicat_schemas/dataset.schema.json.jinja
-include src/scicat_schemas/origdatablock.schema.json.jinja

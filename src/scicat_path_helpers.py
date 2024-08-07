@@ -5,20 +5,37 @@ import pathlib
 from scicat_configuration import FileHandlingOptions
 
 
-def select_target_directory(
-    fh_options: FileHandlingOptions, file_path: pathlib.Path
+def compose_ingestor_directory(
+    fh_options: FileHandlingOptions, nexus_file_path: str | pathlib.Path
 ) -> pathlib.Path:
-    """Select the target directory based on the file path and the options."""
-    if fh_options.hdf_structure_output == "SOURCE_FOLDER":
-        return file_path.parent / pathlib.Path(fh_options.ingestor_files_directory)
+    """Select the ingestor directory based on the file path and the options."""
+    directory = pathlib.Path(fh_options.ingestor_files_directory)
+    nexus_file_path = (
+        pathlib.Path(nexus_file_path)
+        if isinstance(nexus_file_path, str)
+        else nexus_file_path
+    )
+    if directory.is_absolute():
+        return directory
     else:
-        return pathlib.Path(fh_options.local_output_directory)
+        directory = nexus_file_path.parents[0] / directory
+        return directory.resolve()
 
 
-def compose_checksum_file_path(
-    fh_options: FileHandlingOptions, file_path: pathlib.Path
+def compose_ingestor_output_file_path(
+    ingestor_directory: pathlib.Path,
+    file_name: str,
+    file_extension: str,
 ) -> pathlib.Path:
-    """Compose the path for the checksum file."""
-    return pathlib.Path(fh_options.ingestor_files_directory) / pathlib.Path(
-        file_path.name + fh_options.hash_file_extension
+    """Compose the ingestor output file path based on the input provided."""
+
+    return ingestor_directory / (
+        pathlib.Path(
+            ".".join(
+                (
+                    file_name,
+                    file_extension,
+                )
+            )
+        )
     )

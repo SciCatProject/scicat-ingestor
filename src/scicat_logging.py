@@ -5,19 +5,21 @@ import logging
 import logging.handlers
 
 import graypy
-from scicat_configuration import IngesterConfig
+from scicat_configuration import OfflineIngestorConfig, OnlineIngestorConfig
 
 
-def build_logger(config: IngesterConfig) -> logging.Logger:
+def build_logger(
+    config: OnlineIngestorConfig | OfflineIngestorConfig,
+) -> logging.Logger:
     """Build a logger and configure it according to the ``config``."""
-    run_options = config.run_options
+    logging_options = config.logging
 
     # Build logger and formatter
     logger = logging.getLogger('esd extract parameters')
     formatter = logging.Formatter(
         " - ".join(
             (
-                run_options.log_message_prefix,
+                logging_options.log_message_prefix,
                 '%(asctime)s',
                 '%(name)s',
                 '%(levelname)s',
@@ -27,9 +29,9 @@ def build_logger(config: IngesterConfig) -> logging.Logger:
     )
 
     # Add FileHandler
-    if run_options.file_log:
-        file_name_components = [run_options.file_log_base_name]
-        if run_options.file_log_timestamp:
+    if logging_options.file_log:
+        file_name_components = [logging_options.file_log_base_name]
+        if logging_options.file_log_timestamp:
             file_name_components.append(
                 datetime.datetime.now(datetime.UTC).strftime('%Y%m%d%H%M%S%f')
             )
@@ -40,30 +42,29 @@ def build_logger(config: IngesterConfig) -> logging.Logger:
         logger.addHandler(file_handler)
 
     # Add SysLogHandler
-    if run_options.system_log:
+    if logging_options.system_log:
         logger.addHandler(logging.handlers.SysLogHandler(address='/dev/log'))
 
     # Add graylog handler
-    if run_options.graylog:
-        graylog_config = config.graylog_options
+    if logging_options.graylog:
         graylog_handler = graypy.GELFTCPHandler(
-            graylog_config.host,
-            int(graylog_config.port),
-            facility=graylog_config.facility,
+            logging_options.graylog_host,
+            int(logging_options.graylog_port),
+            facility=logging_options.graylog_facility,
         )
         logger.addHandler(graylog_handler)
 
     # Set the level and formatter for all handlers
-    logger.setLevel(run_options.logging_level)
+    logger.setLevel(logging_options.logging_level)
     for handler in logger.handlers:
-        handler.setLevel(run_options.logging_level)
+        handler.setLevel(logging_options.logging_level)
         handler.setFormatter(formatter)
 
     # Add StreamHandler
     # streamer handler is added last since it is using different formatter
-    if run_options.verbose:
+    if logging_options.verbose:
         from rich.logging import RichHandler
 
-        logger.addHandler(RichHandler(level=run_options.logging_level))
+        logger.addHandler(RichHandler(level=logging_options.logging_level))
 
     return logger

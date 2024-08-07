@@ -3,7 +3,7 @@ from collections.abc import Generator
 from contextlib import contextmanager
 
 
-def quit(logger: logging.Logger, unexpected: bool = True) -> None:
+def exit(logger: logging.Logger, unexpected: bool = True) -> None:
     """Log the message and exit the program."""
     import sys
 
@@ -12,7 +12,7 @@ def quit(logger: logging.Logger, unexpected: bool = True) -> None:
 
 
 @contextmanager
-def exit_at_exceptions(
+def online_ingestor_exit_at_exceptions(
     logger: logging.Logger, daemon: bool = True
 ) -> Generator[None, None, None]:
     """Exit the program if an exception is raised."""
@@ -20,14 +20,31 @@ def exit_at_exceptions(
         yield
     except KeyboardInterrupt:
         logger.info("Received keyboard interrupt.")
-        quit(logger, unexpected=False)
+        exit(logger, unexpected=False)
     except Exception as e:
         logger.error("An exception occurred: %s", e)
-        quit(logger, unexpected=True)
+        exit(logger, unexpected=True)
     else:
         if daemon:
             logger.error("Loop finished unexpectedly.")
-            quit(logger, unexpected=True)
+            exit(logger, unexpected=True)
         else:
             logger.info("Finished successfully.")
-            quit(logger, unexpected=False)
+            exit(logger, unexpected=False)
+
+
+@contextmanager
+def offline_ingestor_exit_at_exceptions(
+    logger: logging.Logger,
+) -> Generator[None, None, None]:
+    """
+    manage exceptions specifically for offline ingestor
+    """
+    try:
+        yield
+    except Exception as e:
+        logger.error("An exception occurred: %s", e)
+    else:
+        logger.error("An unexpected error occurred")
+
+    exit(logger, unexpected=True)
