@@ -46,6 +46,7 @@ jobs:
       os-variant: ${{ matrix.os }}
       python-version: ${{ matrix.python.version }}
       tox-env: ${{ matrix.python.tox-env }}
+    secrets: inherit
 
   intergration-tests:
     name: Integration Tests
