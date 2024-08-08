@@ -21,7 +21,7 @@ from scicat_dataset import (
 from scicat_logging import build_logger
 from scicat_metadata import collect_schemas, select_applicable_schema
 from scicat_path_helpers import compose_ingestor_directory
-from system_helpers import exit, offline_ingestor_exit_at_exceptions
+from system_helpers import handle_exceptions
 
 
 def _prepare_scicat_origdatablock(scicat_dataset, datafilelist, config, logger):
@@ -97,7 +97,7 @@ def main() -> None:
     # Collect all metadata schema configurations
     schemas = collect_schemas(ingestion_options.schemas_directory)
 
-    with offline_ingestor_exit_at_exceptions(logger):
+    with handle_exceptions(logger):
         nexus_file_path = pathlib.Path(config.offline_run.nexus_file)
         logger.info(
             "Nexus file to be ingested : %s",
@@ -160,4 +160,11 @@ def main() -> None:
         )
 
         # check one more time if we successfully created the entries in scicat
-        exit(logger, unexpected=(bool(scicat_dataset) and bool(scicat_origdatablock)))
+        if not ((len(scicat_dataset) > 0) and (len(scicat_origdatablock) > 0)):
+            logger.error(
+                "Failed to create dataset or origdatablock in scicat.\n"
+                "SciCat dataset: %s\nSciCat origdatablock: %s",
+                scicat_dataset,
+                scicat_origdatablock,
+            )
+            raise RuntimeError("Failed to create dataset or origdatablock.")
