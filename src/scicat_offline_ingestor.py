@@ -1,9 +1,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 # import scippnexus as snx
-import copy
-import json
-import os
 import pathlib
 
 import h5py
@@ -14,69 +11,16 @@ from scicat_configuration import (
 )
 from scicat_dataset import (
     create_data_file_list,
+    create_origdatablock_instance,
     create_scicat_dataset_instance,
     extract_variables_values,
+    origdatablock_to_dict,
     scicat_dataset_to_dict,
 )
 from scicat_logging import build_logger
 from scicat_metadata import collect_schemas, select_applicable_schema
 from scicat_path_helpers import compose_ingestor_directory
 from system_helpers import handle_exceptions
-
-
-def _prepare_scicat_origdatablock(scicat_dataset, datafilelist, config, logger):
-    """
-    Create local copy of the orig datablock to send to scicat
-    """
-    logger.info(
-        "_prepare_scicat_origdatablock: Preparing scicat origdatablock structure"
-    )
-    origdatablock = {
-        "ownerGroup": scicat_dataset["ownerGroup"],
-        "accessGroups": scicat_dataset["accessGroups"],
-        "size": sum([item["size"] for item in datafilelist]),
-        "chkAlg": config.ingestion.file_hash_algorithm,
-        "dataFileList": datafilelist,
-        "datasetId": scicat_dataset["pid"],
-    }
-
-    logger.info(
-        "_prepare_scicat_origdatablock: Scicat origdatablock: %s",
-        json.dumps(origdatablock),
-    )
-    return origdatablock
-
-
-def _define_dataset_source_folder(datafilelist) -> pathlib.Path:
-    """
-    Return the dataset source folder, which is the common path
-    between all the data files associated with the dataset
-    """
-    return pathlib.Path(os.path.commonpath([item["path"] for item in datafilelist]))
-
-
-def _path_to_relative(
-    datafilelist_item: dict, dataset_source_folder: pathlib.Path
-) -> dict:
-    """
-    Copy the datafiles item and transform the path to the relative path
-    to the dataset source folder
-    """
-    origdatablock_datafilelist_item = copy.deepcopy(datafilelist_item)
-    origdatablock_datafilelist_item["path"] = str(
-        datafilelist_item["path"].to_relative(dataset_source_folder)
-    )
-    return origdatablock_datafilelist_item
-
-
-def _prepare_origdatablock_datafilelist(
-    datafiles_list: list, dataset_source_folder: pathlib.Path
-) -> list:
-    """
-    Prepare the datafiles list for the origdatablock entry in scicat
-    That means that the file paths needs to be relative to the dataset source folder
-    """
-    return [_path_to_relative(item, dataset_source_folder) for item in datafiles_list]
 
 
 def main() -> None:
@@ -127,7 +71,7 @@ def main() -> None:
             # TODO: add done_writing_message_file and nexus_structure_file
         )
 
-        # Create scicat dataset instance(entry)
+        # Prepare scicat dataset instance(entry)
         local_dataset = scicat_dataset_to_dict(
             create_scicat_dataset_instance(
                 metadata_schema_id=metadata_schema["id"],
@@ -138,22 +82,22 @@ def main() -> None:
                 logger=logger,
             )
         )
-        # create dataset in scicat
+        # Create dataset in scicat
         scicat_dataset = create_scicat_dataset(
             dataset=local_dataset, config=config.scicat, logger=logger
         )
 
-        dataset_source_folder = _define_dataset_source_folder(data_file_list)
-
-        origdatablock_datafiles_list = _prepare_origdatablock_datafilelist(
-            data_file_list, dataset_source_folder
+        logger.info("Preparing scicat origdatablock structure")
+        # Prepare origdatablock
+        local_origdatablock = origdatablock_to_dict(
+            create_origdatablock_instance(
+                data_file_list=data_file_list,
+                scicat_dataset=local_dataset,
+                config=config.ingestion,
+                logger=logger,
+            )
         )
-        # create and populate scicat origdatablock entry
-        # with files and hashes previously computed
-        local_origdatablock = _prepare_scicat_origdatablock(
-            scicat_dataset, origdatablock_datafiles_list, config, logger
-        )
-
+        logger.info("Scicat origdatablock: %s", local_origdatablock)
         # create origdatablock in scicat
         scicat_origdatablock = create_scicat_origdatablock(
             origdatablock=local_origdatablock, config=config.scicat, logger=logger
