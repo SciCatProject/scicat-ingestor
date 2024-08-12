@@ -4,10 +4,7 @@ import pathlib
 
 import h5py
 from scicat_communication import create_scicat_dataset, create_scicat_origdatablock
-from scicat_configuration import (
-    build_offline_ingestor_arg_parser,
-    build_scicat_offline_ingestor_config,
-)
+from scicat_configuration import OfflineIngestorConfig, build_config
 from scicat_dataset import (
     create_data_file_list,
     create_origdatablock_instance,
@@ -24,9 +21,7 @@ from system_helpers import handle_exceptions
 
 def main() -> None:
     """Main entry point of the app."""
-    arg_parser = build_offline_ingestor_arg_parser()
-    arg_namespace = arg_parser.parse_args()
-    config = build_scicat_offline_ingestor_config(arg_namespace)
+    config = build_config(OfflineIngestorConfig)
     fh_options = config.ingestion.file_handling
     logger = build_logger(config)
 
@@ -40,7 +35,7 @@ def main() -> None:
     schemas = collect_schemas(config.ingestion.schemas_directory)
 
     with handle_exceptions(logger):
-        nexus_file_path = pathlib.Path(config.offline_run.nexus_file)
+        nexus_file_path = pathlib.Path(config.nexus_file)
         logger.info("Nexus file to be ingested: %s", nexus_file_path)
 
         # Path to the directory where the ingestor saves the files it creates

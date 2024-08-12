@@ -2,50 +2,142 @@
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 import argparse
 from collections.abc import Mapping
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, is_dataclass
+from functools import partial
+from inspect import get_annotations
+from pathlib import Path
 from types import MappingProxyType
-from typing import Any
+from typing import Any, TypeVar, get_origin
+
+_SHORTENED_ARG_NAMES = MappingProxyType(
+    {
+        "config-file": "c",
+    }
+)
 
 
-def _load_config(config_file: Any) -> dict:
+def _load_config(config_file: Path) -> dict:
     """Load configuration from the configuration file path."""
     import json
-    import pathlib
 
-    if (
-        isinstance(config_file, str | pathlib.Path)
-        and (config_file_path := pathlib.Path(config_file)).is_file()
-    ):
-        return json.loads(config_file_path.read_text())
-    return {}
+    if config_file.is_file():
+        return json.loads(config_file.read_text())
+    else:
+        raise FileNotFoundError(f"Configuration file not found: {config_file}")
 
 
-def _merge_config_options(
-    config_dict: dict, input_args_dict: dict, keys: list[str] | None = None
-) -> dict:
-    """Merge configuration from the configuration file and input arguments."""
+def _insert_item(d: dict, key: str, value: Any) -> None:
+    """Insert a key-value pair into a dictionary.
 
-    if keys is None:
-        keys = config_dict.keys()
+    If ``key`` is a nested key, the function creates the nested dictionary.
 
+    Example:
+    >>> d = {}
+    >>> _insert_item(d, "a.b.c", 1)
+    >>> d
+    {'a': {'b': {'c': 1}}}
+    """
+    key_parts = key.split(".")
+    for key_part in key_parts[:-1]:
+        d = d.setdefault(key_part, {})
+    d[key_parts[-1]] = value
+
+
+def _parse_nested_input_args(input_args: argparse.Namespace) -> dict:
+    nested_args = {}
+    for key, value in vars(input_args).items():
+        _insert_item(nested_args, key, value)
+
+    return nested_args
+
+
+def _merge_config_and_input_args(config_dict: dict, input_args_dict: dict) -> dict:
+    """Merge nested dictionaries.
+
+    ``input_args_dict`` has higher priority than ``config_dict``.
+    """
     return {
-        **config_dict.setdefault("options", {}),
-        **{
-            key: input_args_dict[key]
-            for key in keys
-            if input_args_dict[key] is not None
-        },
+        key: _merge_config_and_input_args(
+            config_dict.get(key, {}), input_args_dict.get(key, {})
+        )
+        if (
+            isinstance(config_dict.get(key), dict)
+            or isinstance(input_args_dict.get(key), dict)
+        )
+        else i_value
+        if (i_value := input_args_dict.get(key)) is not None
+        else config_dict.get(key)
+        for key in set(config_dict.keys()).union(set(input_args_dict.keys()))
     }
 
 
-def _freeze_dict_items(d: dict) -> MappingProxyType:
-    """Freeze the dictionary to make it read-only."""
-    return MappingProxyType(
-        {
-            key: MappingProxyType(value) if isinstance(value, dict) else value
-            for key, value in d.items()
+def build_arg_parser(config_dataclass: type) -> argparse.ArgumentParser:
+    """Build an argument parser from a dataclass.
+
+    **Note**: It can't parse the annotations from parent class.
+    """
+    parser = argparse.ArgumentParser()
+
+    def _add_arguments(dataclass_tp: type, prefixes: tuple[str, ...] = ()) -> None:
+        # Add argument group if prefixes are provided
+        if len(prefixes) > 0:
+            group_name = " ".join(
+                prefix.replace("_", " ").capitalize() for prefix in prefixes
+            )
+            group = parser.add_argument_group(group_name)
+        else:
+            group = parser
+
+        all_types = get_annotations(dataclass_tp)
+        # Add arguments for atomic types
+        atomic_types = {
+            name: tp for name, tp in all_types.items() if not is_dataclass(tp)
         }
-    )
+
+        for name, tp in atomic_types.items():
+            long_name = name.replace("_", "-")
+            long_arg_name = "--" + (
+                ".".join((*prefixes, long_name)) if prefixes else long_name
+            )
+            arg_names = (
+                (long_arg_name,)
+                if (short_arg_name := _SHORTENED_ARG_NAMES.get(long_name)) is None
+                else ("-" + short_arg_name, long_arg_name)
+            )
+            arg_adder = partial(group.add_argument, *arg_names, required=False)
+            if tp is bool:
+                arg_adder(action="store_true")
+            elif tp in (int, float, str):
+                arg_adder(type=tp)
+            elif (
+                tp is list
+                or tp is tuple
+                or (orig := get_origin(tp)) is list
+                or orig is tuple
+            ):
+                arg_adder(nargs="+")
+            elif tp is dict:
+                ...  # dict type is not supported from the command line
+            elif tp == str | None:
+                arg_adder(type=str)
+            else:
+                raise ValueError(
+                    f"Unsupported type for argument parsing: {tp} in {dataclass_tp}"
+                )
+
+        # Recursively add arguments for nested dataclasses
+        # It is done separately to use argument groups
+        sub_dataclasses = {
+            name: tp
+            for name, tp in all_types.items()
+            if is_dataclass(tp) and isinstance(tp, type)
+        }
+
+        for name, tp in sub_dataclasses.items():
+            _add_arguments(tp, (*prefixes, name))
+
+    _add_arguments(config_dataclass)
+    return parser
 
 
 def _recursive_deepcopy(obj: Any) -> dict:
@@ -61,133 +153,7 @@ def _recursive_deepcopy(obj: Any) -> dict:
     return copied
 
 
-def build_online_arg_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser()
-
-    group = parser.add_argument_group("Scicat Ingestor Options")
-
-    group.add_argument(
-        "-c",
-        "--cf",
-        "--config",
-        "--config-file",
-        default="config.20240405.json",
-        dest="config_file",
-        help="Configuration file name. Default: config.20240405.json",
-        type=str,
-    )
-    group.add_argument(
-        "-d",
-        "--dry-run",
-        dest="dry_run",
-        help="Dry run. Does not produce any output file nor modify entry in SciCat",
-        action="store_true",
-        default=False,
-    )
-    group.add_argument(
-        "-v",
-        "--verbose",
-        dest="verbose",
-        help="Provide logging on stdout",
-        action="store_true",
-        default=False,
-    )
-    group.add_argument(
-        "--file-log",
-        dest="file_log",
-        help="Provide logging on file",
-        action="store_true",
-        default=False,
-    )
-    group.add_argument(
-        "--file-log-base-name",
-        dest="file_log_base_name",
-        help="Prefix of the log file path",
-        default=".scicat_ingestor_log",
-    )
-    group.add_argument(
-        "--file-log-timestamp",
-        dest="file_log_timestamp",
-        help="Provide logging on the system log",
-        action="store_true",
-        default=False,
-    )
-    group.add_argument(
-        "--system-log",
-        dest="system_log",
-        help="Provide logging on the system log",
-        action="store_true",
-        default=False,
-    )
-    group.add_argument(
-        "--system-log-facility",
-        dest="system_log_facility",
-        help="Facility for system log",
-        default="mail",
-    )
-    group.add_argument(
-        "--log-message-prefix",
-        dest="log_message_prefix",
-        help="Prefix for log messages",
-        default=" SFI: ",
-    )
-    group.add_argument(
-        "--logging-level",
-        dest="logging_level",
-        help="Logging level",
-        default="INFO",
-        type=str,
-    )
-    group.add_argument(
-        "--check-by-job-id",
-        dest="check_by_job_id",
-        help="Check the status of a job by job_id",
-        action="store_true",
-        default=True,
-    )
-    group.add_argument(
-        "--graylog",
-        dest="graylog",
-        help="Use graylog for additional logs",
-        action="store_true",
-        default=False,
-    )
-    return parser
-
-
-def build_offline_ingestor_arg_parser() -> argparse.ArgumentParser:
-    parser = build_online_arg_parser()
-    group = parser.add_argument_group('Scicat Offline Ingestor Options')
-
-    group.add_argument(
-        '-f',
-        '--nf',
-        '--file',
-        '--nexus-file',
-        default='',
-        dest='nexus_file',
-        help='Full path of the input nexus file to be ingested',
-        type=str,
-    )
-
-    group.add_argument(
-        '-m',
-        '--dm',
-        '--wrdm',
-        '--done-writing-message-file',
-        default='',
-        dest='done_writing_message_file',
-        help="""
-          Full path of the input done writing message
-          file that match the nexus file to be ingested
-        """,
-        type=str,
-    )
-
-    return parser
-
-
-@dataclass
+@dataclass(kw_only=True)
 class LoggingOptions:
     """
     LoggingOptions dataclass to store the configuration options.
@@ -220,11 +186,11 @@ class KafkaOptions:
     expected to be set by command line arguments.
     """
 
-    topics: list[str] | str = "KAFKA_TOPIC_1,KAFKA_TOPIC_2"
+    topics: str = "KAFKA_TOPIC_1,KAFKA_TOPIC_2"
     """List of Kafka topics. Multiple topics can be separated by commas."""
     group_id: str = "GROUP_ID"
     """Kafka consumer group ID."""
-    bootstrap_servers: list[str] | str = "localhost:9092"
+    bootstrap_servers: str = "localhost:9092"
     """List of Kafka bootstrap servers. Multiple servers can be separated by commas."""
     sasl_mechanism: str = "PLAIN"
     """Kafka SASL mechanism."""
@@ -234,17 +200,12 @@ class KafkaOptions:
     """Kafka SASL password."""
     ssl_ca_location: str = ""
     """Kafka SSL CA location."""
-    individual_message_commit: bool = False
+    individual_message_commit: bool = True
     """Commit for each topic individually."""
     enable_auto_commit: bool = True
     """Enable Kafka auto commit."""
     auto_offset_reset: str = "earliest"
     """Kafka auto offset reset."""
-
-    @classmethod
-    def from_configurations(cls, config: dict) -> "KafkaOptions":
-        """Create kafkaOptions from a dictionary."""
-        return cls(**config)
 
 
 @dataclass
@@ -259,38 +220,24 @@ class FileHandlingOptions:
     message_file_extension: str = "message.json"
 
 
-@dataclass
+@dataclass(kw_only=True)
 class IngestionOptions:
-    file_handling: FileHandlingOptions
     dry_run: bool = False
-    schemas_directory: str = "schemas"
     offline_ingestor_executable: str = "./scicat_offline_ingestor.py"
-
-    @classmethod
-    def from_configurations(cls, config: dict) -> "IngestionOptions":
-        """Create IngestionOptions from a dictionary."""
-        return cls(
-            FileHandlingOptions(**config.get("file_handling_options", {})),
-            dry_run=config.get("dry_run", False),
-            schemas_directory=config.get("schemas_directory", "schemas"),
-        )
+    schemas_directory: str = "schemas"
+    file_handling: FileHandlingOptions
 
 
 @dataclass
 class DatasetOptions:
-    check_by_job_id: bool = (True,)
-    allow_dataset_pid: bool = (True,)
-    generate_dataset_pid: bool = (False,)
-    dataset_pid_prefix: str = ("20.500.12269",)
-    default_instrument_id: str = ("",)
-    default_proposal_id: str = ("",)
-    default_owner_group: str = ("",)
+    check_by_job_id: bool = True
+    allow_dataset_pid: bool = True
+    generate_dataset_pid: bool = False
+    dataset_pid_prefix: str = "20.500.12269"
+    default_instrument_id: str = ""
+    default_proposal_id: str = ""
+    default_owner_group: str = ""
     default_access_groups: list[str] = field(default_factory=list)
-
-    @classmethod
-    def from_configurations(cls, config: dict) -> "DatasetOptions":
-        """Create DatasetOptions from a dictionary."""
-        return cls(**config)
 
 
 @dataclass
@@ -312,109 +259,93 @@ class SciCatOptions:
 
 @dataclass
 class OnlineIngestorConfig:
-    original_dict: Mapping
+    # original_dict: Mapping
     """Original configuration dictionary in the json file."""
+
+    config_file: str
+    id: str
     dataset: DatasetOptions
+    ingestion: IngestionOptions
     kafka: KafkaOptions
     logging: LoggingOptions
-    ingestion: IngestionOptions
     scicat: SciCatOptions
 
     def to_dict(self) -> dict:
         """Return the configuration as a dictionary."""
 
-        return asdict(
-            OnlineIngestorConfig(
-                _recursive_deepcopy(
-                    self.original_dict
-                ),  # asdict does not support MappingProxyType
-                self.dataset,
-                self.kafka,
-                self.logging,
-                self.ingestion,
-                self.scicat,
-            )
-        )
-
-
-def build_scicat_online_ingestor_config(
-    input_args: argparse.Namespace,
-) -> OnlineIngestorConfig:
-    """Merge configuration from the configuration file and input arguments."""
-    config_dict = _load_config(input_args.config_file)
-    logging_dict = _merge_config_options(
-        config_dict.setdefault("logging", {}), vars(input_args)
-    )
-    ingestion_dict = _merge_config_options(
-        config_dict.setdefault("ingestion", {}), vars(input_args), ["dry-run"]
-    )
-
-    # Wrap configuration in a dataclass
-    return OnlineIngestorConfig(
-        original_dict=_freeze_dict_items(config_dict),
-        dataset=DatasetOptions(**config_dict.setdefault("dataset", {})),
-        ingestion=IngestionOptions.from_configurations(ingestion_dict),
-        kafka=KafkaOptions(**config_dict.setdefault("kafka", {})),
-        logging=LoggingOptions(**logging_dict),
-        scicat=SciCatOptions(**config_dict.setdefault("scicat", {})),
-    )
-
-
-@dataclass
-class OfflineRunOptions:
-    nexus_file: str
-    """Full path of the input nexus file to be ingested."""
-    done_writing_message_file: str
-    """Full path of the done writing message file that match the ``nexus_file``."""
+        return asdict(self)
 
 
 @dataclass
 class OfflineIngestorConfig(OnlineIngestorConfig):
-    offline_run: OfflineRunOptions
-    """Single run configuration options for background ingestor."""
+    nexus_file: str
+    """Full path of the input nexus file to be ingested."""
+    done_writing_message_file: str
+    """Full path of the done writing message file that match the ``nexus_file``."""
+    dataset: DatasetOptions
+    ingestion: IngestionOptions
+    logging: LoggingOptions
+    scicat: SciCatOptions
 
     def to_dict(self) -> dict:
         """Return the configuration as a dictionary."""
 
-        return asdict(
-            OfflineIngestorConfig(
-                _recursive_deepcopy(
-                    self.original_dict
-                ),  # asdict does not support MappingProxyType
-                self.dataset,
-                self.kafka,
-                self.logging,
-                self.ingestion,
-                self.scicat,
-                self.offline_run,
-            )
-        )
+        return asdict(self)
 
 
-def build_scicat_offline_ingestor_config(
-    input_args: argparse.Namespace,
-) -> OfflineIngestorConfig:
-    """Merge configuration from the configuration file and input arguments."""
-    config_dict = _load_config(input_args.config_file)
-    input_args_dict = vars(input_args)
-    logging_dict = _merge_config_options(
-        config_dict.setdefault("logging", {}), input_args_dict
-    )
-    ingestion_dict = _merge_config_options(
-        config_dict.setdefault("ingestion", {}), input_args_dict, ["dry-run"]
-    )
-    offline_run_option_dict = {
-        "nexus_file": input_args_dict.pop("nexus_file"),
-        "done_writing_message_file": input_args_dict.pop("done_writing_message_file"),
-    }
+T = TypeVar("T")
 
-    # Wrap configuration in a dataclass
-    return OfflineIngestorConfig(
-        original_dict=_freeze_dict_items(config_dict),
-        dataset=DatasetOptions(**config_dict.setdefault("dataset", {})),
-        ingestion=IngestionOptions.from_configurations(ingestion_dict),
-        kafka=KafkaOptions(**config_dict.setdefault("kafka", {})),
-        logging=LoggingOptions(**logging_dict),
-        scicat=SciCatOptions(**config_dict.setdefault("scicat", {})),
-        offline_run=OfflineRunOptions(**offline_run_option_dict),
+
+def build_dataclass(tp: type[T], data: dict) -> T:
+    type_hints = get_annotations(tp)
+    return tp(
+        **{
+            key: build_dataclass(sub_tp, value)
+            if is_dataclass(sub_tp := type_hints.get(key))
+            else value
+            for key, value in data.items()
+        }
     )
+
+
+def build_config(config_tp: type[T]) -> T:
+    arg_parser = build_arg_parser(config_tp)
+    arg_namespace = arg_parser.parse_args()
+    config_from_file = _load_config(Path(arg_namespace.config_file))
+    merged_configuration = _merge_config_and_input_args(
+        config_from_file, _parse_nested_input_args(arg_namespace)
+    )
+
+    return build_dataclass(config_tp, merged_configuration)
+
+
+def validate_config_file() -> None:
+    """Validate the configuration file."""
+    import logging
+
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument(
+        help="Configuration file path to validate.", dest="config_file"
+    )
+    config_file = Path(arg_parser.parse_args().config_file)
+
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)  # Always debug level since it is for validation
+    logger.addHandler(logging.StreamHandler())
+    logger.debug("Configuration file: %s", config_file)
+
+    if not config_file.is_file():
+        raise FileNotFoundError(f"Configuration file not found: {config_file}")
+
+    logger.debug(
+        "Configuration built successfully. %s",
+        build_dataclass(
+            OnlineIngestorConfig,
+            {**_load_config(config_file), 'config_file': config_file.as_posix()},
+        ),
+    )
+    logger.info("Configuration file %s is valid.", config_file)
+
+
+if __name__ == "__main__":
+    validate_config_file()
