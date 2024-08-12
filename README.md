@@ -52,6 +52,18 @@ cp resources/config.sample.json config.20240405.json
 
 Then ``scicat_ingestor`` will automatically use the configuration file.
 
+### Configuration Validator
+
+You can validate a configuration file with ``validate_ingestor_config`` command.
+
+```bash
+validate_ingestor_config
+```
+
+It tries building nested configuration dataclasses from the configuration file.
+
+It will throw errors if configuration is invalid.
+
 ## Developer's Guide
 
 ### Virtual Environments
