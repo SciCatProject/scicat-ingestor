@@ -1,0 +1,17 @@
+{
+    "ingestion": {
+        "dry_run": false,
+        "offline_ingestor_executable" : "./scicat_offline_ingestor.py",
+        "schemas_directory": "schemas",
+        "file_handling": {
+            "compute_file_stats": true,
+            "compute_file_hash": true,
+            "file_hash_algorithm": "blake2b",
+            "save_file_hash": true,
+            "hash_file_extension": "b2b",
+            "ingestor_files_directory": "../ingestor",
+            "message_to_file": true,
+            "message_file_extension": "message.json"
+        }
+    }
+}

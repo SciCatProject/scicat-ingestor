@@ -9,12 +9,6 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any, TypeVar, get_origin
 
-_SHORTENED_ARG_NAMES = MappingProxyType(
-    {
-        "config-file": "c",
-    }
-)
-
 
 def _load_config(config_file: Path) -> dict:
     """Load configuration from the configuration file path."""
@@ -51,27 +45,26 @@ def _parse_nested_input_args(input_args: argparse.Namespace) -> dict:
     return nested_args
 
 
-def _merge_config_and_input_args(config_dict: dict, input_args_dict: dict) -> dict:
-    """Merge nested dictionaries.
-
-    ``input_args_dict`` has higher priority than ``config_dict``.
-    """
-    return {
-        key: _merge_config_and_input_args(
-            config_dict.get(key, {}), input_args_dict.get(key, {})
-        )
-        if (
-            isinstance(config_dict.get(key), dict)
-            or isinstance(input_args_dict.get(key), dict)
-        )
-        else i_value
-        if (i_value := input_args_dict.get(key)) is not None
-        else config_dict.get(key)
-        for key in set(config_dict.keys()).union(set(input_args_dict.keys()))
+_SHORTENED_ARG_NAMES = MappingProxyType(
+    {
+        "config-file": "c",
     }
+)
 
 
-def build_arg_parser(config_dataclass: type) -> argparse.ArgumentParser:
+def _wrap_arg_names(name: str, *prefixes: str) -> tuple[str, ...]:
+    long_name = (".".join((*prefixes, name)) if prefixes else name).replace("_", "-")
+    long_arg_name = "--" + long_name
+    return (
+        (long_arg_name,)
+        if (short_arg_name := _SHORTENED_ARG_NAMES.get(long_name)) is None
+        else ("-" + short_arg_name, long_arg_name)
+    )
+
+
+def build_arg_parser(
+    config_dataclass: type, mandatory_args: tuple[str, ...] = ()
+) -> argparse.ArgumentParser:
     """Build an argument parser from a dataclass.
 
     **Note**: It can't parse the annotations from parent class.
@@ -95,16 +88,9 @@ def build_arg_parser(config_dataclass: type) -> argparse.ArgumentParser:
         }
 
         for name, tp in atomic_types.items():
-            long_name = name.replace("_", "-")
-            long_arg_name = "--" + (
-                ".".join((*prefixes, long_name)) if prefixes else long_name
-            )
-            arg_names = (
-                (long_arg_name,)
-                if (short_arg_name := _SHORTENED_ARG_NAMES.get(long_name)) is None
-                else ("-" + short_arg_name, long_arg_name)
-            )
-            arg_adder = partial(group.add_argument, *arg_names, required=False)
+            arg_names = _wrap_arg_names(name, *prefixes)
+            required = any(arg_name in mandatory_args for arg_name in arg_names)
+            arg_adder = partial(group.add_argument, *arg_names, required=required)
             if tp is bool:
                 arg_adder(action="store_true")
             elif tp in (int, float, str):
@@ -177,7 +163,7 @@ class LoggingOptions:
     graylog_facility: str = "scicat.ingestor"
 
 
-@dataclass
+@dataclass(kw_only=True)
 class KafkaOptions:
     """
     KafkaOptions dataclass to store the configuration options.
@@ -208,7 +194,7 @@ class KafkaOptions:
     """Kafka auto offset reset."""
 
 
-@dataclass
+@dataclass(kw_only=True)
 class FileHandlingOptions:
     compute_file_stats: bool = False
     compute_file_hash: bool = False
@@ -225,10 +211,10 @@ class IngestionOptions:
     dry_run: bool = False
     offline_ingestor_executable: str = "./scicat_offline_ingestor.py"
     schemas_directory: str = "schemas"
-    file_handling: FileHandlingOptions
+    file_handling: FileHandlingOptions = field(default_factory=FileHandlingOptions)
 
 
-@dataclass
+@dataclass(kw_only=True)
 class DatasetOptions:
     check_by_job_id: bool = True
     allow_dataset_pid: bool = True
@@ -240,7 +226,7 @@ class DatasetOptions:
     default_access_groups: list[str] = field(default_factory=list)
 
 
-@dataclass
+@dataclass(kw_only=True)
 class SciCatOptions:
     host: str = ""
     token: str = ""
@@ -257,18 +243,18 @@ class SciCatOptions:
         return options
 
 
-@dataclass
+@dataclass(kw_only=True)
 class OnlineIngestorConfig:
     # original_dict: Mapping
     """Original configuration dictionary in the json file."""
 
     config_file: str
-    id: str
-    dataset: DatasetOptions
-    ingestion: IngestionOptions
-    kafka: KafkaOptions
-    logging: LoggingOptions
-    scicat: SciCatOptions
+    id: str = ""
+    dataset: DatasetOptions = field(default_factory=DatasetOptions)
+    ingestion: IngestionOptions = field(default_factory=IngestionOptions)
+    kafka: KafkaOptions = field(default_factory=KafkaOptions)
+    logging: LoggingOptions = field(default_factory=LoggingOptions)
+    scicat: SciCatOptions = field(default_factory=SciCatOptions)
 
     def to_dict(self) -> dict:
         """Return the configuration as a dictionary."""
@@ -276,16 +262,18 @@ class OnlineIngestorConfig:
         return asdict(self)
 
 
-@dataclass
-class OfflineIngestorConfig(OnlineIngestorConfig):
+@dataclass(kw_only=True)
+class OfflineIngestorConfig:
     nexus_file: str
     """Full path of the input nexus file to be ingested."""
     done_writing_message_file: str
     """Full path of the done writing message file that match the ``nexus_file``."""
-    dataset: DatasetOptions
-    ingestion: IngestionOptions
-    logging: LoggingOptions
-    scicat: SciCatOptions
+    config_file: str
+    id: str
+    dataset: DatasetOptions = field(default_factory=DatasetOptions)
+    ingestion: IngestionOptions = field(default_factory=IngestionOptions)
+    logging: LoggingOptions = field(default_factory=LoggingOptions)
+    scicat: SciCatOptions = field(default_factory=SciCatOptions)
 
     def to_dict(self) -> dict:
         """Return the configuration as a dictionary."""
@@ -296,11 +284,17 @@ class OfflineIngestorConfig(OnlineIngestorConfig):
 T = TypeVar("T")
 
 
-def build_dataclass(tp: type[T], data: dict) -> T:
+def build_dataclass(tp: type[T], data: dict, prefixes: tuple[str, ...] = ()) -> T:
     type_hints = get_annotations(tp)
+    if unused_keys := (set(data.keys()) - set(type_hints.keys())):
+        # If ``data`` contains unnecessary fields.
+        unused_keys_repr = "\n\t\t- ".join(
+            ".".join((*prefixes, unused_key)) for unused_key in unused_keys
+        )
+        raise ValueError(f"Invalid argument found: \n\t\t- {unused_keys_repr}")
     return tp(
         **{
-            key: build_dataclass(sub_tp, value)
+            key: build_dataclass(sub_tp, value, (*prefixes, key))
             if is_dataclass(sub_tp := type_hints.get(key))
             else value
             for key, value in data.items()
@@ -308,15 +302,40 @@ def build_dataclass(tp: type[T], data: dict) -> T:
     )
 
 
-def build_config(config_tp: type[T]) -> T:
-    arg_parser = build_arg_parser(config_tp)
-    arg_namespace = arg_parser.parse_args()
-    config_from_file = _load_config(Path(arg_namespace.config_file))
-    merged_configuration = _merge_config_and_input_args(
+def _merge_config_and_input_args(config_dict: dict, input_args_dict: dict) -> dict:
+    """Merge nested dictionaries.
+
+    ``input_args_dict`` has higher priority than ``config_dict``.
+    """
+    return {
+        key: _merge_config_and_input_args(
+            config_dict.get(key, {}), input_args_dict.get(key, {})
+        )
+        if (
+            isinstance(config_dict.get(key), dict)
+            or isinstance(input_args_dict.get(key), dict)
+        )
+        else i_value
+        if (i_value := input_args_dict.get(key)) is not None
+        else config_dict.get(key)
+        for key in set(config_dict.keys()).union(set(input_args_dict.keys()))
+    }
+
+
+def merge_config_and_input_args(
+    config_file: Path, arg_namespace: argparse.Namespace
+) -> dict[str, Any]:
+    config_from_file = _load_config(config_file)
+    return _merge_config_and_input_args(
         config_from_file, _parse_nested_input_args(arg_namespace)
     )
 
-    return build_dataclass(config_tp, merged_configuration)
+
+def _validate_config_file(target_type: type[T], config_file: Path) -> T:
+    return build_dataclass(
+        target_type,
+        {**_load_config(config_file), "config_file": config_file.as_posix()},
+    )
 
 
 def validate_config_file() -> None:
@@ -332,17 +351,16 @@ def validate_config_file() -> None:
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)  # Always debug level since it is for validation
     logger.addHandler(logging.StreamHandler())
+    logger.info("Scicat file ingestor configuration file validation test.")
+    logger.info("Note that it does not validate type of the field.")
+    logger.debug("It only validate the file for %s.", OnlineIngestorConfig)
     logger.debug("Configuration file: %s", config_file)
 
     if not config_file.is_file():
         raise FileNotFoundError(f"Configuration file not found: {config_file}")
-
     logger.debug(
         "Configuration built successfully. %s",
-        build_dataclass(
-            OnlineIngestorConfig,
-            {**_load_config(config_file), 'config_file': config_file.as_posix()},
-        ),
+        _validate_config_file(OnlineIngestorConfig, config_file),
     )
     logger.info("Configuration file %s is valid.", config_file)
 
