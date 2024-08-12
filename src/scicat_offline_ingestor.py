@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
-# import scippnexus as snx
 import pathlib
 
 import h5py
@@ -28,8 +27,7 @@ def main() -> None:
     arg_parser = build_offline_ingestor_arg_parser()
     arg_namespace = arg_parser.parse_args()
     config = build_scicat_offline_ingestor_config(arg_namespace)
-    ingestion_options = config.ingestion
-    fh_options = ingestion_options.file_handling
+    fh_options = config.ingestion.file_handling
     logger = build_logger(config)
 
     # Log the configuration as dictionary so that it is easier to read from the logs
@@ -39,17 +37,13 @@ def main() -> None:
     )
 
     # Collect all metadata schema configurations
-    schemas = collect_schemas(ingestion_options.schemas_directory)
+    schemas = collect_schemas(config.ingestion.schemas_directory)
 
     with handle_exceptions(logger):
         nexus_file_path = pathlib.Path(config.offline_run.nexus_file)
-        logger.info(
-            "Nexus file to be ingested : %s",
-            nexus_file_path,
-        )
+        logger.info("Nexus file to be ingested: %s", nexus_file_path)
 
-        # define which is the directory where the ingestor should save
-        # the files it creates, if any is created
+        # Path to the directory where the ingestor saves the files it creates
         ingestor_directory = compose_ingestor_directory(fh_options, nexus_file_path)
 
         # open nexus file with h5py
@@ -72,6 +66,7 @@ def main() -> None:
         )
 
         # Prepare scicat dataset instance(entry)
+        logger.info("Preparing scicat dataset instance ...")
         local_dataset = scicat_dataset_to_dict(
             create_scicat_dataset_instance(
                 metadata_schema_id=metadata_schema["id"],
@@ -82,22 +77,22 @@ def main() -> None:
                 logger=logger,
             )
         )
+        logger.debug("Scicat dataset: %s", local_dataset)
         # Create dataset in scicat
         scicat_dataset = create_scicat_dataset(
             dataset=local_dataset, config=config.scicat, logger=logger
         )
 
-        logger.info("Preparing scicat origdatablock structure")
         # Prepare origdatablock
+        logger.info("Preparing scicat origdatablock instance ...")
         local_origdatablock = origdatablock_to_dict(
             create_origdatablock_instance(
                 data_file_list=data_file_list,
                 scicat_dataset=local_dataset,
-                config=config.ingestion,
-                logger=logger,
+                config=fh_options,
             )
         )
-        logger.info("Scicat origdatablock: %s", local_origdatablock)
+        logger.debug("Scicat origdatablock: %s", local_origdatablock)
         # create origdatablock in scicat
         scicat_origdatablock = create_scicat_origdatablock(
             origdatablock=local_origdatablock, config=config.scicat, logger=logger
