@@ -22,16 +22,27 @@ def template_config_file() -> Path:
     return Path(__file__).parent / "../resources/config.sample.json"
 
 
+def test_template_config_file_synchronized(template_config_file: Path) -> None:
+    """Template config file should have all the fields in the OnlineIngestorConfig
+
+    If this test fails, it means that the template config file is out of sync with the
+    OnlineIngestorConfig class.
+    In that case, use the command ``synchronize_config`` to update the template file.
+
+    ```bash
+    synchronize_config
+    ```
+    """
+    import json
+
+    assert (
+        json.loads(template_config_file.read_text())
+        == OnlineIngestorConfig(config_file="").to_dict()
+    )
+
+
 def test_config_validator(template_config_file: Path) -> None:
     _validate_config_file(OnlineIngestorConfig, template_config_file)
-
-
-def test_config_validator_invalid_config_raises() -> None:
-    with pytest.raises(TypeError, match="(OnlineIngestorConfig.__init__)*(missing)"):
-        _validate_config_file(
-            OnlineIngestorConfig,
-            Path(__file__).parent / "invalid_config.json",
-        )
 
 
 def test_config_validator_unused_args_raises() -> None:
