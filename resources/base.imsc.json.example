@@ -178,7 +178,7 @@
       "field_type": "scientific_metadata",
       "machine_name": "acquisition_team_members",
       "human_name": "Acquisition Team Members",
-      "values": "<acquisition_team_members>",
+      "value": "<acquisition_team_members>",
       "type": "string"
     },
     "owner_group": {
