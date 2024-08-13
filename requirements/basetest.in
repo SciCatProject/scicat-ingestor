@@ -3,3 +3,4 @@
 
 pytest
 scitacean
+pyyaml  # for scitacean tests
