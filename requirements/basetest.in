@@ -4,3 +4,4 @@
 pytest
 scitacean
 pyyaml  # for scitacean tests
+filelock  # for scitacean tests
