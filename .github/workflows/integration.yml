@@ -29,4 +29,5 @@ jobs:
       - run: docker-compose version
       - run: docker-compose -f tests/docker-compose-file-writer.yml up -d
       - run: python tests/_scicat_ingestor.py -c resources/config.sample.json --verbose
+      - run: pytest --backend-tests
       - run: docker-compose -f tests/docker-compose-file-writer.yml down
