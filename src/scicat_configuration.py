@@ -149,14 +149,14 @@ class LoggingOptions:
     command line arguments.
     """
 
-    verbose: bool
-    file_log: bool
-    file_log_base_name: str
-    file_log_timestamp: bool
-    logging_level: str
-    log_message_prefix: str
-    system_log: bool
-    system_log_facility: str | None = None
+    verbose: bool = False
+    file_log: bool = False
+    file_log_base_name: str = "scicat_ingestor_log"
+    file_log_timestamp: bool = False
+    logging_level: str = "INFO"
+    log_message_prefix: str = "SFI"
+    system_log: bool = False
+    system_log_facility: str | None = "mail"
     graylog: bool = False
     graylog_host: str = ""
     graylog_port: str = ""
@@ -176,15 +176,15 @@ class KafkaOptions:
     """List of Kafka topics. Multiple topics can be separated by commas."""
     group_id: str = "GROUP_ID"
     """Kafka consumer group ID."""
-    bootstrap_servers: str = "localhost:9092"
+    bootstrap_servers: str = "localhost:9093"
     """List of Kafka bootstrap servers. Multiple servers can be separated by commas."""
-    sasl_mechanism: str = "PLAIN"
+    sasl_mechanism: str = "SCRAM-SHA-256"
     """Kafka SASL mechanism."""
-    sasl_username: str = ""
+    sasl_username: str = "USERNAME"
     """Kafka SASL username."""
-    sasl_password: str = ""
+    sasl_password: str = "PASSWORD"
     """Kafka SASL password."""
-    ssl_ca_location: str = ""
+    ssl_ca_location: str = "FULL_PATH_TO_CERTIFICATE_FILE"
     """Kafka SSL CA location."""
     individual_message_commit: bool = True
     """Commit for each topic individually."""
@@ -196,10 +196,10 @@ class KafkaOptions:
 
 @dataclass(kw_only=True)
 class FileHandlingOptions:
-    compute_file_stats: bool = False
-    compute_file_hash: bool = False
+    compute_file_stats: bool = True
+    compute_file_hash: bool = True
     file_hash_algorithm: str = "blake2b"
-    save_file_hash: bool = False
+    save_file_hash: bool = True
     hash_file_extension: str = "b2b"
     ingestor_files_directory: str = "../ingestor"
     message_to_file: bool = True
@@ -209,9 +209,13 @@ class FileHandlingOptions:
 @dataclass(kw_only=True)
 class IngestionOptions:
     dry_run: bool = False
-    offline_ingestor_executable: str = "./scicat_offline_ingestor.py"
+    offline_ingestor_executable: str = "background_ingestor"
     schemas_directory: str = "schemas"
     file_handling: FileHandlingOptions = field(default_factory=FileHandlingOptions)
+
+
+def default_access_groups() -> list[str]:
+    return ["ACCESS_GROUP_1"]
 
 
 @dataclass(kw_only=True)
@@ -220,16 +224,16 @@ class DatasetOptions:
     allow_dataset_pid: bool = True
     generate_dataset_pid: bool = False
     dataset_pid_prefix: str = "20.500.12269"
-    default_instrument_id: str = ""
-    default_proposal_id: str = ""
-    default_owner_group: str = ""
-    default_access_groups: list[str] = field(default_factory=list)
+    default_instrument_id: str = "ID_OF_FALLBACK_INSTRUMENT"
+    default_proposal_id: str = "DEFAULT_PROPOSAL_ID"
+    default_owner_group: str = "DEFAULT_OWNER_GROUP"
+    default_access_groups: list[str] = field(default_factory=default_access_groups)
 
 
 @dataclass(kw_only=True)
 class SciCatOptions:
-    host: str = ""
-    token: str = ""
+    host: str = "https://scicat.host"
+    token: str = "JWT_TOKEN"
     headers: dict = field(default_factory=dict)
     timeout: int = 0
     stream: bool = True
@@ -363,6 +367,17 @@ def validate_config_file() -> None:
         _validate_config_file(OnlineIngestorConfig, config_file),
     )
     logger.info("Configuration file %s is valid.", config_file)
+
+
+def synchronize_config_file() -> None:
+    """Synchronize the configurations from the dataclass and json file."""
+    import json
+
+    config_file_from_repo = Path("resources/config.sample.json")
+    default_config = OnlineIngestorConfig(config_file="")
+
+    target_file = Path(__file__).parent.parent / config_file_from_repo
+    target_file.write_text(json.dumps(default_config.to_dict(), indent=2) + "\n")
 
 
 if __name__ == "__main__":
