@@ -48,6 +48,7 @@ dynamic = ["version"]
 scicat_ingestor = "scicat_online_ingestor:main"
 background_ingestor = "scicat_offline_ingestor:main"
 validate_ingestor_config = "scicat_configuration:validate_config_file"
+synchronize_config = "scicat_configuration:synchronize_config_file"
 
 [project.entry-points."scicat_ingestor.metadata_extractor"]
 max = "numpy:max"
