@@ -11,7 +11,11 @@ from typing import Any
 
 import h5py
 from scicat_communication import retrieve_value_from_scicat
-from scicat_configuration import DatasetOptions, FileHandlingOptions, SciCatOptions
+from scicat_configuration import (
+    DatasetOptions,
+    FileHandlingOptions,
+    SciCatOptions,
+)
 from scicat_metadata import (
     HIGH_LEVEL_METADATA_TYPE,
     SCIENTIFIC_METADATA_TYPE,
@@ -156,6 +160,8 @@ class OrigDataBlockInstance:
     size: int
     chkAlg: str
     dataFileList: list[DataFileListItem]
+    ownerGroup: str | None = None
+    accessGroups: list[str] | None = None
 
 
 def _calculate_checksum(file_path: pathlib.Path, algorithm_name: str) -> str | None:
@@ -483,3 +489,76 @@ def scicat_dataset_to_dict(dataset: ScicatDataset) -> dict:
 
     """
     return {k: v for k, v in asdict(dataset).items() if v is not None}
+
+
+def _define_dataset_source_folder(datafilelist: list[DataFileListItem]) -> pathlib.Path:
+    """
+    Return the dataset source folder, which is the common path
+    between all the data files associated with the dataset
+    """
+    import os
+
+    return pathlib.Path(os.path.commonpath([item.path for item in datafilelist]))
+
+
+def _path_to_relative(
+    datafilelist_item: DataFileListItem, dataset_source_folder: pathlib.Path
+) -> DataFileListItem:
+    """
+    Copy the datafiles item and transform the path to the relative path
+    to the dataset source folder
+    """
+    from copy import copy
+
+    origdatablock_datafilelist_item = copy(datafilelist_item)
+    origdatablock_datafilelist_item.path = (
+        pathlib.Path(datafilelist_item.path)
+        .relative_to(dataset_source_folder)
+        .as_posix()
+    )
+    return origdatablock_datafilelist_item
+
+
+def _prepare_origdatablock_datafilelist(
+    datafiles_list: list[DataFileListItem], dataset_source_folder: pathlib.Path
+) -> list[DataFileListItem]:
+    """
+    Prepare the datafiles list for the origdatablock entry in scicat
+    That means that the file paths needs to be relative to the dataset source folder
+    """
+    return [_path_to_relative(item, dataset_source_folder) for item in datafiles_list]
+
+
+def create_origdatablock_instance(
+    data_file_list: list[DataFileListItem],
+    scicat_dataset: dict,
+    config: FileHandlingOptions,
+) -> OrigDataBlockInstance:
+    dataset_source_folder = _define_dataset_source_folder(data_file_list)
+    origdatablock_datafiles_list = _prepare_origdatablock_datafilelist(
+        data_file_list, dataset_source_folder
+    )
+    return OrigDataBlockInstance(
+        datasetId=scicat_dataset["pid"],
+        size=sum([item.size for item in data_file_list if item.size is not None]),
+        chkAlg=config.file_hash_algorithm,
+        dataFileList=origdatablock_datafiles_list,
+        ownerGroup=scicat_dataset["ownerGroup"],
+        accessGroups=scicat_dataset["accessGroups"],
+    )
+
+
+def origdatablock_to_dict(origdatablock: OrigDataBlockInstance) -> dict:
+    """
+    Convert the ``origdatablock`` to a dictionary.
+
+    It removes the ``None`` values from the dictionary.
+    You can add more handlings for specific fields here if needed.
+
+    Params
+    ------
+    origdatablock:
+        Origdatablock instance to be sent to scicat backend.
+
+    """
+    return {k: v for k, v in asdict(origdatablock).items() if v is not None}
