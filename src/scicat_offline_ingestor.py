@@ -1,12 +1,15 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
-import pathlib
+
+from pathlib import Path
 
 import h5py
 from scicat_communication import create_scicat_dataset, create_scicat_origdatablock
 from scicat_configuration import (
-    build_offline_ingestor_arg_parser,
-    build_scicat_offline_ingestor_config,
+    OfflineIngestorConfig,
+    build_arg_parser,
+    build_dataclass,
+    merge_config_and_input_args,
 )
 from scicat_dataset import (
     create_data_file_list,
@@ -22,11 +25,25 @@ from scicat_path_helpers import compose_ingestor_directory
 from system_helpers import handle_exceptions
 
 
+def build_offline_config() -> OfflineIngestorConfig:
+    arg_parser = build_arg_parser(
+        OfflineIngestorConfig, mandatory_args=('--config-file',)
+    )
+    arg_namespace = arg_parser.parse_args()
+    merged_configuration = merge_config_and_input_args(
+        Path(arg_namespace.config_file), arg_namespace
+    )
+    # Remove unused fields
+    # It is because ``OfflineIngestorConfig`` shares the template config file
+    # with ``OnlineIngestorConfig``.
+    del merged_configuration["kafka"]
+
+    return build_dataclass(OfflineIngestorConfig, merged_configuration)
+
+
 def main() -> None:
     """Main entry point of the app."""
-    arg_parser = build_offline_ingestor_arg_parser()
-    arg_namespace = arg_parser.parse_args()
-    config = build_scicat_offline_ingestor_config(arg_namespace)
+    config = build_offline_config()
     fh_options = config.ingestion.file_handling
     logger = build_logger(config)
 
@@ -40,7 +57,7 @@ def main() -> None:
     schemas = collect_schemas(config.ingestion.schemas_directory)
 
     with handle_exceptions(logger):
-        nexus_file_path = pathlib.Path(config.offline_run.nexus_file)
+        nexus_file_path = Path(config.nexus_file)
         logger.info("Nexus file to be ingested: %s", nexus_file_path)
 
         # Path to the directory where the ingestor saves the files it creates

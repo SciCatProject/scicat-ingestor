@@ -13,11 +13,14 @@ except importlib.metadata.PackageNotFoundError:
     __version__ = "0.0.0"
 
 del importlib
+from pathlib import Path
 
 from scicat_configuration import (
     FileHandlingOptions,
-    build_online_arg_parser,
-    build_scicat_online_ingestor_config,
+    OnlineIngestorConfig,
+    build_arg_parser,
+    build_dataclass,
+    merge_config_and_input_args,
 )
 from scicat_kafka import (
     WritingFinished,
@@ -73,11 +76,21 @@ def _individual_message_commit(offline_ingestors, consumer, logger: logging.Logg
             offline_ingestors.pop(job_id)
 
 
+def build_online_config() -> OnlineIngestorConfig:
+    arg_parser = build_arg_parser(
+        OnlineIngestorConfig, mandatory_args=('--config-file',)
+    )
+    arg_namespace = arg_parser.parse_args()
+    merged_configuration = merge_config_and_input_args(
+        Path(arg_namespace.config_file), arg_namespace
+    )
+
+    return build_dataclass(OnlineIngestorConfig, merged_configuration)
+
+
 def main() -> None:
     """Main entry point of the app."""
-    arg_parser = build_online_arg_parser()
-    arg_namespace = arg_parser.parse_args()
-    config = build_scicat_online_ingestor_config(arg_namespace)
+    config = build_online_config()
     logger = build_logger(config)
 
     # Log the configuration as dictionary so that it is easier to read from the logs
@@ -132,7 +145,7 @@ def main() -> None:
                 cmd = [
                     config.ingestion.offline_ingestor_executable,
                     "-c",
-                    arg_namespace.config_file,
+                    config.config_file,
                     "-f",
                     nexus_file_path,
                     "-j",

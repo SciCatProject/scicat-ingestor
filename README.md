@@ -46,11 +46,21 @@ background_ingestor \\
 You can use a json file to configure options.
 There is a template, ``resources/config.sample.json`` you can copy/paste to make your own configuration file.
 
+In order to update the configurations, you should update it the ``scicat_configuration`` module.
+
+The template file can be synchronized automatically by ``synchronize_config`` command.
+
+### Configuration Validator
+
+You can validate a configuration file with ``validate_ingestor_config`` command.
+
 ```bash
-cp resources/config.sample.json config.20240405.json
+validate_ingestor_config
 ```
 
-Then ``scicat_ingestor`` will automatically use the configuration file.
+It tries building nested configuration dataclasses from the configuration file.
+
+It will throw errors if configuration is invalid.
 
 ## Developer's Guide
 

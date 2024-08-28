@@ -1,5 +1,5 @@
 {
-  "config_file": "config.json",
+  "config_file": "",
   "id": "",
   "dataset": {
     "check_by_job_id": true,
@@ -15,7 +15,7 @@
   },
   "ingestion": {
     "dry_run": false,
-    "offline_ingestor_executable" : "./scicat_offline_ingestor.py",
+    "offline_ingestor_executable": "background_ingestor",
     "schemas_directory": "schemas",
     "file_handling": {
       "compute_file_stats": true,
@@ -29,14 +29,9 @@
     }
   },
   "kafka": {
-    "topics": [
-      "KAFKA_TOPIC_1",
-      "KAFKA_TOPIC_2"
-    ],
+    "topics": "KAFKA_TOPIC_1,KAFKA_TOPIC_2",
     "group_id": "GROUP_ID",
-    "bootstrap_servers": [
-      "localhost:9093"
-    ],
+    "bootstrap_servers": "localhost:9093",
     "sasl_mechanism": "SCRAM-SHA-256",
     "sasl_username": "USERNAME",
     "sasl_password": "PASSWORD",
@@ -68,4 +63,3 @@
     "verify": false
   }
 }
-
