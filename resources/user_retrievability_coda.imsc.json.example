@@ -1,0 +1,257 @@
+{
+  "id": "15cdac26-6611-11ef-8020-97104cc16d50",
+  "name" : "ESS Configuration for CODA acquisition simulation for User Retrievability",
+  "instrument" : "All",
+  "selector" : "filename:starts_with:/ess/data/coda",
+  "order" : -2,
+  "variables" : {
+    "pid": {
+      "source": "NXS",
+      "path": "/entry/entry_identifier_uuid",
+      "value_type": "string"
+    },
+    "dataset_type" : {
+      "source" : "STATIC",
+      "value" : "raw",
+      "value_type" : "string"
+    }
+    "proposal_id": {
+      "source": "NXS",
+      "path": "/entry/experiment_identifier",
+      "value_type": "string"
+    },
+    "proposal_object": {
+      "source": "SC",
+      "url": "proposals/<proposal_id>",
+    },
+    "dataset_name": {
+      "source": "NXS",
+      "path": "/entry/title",
+      "default_value" : "Proposal <proposal_id>, Run <run_number>"
+      "value_type": "string"
+    },
+    "pi_firstname": {
+      "source": "OBJF",
+      "object": "proposal_object",
+      "field" : "pi_firstname",
+      "value_type": "string"
+    },
+    "pi_lastname": {
+      "source": "OBJF",
+      "object": "proposal_object",
+      "field": "pi_lastname",
+      "value_type": "string"
+    },
+    "principal_investigator": {
+      "source": "VALUE",
+      "value": "<pi_firstname> <pi_lastname>",
+      "value_type": "string"
+    },
+    "contact_email": {
+      "source": "OBJF",
+      "object": "proposal_object",
+      "field": "pi_email",
+      "value_type": "string"
+    },
+    "owner": {
+      "source": "STATIC",
+      "value": "ESS",
+      "value_type": "string"
+    },
+    "simulated_instrument_name": {
+      "source": "NXS",
+      "path": "/entry/instrument/name",
+      "value_type": "string"
+    },
+    "simulated_instrument_object": {
+      "source": "SC",
+      "url": "instruments?filter=%7B%22where%22%20%3A%20%7B%20%22name%22%20%3A%20%22<simulated_instrument_name>%22%20%7D%20%7D",
+    },
+    "simulated_instrument_id": {
+      "source": "OBJF",
+      "object": "simulated_instrument_object",
+      "field": "id",
+      "value_type": "string"
+    },
+    "simulated_instrument_id_sanitized": {
+      "source": "VALUE",
+      "operation": "quote_plus"
+      "variable": "simulated_instrument_id",
+      "value_type": "string"
+    },
+    "simulated_instrument_link": {
+      "source": "VALUE",
+      "operation": "quote_plus"
+      "value": "https://staging.scicat.ess.eu/instruments/<simulated_instrument_link_sanitized>",
+      "value_type": "string"
+    },
+    "coda_instrument_object": {
+      "source": "SC",
+      "url": "instruments?filter=%7B%22where%22%20%3A%20%7B%20%22name%22%20%3A%20%22<coda>%22%20%7D%20%7D",
+    },
+    "coda_instrument_id": {
+      "source": "OBJF",
+      "object": "coda_instrument_object",
+      "field": "id",
+      "value_type": "string"
+    },
+    "start_time": {
+      "source": "NXS",
+      "path": "/entry/start_time",
+      "value_type": "date"
+    },
+    "end_time": {
+      "source": "NXS",
+      "path": "/entry/end_time",
+      "value_type": "date"
+    },
+    "location": {
+      "source": "VALUE",
+      "value": "ESS/CODA/<simulated_instrument_name>",
+      "value_type": "date"
+    },
+    "run_number": {
+      "source": "NXS",
+      "path": "/entry/entry_identifier",
+      "value_type": "integer"
+    },
+    "acquisition_team_members_list": {
+      "source": "NXS",
+      "path" : "/entry/user_*/name",
+      "value_type": "string[]"
+    },
+    "acquisition_team_members": {
+      "source": "VALUE",
+      "operator" : "join_with_space",
+      "value" : "<acquisition_team_members>",
+      "value_type": "string"
+    },
+    "owner_group": {
+      "source": "VALUE",
+      "value": "ess_proposal_<proposal_id>",
+      "value_type": "string"
+    },
+    "access_groups": {
+      "source": "VALUE",
+      "value": ["scientific information management systems group", "swap"],
+      "value_type": "string[]"
+    }
+  },
+  "schema": {
+    "pid": {
+      "field_type": "high_level",
+      "machine_name": "pid",
+      "variable": "pid",
+      "type": "string"
+    },
+    "type" : {
+      "field_type": "high_level",
+      "machine_name": "type",
+      "variable": "dataset_type",
+      "type": "string"
+    },
+    "proposal_id": {
+      "field_type": "high_level",
+      "machine_name": "proposalId",
+      "variable": "proposal_id",
+      "type": "string"
+    },
+    "dataset_name": {
+      "field_type": "high_level",
+      "machine_name": "datasetName",
+      "variable": "dataset_name",
+      "type": "string"
+    },
+    "principal_investigator": {
+      "field_type": "high_level",
+      "machine_name": "principalInvestigator",
+      "variable": "principal_investigator",
+      "type": "string"
+    },
+    "owner": {
+      "field_type": "high_level",
+      "machine_name": "owner",
+      "variable": "dataset_owner",
+      "type": "string"
+    },
+    "contact_email": {
+      "field_type": "high_level",
+      "machine_name": "contactEmail",
+      "variable": "<contact_email>",
+      "type": "email"
+    },
+    "instrument_id": {
+      "field_type": "high_level",
+      "machine_name": "instrumentId",
+      "variable": "instrument_id",
+      "type": "string"
+    },
+    "location": {
+      "field_type": "high_level",
+      "machine_name": "location",
+      "variable": "location",
+      "type": "string"
+    },
+    "start_time": {
+      "field_type": "scientific_metadata",
+      "machine_name": "start_time",
+      "human_name": "Start Time",
+      "variable": "start_time",
+      "type": "date"
+    },
+    "end_time": {
+      "field_type": "scientific_metadata",
+      "machine_name": "end_time",
+      "human_name": "End Time",
+      "variable": "end_time",
+      "type": "date"
+    },
+    "run_number": {
+      "field_type": "scientific_metadata",
+      "machine_name": "run_number",
+      "human_name": "Run Number",
+      "variable": "run_number",
+      "type": "integer"
+    },
+    "acquisition_team_members": {
+      "field_type": "scientific_metadata",
+      "machine_name": "acquisition_team_members",
+      "human_name": "Acquisition Team Members",
+      "variable": "acquisition_team_members",
+      "type": "string"
+    },
+    "simulated_instrument_name": {
+      "field_type": "scientific_metadata",
+      "machine_name": "simulated_instrument_name",
+      "human_name": "Simulated Instrument Name",
+      "variable": "simulated_instrument_name",
+      "type": "string"
+    },
+    "simulated_instrument_id": {
+      "field_type": "scientific_metadata",
+      "machine_name": "simulated_instrument_id",
+      "human_name": "Simulated Instrument Id",
+      "variable": "simulated_instrument_id",
+      "type": "string"
+    },
+    "simulated_instrument_link": {
+      "field_type": "scientific_metadata",
+      "machine_name": "simulated_instrument_link",
+      "human_name": "Simulated Instrument Link",
+      "variable": "simulated_instrument_link_sanitized",
+      "type": "string"
+    },
+    "owner_group": {
+      "field_type": "high_level",
+      "machine_name": "ownerGroup",
+      "variable": "owner_group",
+      "type": "string"
+    },
+    "access_groups": {
+      "field_type": "high_level",
+      "machine_name": "accessGroups",
+      "variable": "access_groups",
+      "type": "string[]"
+    }
+  }
+}
