@@ -47,6 +47,8 @@ def to_date(value: Any) -> str | None:
         return datetime.datetime.fromtimestamp(value, tz=datetime.UTC).isoformat()
     return None
 
+def to_dict(value: Any) -> dict:
+    return dict(value)
 
 _DtypeConvertingMap = MappingProxyType(
     {
@@ -55,6 +57,7 @@ _DtypeConvertingMap = MappingProxyType(
         "integer": to_integer,
         "float": to_float,
         "date": to_date,
+        "dict": to_dict,
         # TODO: Add email converter
     }
 )
@@ -73,6 +76,7 @@ _OPERATOR_REGISTRY = MappingProxyType(
     {
         "DO_NOTHING": lambda value: value,
         "join_with_space": lambda value: ", ".join(value),
+        "evaluate": lambda value: eval(value),
     }
 )
 
@@ -82,28 +86,32 @@ def _get_operator(operator: str | None) -> Callable:
 
 
 def extract_variables_values(
-    variables: dict[str, dict], h5file: h5py.File, config: SciCatOptions
+    variables: dict[str, dict],
+    h5file: h5py.File,
+    config: SciCatOptions
 ) -> dict:
     variable_map = {}
     for variable_name, variable_recipe in variables.items():
-        if (source := variable_recipe["source"]) == "NXS":
-            value = h5file[variable_recipe["path"]][...]
+        print(variable_name)
+        source = variable_recipe.source
+        if source == "NXS":
+            value = h5file[variable_recipe.path][...].item().decode('utf-8')
         elif source == "SC":
             value = retrieve_value_from_scicat(
                 config=config,
                 variable_url=render_variable_value(
-                    variable_recipe["url"], variable_map
+                    variable_recipe.url, variable_map
                 ),
-                field_name=variable_recipe["field"],
+                field_name=variable_recipe.field,
             )
         elif source == "VALUE":
-            value = _get_operator(variable_recipe.get("operator"))(
-                render_variable_value(variable_recipe["value"], variable_map)
+            value = _get_operator(variable_recipe.operator)(
+                render_variable_value(variable_recipe.value, variable_map)
             )
         else:
             raise Exception("Invalid variable source: ", source)
         variable_map[variable_name] = convert_to_type(
-            value, variable_recipe["value_type"]
+            value, variable_recipe.value_type
         )
     return variable_map
 

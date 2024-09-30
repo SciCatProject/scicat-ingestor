@@ -13,11 +13,11 @@ def retrieve_value_from_scicat(
     variable_url: str,  # It should be already rendered from variable_recipe["url"]
     field_name: str,  # variable_recipe["field"]
 ) -> str:
-    url = config.host.removesuffix('/') + variable_url
+    url = config.host.removesuffix('/') + "/" + variable_url
     response: dict = requests.get(
-        url, headers={"token": config.token}, timeout=config.timeout
+        url, headers={"Authorization": config.token}, timeout=config.timeout
     ).json()
-    return response[field_name]
+    return response[field_name] if field_name else response
 
 
 class ScicatDatasetAPIError(Exception):

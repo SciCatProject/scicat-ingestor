@@ -70,7 +70,9 @@ def main() -> None:
 
             # define variables values
             variable_map = extract_variables_values(
-                metadata_schema['variables'], h5file, config.scicat
+                metadata_schema.variables,
+                h5file,
+                config.scicat
             )
 
         # Collect data-file descriptions
@@ -124,3 +126,6 @@ def main() -> None:
                 scicat_origdatablock,
             )
             raise RuntimeError("Failed to create dataset or origdatablock.")
+
+if __name__ == "__main__":
+    main()
