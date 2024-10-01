@@ -41,7 +41,6 @@ def _parse_nested_input_args(input_args: argparse.Namespace) -> dict:
     nested_args = {}
     for key, value in vars(input_args).items():
         _insert_item(nested_args, key, value)
-
     return nested_args
 
 
@@ -69,7 +68,7 @@ def build_arg_parser(
 
     **Note**: It can't parse the annotations from parent class.
     """
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(argument_default=argparse.SUPPRESS)
 
     def _add_arguments(dataclass_tp: type, prefixes: tuple[str, ...] = ()) -> None:
         # Add argument group if prefixes are provided
