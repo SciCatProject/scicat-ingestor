@@ -120,7 +120,7 @@ def check_dataset_by_pid(
     dataset_exists: bool
     if not response.ok:
         logger.error(
-            "Failed to check dataset existence by job id with status code: %s. "
+            "Failed to check dataset existence by pid with status code: %s. "
             "Error message from scicat backend: \n%s\n"
             "Assuming the dataset does not exist.",
             response.status_code,
@@ -157,9 +157,10 @@ def check_dataset_by_metadata(
     dataset_exists: bool
     if not response.ok:
         logger.error(
-            "Failed to check dataset existence metadata with status code: %s. "
+            "Failed to check dataset existence by metadata key %s with status code: %s "
             "Error message from scicat backend: \n%s\n"
             "Assuming the dataset does not exist.",
+            metadata_key,
             response.status_code,
             response.reason,
         )
