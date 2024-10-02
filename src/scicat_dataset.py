@@ -22,7 +22,8 @@ from scicat_metadata import (
     VALID_METADATA_TYPES,
     render_variable_value,
 )
-
+import re
+import copy
 
 def to_string(value: Any) -> str:
     return str(value)
@@ -75,7 +76,7 @@ def convert_to_type(input_value: Any, dtype_desc: str) -> Any:
 _OPERATOR_REGISTRY = MappingProxyType(
     {
         "DO_NOTHING": lambda value: value,
-        "join_with_space": lambda value: ", ".join(value),
+        "join_with_space": lambda value: ", ".join(eval(value) if isinstance(value,str) else value),
         "evaluate": lambda value: eval(value),
     }
 )
@@ -95,7 +96,18 @@ def extract_variables_values(
         print(variable_name)
         source = variable_recipe.source
         if source == "NXS":
-            value = h5file[variable_recipe.path][...].item().decode('utf-8')
+            path = variable_recipe.path
+            if "*" in path:
+                provided_path = path.split("/")[1:]
+                provided_path[0] = "/" + provided_path[0]
+                expanded_paths = extract_paths_from_h5_file(h5file,provided_path)
+                value = [
+                    h5file[p][...].item().decode("utf-8")
+                    for p
+                    in expanded_paths
+                ]
+            else:
+                value = h5file[path][...].item().decode("utf-8")
         elif source == "SC":
             value = retrieve_value_from_scicat(
                 config=config,
@@ -105,15 +117,36 @@ def extract_variables_values(
                 field_name=variable_recipe.field,
             )
         elif source == "VALUE":
-            value = _get_operator(variable_recipe.operator)(
-                render_variable_value(variable_recipe.value, variable_map)
-            )
+            value = variable_recipe.value
+            value = render_variable_value(value, variable_map) if isinstance(value,str) else value
+            value = _get_operator(variable_recipe.operator)(value)
         else:
             raise Exception("Invalid variable source: ", source)
         variable_map[variable_name] = convert_to_type(
             value, variable_recipe.value_type
         )
     return variable_map
+
+def extract_paths_from_h5_file(
+    h5_object: Any,
+    path: list[str],
+) -> list[str]:
+    master_key = path.pop(0)
+    output_paths = [master_key]
+    if "*" in master_key:
+        temp_keys = [k2 for k2 in list(h5_object.keys()) if re.search(master_key, k2)]
+        output_paths = []
+        for key in temp_keys:
+            output_paths += [
+                key + "/" + subkey
+                for subkey
+                in extract_paths_from_h5_file(h5_object[key], copy.deepcopy(path))
+            ]
+    else:
+        if path:
+            output_paths = [master_key + "/" + subkey for subkey in extract_paths_from_h5_file(h5_object[master_key],path)]
+
+    return output_paths
 
 
 @dataclass(kw_only=True)
