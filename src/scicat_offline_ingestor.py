@@ -72,7 +72,7 @@ def main() -> None:
             variable_map = extract_variables_values(
                 metadata_schema.variables,
                 h5file,
-                config.scicat
+                config
             )
 
         # Collect data-file descriptions
@@ -80,6 +80,7 @@ def main() -> None:
             nexus_file=nexus_file_path,
             ingestor_directory=ingestor_directory,
             config=fh_options,
+            source_folder=variable_map["source_folder"],
             logger=logger,
             # TODO: add done_writing_message_file and nexus_structure_file
         )
@@ -88,8 +89,8 @@ def main() -> None:
         logger.info("Preparing scicat dataset instance ...")
         local_dataset = scicat_dataset_to_dict(
             create_scicat_dataset_instance(
-                metadata_schema_id=metadata_schema["id"],
-                metadata_schemas=metadata_schema["schemas"],
+                metadata_schema_id=metadata_schema.id,
+                metadata_schema=metadata_schema.schema,
                 variable_map=variable_map,
                 data_file_list=data_file_list,
                 config=config.dataset,

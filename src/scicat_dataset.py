@@ -2,6 +2,7 @@
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 import datetime
 import logging
+import os.path
 import pathlib
 import uuid
 from collections.abc import Callable, Iterable
@@ -14,7 +15,7 @@ from scicat_communication import retrieve_value_from_scicat
 from scicat_configuration import (
     DatasetOptions,
     FileHandlingOptions,
-    SciCatOptions,
+    SciCatOptions, OfflineIngestorConfig,
 )
 from scicat_metadata import (
     HIGH_LEVEL_METADATA_TYPE,
@@ -30,7 +31,7 @@ def to_string(value: Any) -> str:
 
 
 def to_string_array(value: list[Any]) -> list[str]:
-    return [str(v) for v in value]
+    return [str(v) for v in (eval(value) if isinstance(value, str) else value)]
 
 
 def to_integer(value: Any) -> int:
@@ -59,6 +60,7 @@ _DtypeConvertingMap = MappingProxyType(
         "float": to_float,
         "date": to_date,
         "dict": to_dict,
+        "email": to_string
         # TODO: Add email converter
     }
 )
@@ -68,7 +70,8 @@ def convert_to_type(input_value: Any, dtype_desc: str) -> Any:
     if (converter := _DtypeConvertingMap.get(dtype_desc)) is None:
         raise ValueError(
             "Invalid dtype description. Must be one of: ",
-            "string, string[], integer, float, date.\nGot: {dtype_desc}",
+            "string, string[], integer, float, date.",
+            f"Got: {dtype_desc}",
         )
     return converter(input_value)
 
@@ -78,6 +81,8 @@ _OPERATOR_REGISTRY = MappingProxyType(
         "DO_NOTHING": lambda value: value,
         "join_with_space": lambda value: ", ".join(eval(value) if isinstance(value,str) else value),
         "evaluate": lambda value: eval(value),
+        "filename": lambda value: os.path.basename(value),
+        "dirname-2": lambda value: os.path.dirname(os.path.dirname(value))
     }
 )
 
@@ -89,9 +94,12 @@ def _get_operator(operator: str | None) -> Callable:
 def extract_variables_values(
     variables: dict[str, dict],
     h5file: h5py.File,
-    config: SciCatOptions
+    config: OfflineIngestorConfig
 ) -> dict:
-    variable_map = {}
+    variable_map = {
+        "filepath" : pathlib.Path(config.nexus_file),
+        "now" : datetime.datetime.now().isoformat(),
+    }
     for variable_name, variable_recipe in variables.items():
         print(variable_name)
         source = variable_recipe.source
@@ -110,7 +118,7 @@ def extract_variables_values(
                 value = h5file[path][...].item().decode("utf-8")
         elif source == "SC":
             value = retrieve_value_from_scicat(
-                config=config,
+                config=config.scicat,
                 variable_url=render_variable_value(
                     variable_recipe.url, variable_map
                 ),
@@ -164,7 +172,7 @@ class ScicatDataset:
     numberOfFiles: int
     isPublished: bool = False
     datasetName: str
-    description: str
+    description: str = field(default=None)
     principalInvestigator: str
     creationLocation: str
     scientificMetadata: dict
@@ -174,18 +182,18 @@ class ScicatDataset:
     contactEmail: str
     creationTime: str
     type: str = "raw"
-    sampleId: str
+    sampleId: str = field(default=None)
     techniques: list[TechniqueDesc] = field(default_factory=list)
     instrumentId: str | None = None
     proposalId: str | None = None
     ownerGroup: str | None = None
-    accessGroup: list[str] | None = None
+    accessGroups: list[str] | None = None
 
 
 @dataclass(kw_only=True)
 class DataFileListItem:
     path: str
-    "Absolute path to the file."
+    "Relative path of the file to the source folder."
     size: int | None = None
     "Size of the single file in bytes."
     time: str
@@ -212,7 +220,7 @@ def _calculate_checksum(file_path: pathlib.Path, algorithm_name: str) -> str | N
     if not file_path.exists():
         return None
 
-    if algorithm_name != "b2blake":
+    if algorithm_name != "blake2b":
         raise ValueError(
             "Only b2blake hash algorithm is supported for now. Got: ",
             f"{algorithm_name}",
@@ -230,33 +238,59 @@ def _calculate_checksum(file_path: pathlib.Path, algorithm_name: str) -> str | N
 def _create_single_data_file_list_item(
     *,
     file_path: pathlib.Path,
-    calculate_checksum: bool,
+    compute_file_hash: bool,
     compute_file_stats: bool,
     file_hash_algorithm: str = "",
 ) -> DataFileListItem:
     """``DataFileListItem`` constructing helper."""
 
-    if file_path.exists() and compute_file_stats:
-        return DataFileListItem(
-            path=file_path.absolute().as_posix(),
-            size=(file_stats := file_path.stat()).st_size,
-            time=datetime.datetime.fromtimestamp(
-                file_stats.st_ctime, tz=datetime.UTC
-            ).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-            chk=_calculate_checksum(file_path, file_hash_algorithm)
-            if calculate_checksum
-            else None,
-            uid=str(file_stats.st_uid),
-            gid=str(file_stats.st_gid),
-            perm=oct(file_stats.st_mode),
-        )
-    else:
-        return DataFileListItem(
-            path=file_path.absolute().as_posix(),
-            time=datetime.datetime.now(tz=datetime.UTC).strftime(
-                "%Y-%m-%dT%H:%M:%S.000Z"
-            ),
-        )
+    file_info = {
+        "path" : file_path.absolute().as_posix(),
+        "time" : datetime.datetime.now(tz=datetime.UTC).strftime(
+            "%Y-%m-%dT%H:%M:%S.000Z"
+        ),
+    }
+    if file_path.exists():
+        if compute_file_stats:
+            file_stats = file_path.stat()
+            file_info = {
+                **file_info,
+                **{
+                    "size" : file_stats.st_size,
+                    "time" : datetime.datetime.fromtimestamp(
+                         file_stats.st_ctime, tz=datetime.UTC
+                    ).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                    "uid" : str(file_stats.st_uid),
+                    "gid" : str(file_stats.st_gid),
+                    "perm" : oct(file_stats.st_mode),
+                }
+            }
+
+        if compute_file_hash:
+            file_info["chk"] = _calculate_checksum(file_path, file_hash_algorithm)
+
+    return DataFileListItem(**file_info)
+    # if file_path.exists() and compute_file_stats:
+    #     return DataFileListItem(
+    #         path=file_path.absolute().as_posix(),
+    #         size=(file_stats := file_path.stat()).st_size,
+    #         time=datetime.datetime.fromtimestamp(
+    #             file_stats.st_ctime, tz=datetime.UTC
+    #         ).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+    #         chk=_calculate_checksum(file_path, file_hash_algorithm)
+    #         if compute_file_hash
+    #         else None,
+    #         uid=str(file_stats.st_uid),
+    #         gid=str(file_stats.st_gid),
+    #         perm=oct(file_stats.st_mode),
+    #     )
+    # else:
+    #     return DataFileListItem(
+    #         path=file_path.absolute().as_posix(),
+    #         time=datetime.datetime.now(tz=datetime.UTC).strftime(
+    #             "%Y-%m-%dT%H:%M:%S.000Z"
+    #         ),
+    #     )
 
 
 def _build_hash_path(
@@ -289,6 +323,7 @@ def create_data_file_list(
     nexus_structure_file: pathlib.Path | None = None,
     ingestor_directory: pathlib.Path,
     config: FileHandlingOptions,
+    source_folder: pathlib.Path | str | None = None,
     logger: logging.Logger,
 ) -> list[DataFileListItem]:
     """
@@ -316,6 +351,7 @@ def create_data_file_list(
         _create_single_data_file_list_item,
         file_hash_algorithm=config.file_hash_algorithm,
         compute_file_stats=config.compute_file_stats,
+        compute_file_hash=config.compute_file_hash
     )
 
     # Collect the files that will be ingested
@@ -331,7 +367,6 @@ def create_data_file_list(
         logger.info("Adding file %s to the datafiles list", minimum_file_path)
         new_file_item = single_file_constructor(
             file_path=minimum_file_path,
-            calculate_checksum=config.compute_file_hash,
         )
         data_file_list.append(new_file_item)
         if config.save_file_hash:
@@ -344,31 +379,29 @@ def create_data_file_list(
                 hash_file_extension=config.hash_file_extension,
             )
             logger.info("Saving hash into a file ... %s", hash_file_path)
-            if new_file_item.chk is not None:
-                _save_hash_file(
-                    original_file_instance=new_file_item, hash_path=hash_file_path
+            _save_hash_file(
+                original_file_instance=new_file_item, hash_path=hash_file_path
+            )
+            data_file_list.append(
+                single_file_constructor(
+                    file_path=hash_file_path,
+                    compute_file_hash=False
                 )
-                data_file_list.append(
-                    single_file_constructor(
-                        file_path=hash_file_path, calculate_checksum=False
-                    )
-                )
-            else:
-                logger.warning(
-                    "File instance of (%s) does not have checksum. "
-                    "Probably the file does not exist. "
-                    "Skip saving...",
-                    minimum_file_path,
-                )
+            )
+        if source_folder:
+            for data_file in data_file_list:
+                data_file.path = str(
+                    pathlib.Path(data_file.path).relative_to(source_folder))
 
     return data_file_list
 
 
 def _filter_by_field_type(schemas: Iterable[dict], field_type: str) -> list[dict]:
-    return [field for field in schemas if field["field_type"] == field_type]
+    return [field for field in schemas if field.field_type == field_type]
 
 
 def _render_variable_as_type(value: str, variable_map: dict, dtype: str) -> Any:
+    print(value, dtype)
     return convert_to_type(render_variable_value(value, variable_map), dtype)
 
 
@@ -399,13 +432,13 @@ def _create_scientific_metadata(
             "type": "string",
         },
         **{
-            field["machine_name"]: {
+            field.machine_name: {
                 "value": _render_variable_as_type(
-                    field["value"], variable_map, field["type"]
+                    field.value, variable_map, field.type
                 ),
-                "unit": field.get("unit", ""),
-                "human_name": field.get("human_name", field["machine_name"]),
-                "type": field["type"],
+                "unit": getattr(field,"unit", ""),
+                "human_name": getattr(field,"human_name", field.machine_name),
+                "type": field.type,
             }
             for field in sm_schemas
         },
@@ -413,15 +446,15 @@ def _create_scientific_metadata(
 
 
 def _validate_metadata_schemas(
-    metadata_schemas: dict[str, dict],
+    metadata_schema: dict[str, dict],
 ) -> None:
-    if any(
-        invalid_types := [
-            field["field_type"]
-            for field in metadata_schemas.values()
-            if field["field_type"] not in VALID_METADATA_TYPES
-        ]
-    ):
+    invalid_types = [
+        field.field_type
+        for field in metadata_schema.values()
+        if field.field_type not in VALID_METADATA_TYPES
+    ]
+
+    if any(invalid_types):
         raise ValueError(
             "Invalid metadata schema types found. Valid types are: ",
             VALID_METADATA_TYPES,
@@ -433,7 +466,7 @@ def _validate_metadata_schemas(
 def create_scicat_dataset_instance(
     *,
     metadata_schema_id: str,  # metadata-schema["id"]
-    metadata_schemas: dict[str, dict],  # metadata-schema["schema"]
+    metadata_schema: dict[str, dict],  # metadata-schema["schema"]
     variable_map: dict,
     data_file_list: list[DataFileListItem],
     config: DatasetOptions,
@@ -456,7 +489,7 @@ def create_scicat_dataset_instance(
         Logger instance.
 
     """
-    _validate_metadata_schemas(metadata_schemas)
+    _validate_metadata_schemas(metadata_schema)
     # Create the dataset instance
     scicat_dataset = ScicatDataset(
         size=sum([file.size for file in data_file_list if file.size is not None]),
@@ -465,23 +498,23 @@ def create_scicat_dataset_instance(
         scientificMetadata=_create_scientific_metadata(
             metadata_schema_id=metadata_schema_id,
             sm_schemas=_filter_by_field_type(
-                metadata_schemas.values(), SCIENTIFIC_METADATA_TYPE
+                metadata_schema.values(), SCIENTIFIC_METADATA_TYPE
             ),  # Scientific metadata schemas
             variable_map=variable_map,
         ),
         **{
-            field["machine_name"]: _render_variable_as_type(
-                field["value"], variable_map, field["type"]
+            field.machine_name: _render_variable_as_type(
+                field.value, variable_map, field.type
             )
             for field in _filter_by_field_type(
-                metadata_schemas.values(), HIGH_LEVEL_METADATA_TYPE
+                metadata_schema.values(), HIGH_LEVEL_METADATA_TYPE
             )
             # High level schemas
         },
     )
 
     # Auto generate or assign default values if needed
-    if not config.allow_dataset_pid:
+    if not config.allow_dataset_pid and scicat_dataset.pid:
         logger.info("PID is not allowed in the dataset by configuration.")
         scicat_dataset.pid = None
     elif config.generate_dataset_pid:
@@ -505,11 +538,11 @@ def create_scicat_dataset_instance(
             "Owner group is not provided. Setting to default value. %s",
             scicat_dataset.ownerGroup,
         )
-    if scicat_dataset.accessGroup is None:
-        scicat_dataset.accessGroup = config.default_access_groups
+    if scicat_dataset.accessGroups is None:
+        scicat_dataset.accessGroups = config.default_access_groups
         logger.info(
             "Access group is not provided. Setting to default value. %s",
-            scicat_dataset.accessGroup,
+            scicat_dataset.accessGroups,
         )
 
     logger.info("Dataset instance is created successfully. %s", scicat_dataset)
