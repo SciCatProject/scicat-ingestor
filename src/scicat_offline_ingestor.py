@@ -9,7 +9,7 @@ from scicat_configuration import (
     OfflineIngestorConfig,
     build_arg_parser,
     build_dataclass,
-    merge_config_and_input_args,
+    merge_config_and_input_args, SciCatOptions,
 )
 from scicat_dataset import (
     create_data_file_list,
@@ -38,7 +38,10 @@ def build_offline_config() -> OfflineIngestorConfig:
     # with ``OnlineIngestorConfig``.
     del merged_configuration["kafka"]
 
-    return build_dataclass(OfflineIngestorConfig, merged_configuration)
+    config = build_dataclass(OfflineIngestorConfig, merged_configuration)
+    config.scicat = SciCatOptions.from_configurations(merged_configuration["scicat"])
+
+    return config
 
 
 def main() -> None:
@@ -100,7 +103,9 @@ def main() -> None:
         logger.debug("Scicat dataset: %s", local_dataset)
         # Create dataset in scicat
         scicat_dataset = create_scicat_dataset(
-            dataset=local_dataset, config=config.scicat, logger=logger
+            dataset=local_dataset,
+            config=config.scicat,
+            logger=logger
         )
 
         # Prepare origdatablock
@@ -115,7 +120,9 @@ def main() -> None:
         logger.debug("Scicat origdatablock: %s", local_origdatablock)
         # create origdatablock in scicat
         scicat_origdatablock = create_scicat_origdatablock(
-            origdatablock=local_origdatablock, config=config.scicat, logger=logger
+            origdatablock=local_origdatablock,
+            config=config.scicat,
+            logger=logger
         )
 
         # check one more time if we successfully created the entries in scicat

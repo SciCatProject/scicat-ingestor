@@ -8,6 +8,7 @@ from inspect import get_annotations
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any, TypeVar, get_origin
+from urllib.parse import urljoin
 
 
 def _load_config(config_file: Path) -> dict:
@@ -237,12 +238,23 @@ class SciCatOptions:
     timeout: int = 0
     stream: bool = True
     verify: bool = False
+    urls: dict = field(default_factory=dict)
 
     @classmethod
     def from_configurations(cls, config: dict) -> "SciCatOptions":
         """Create SciCatOptions from a dictionary."""
         options = cls(**config)
-        options.headers = {"Authorization": f"Bearer {options.token}"}
+        options.host = options.host.removesuffix('/') + "/"
+        options.headers = {
+            **options.headers,
+            **{"Authorization": f"Bearer {options.token}"}
+        }
+        options.urls = {
+            "datasets" : urljoin(options.host, "datasets"),
+            "proposals" : urljoin(options.host, "proposals"),
+            "origdatablocks" : urljoin(options.host, "origdatablocks"),
+            "instruments": urljoin(options.host, "instruments"),
+        }
         return options
 
 
@@ -335,9 +347,13 @@ def merge_config_and_input_args(
 
 
 def _validate_config_file(target_type: type[T], config_file: Path) -> T:
+    config = {
+        **_load_config(config_file),
+        "config_file": config_file.as_posix()
+    }
     return build_dataclass(
         target_type,
-        {**_load_config(config_file), "config_file": config_file.as_posix()},
+        config,
     )
 
 

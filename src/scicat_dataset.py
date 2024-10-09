@@ -11,7 +11,7 @@ from types import MappingProxyType
 from typing import Any
 
 import h5py
-from scicat_communication import retrieve_value_from_scicat
+from scicat_communication import retrieve_value_from_scicat, render_full_url
 from scicat_configuration import (
     DatasetOptions,
     FileHandlingOptions,
@@ -119,8 +119,12 @@ def extract_variables_values(
         elif source == "SC":
             value = retrieve_value_from_scicat(
                 config=config.scicat,
-                variable_url=render_variable_value(
-                    variable_recipe.url, variable_map
+                scicat_endpoint_url=render_full_url(
+                    render_variable_value(
+                        variable_recipe.url,
+                        variable_map
+                    ),
+                    config.scicat,
                 ),
                 field_name=variable_recipe.field,
             )
