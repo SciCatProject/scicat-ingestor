@@ -34,11 +34,11 @@ class UserOffice:
                 id,
                 firstname,
                 lastname,
-                institution_id,
+                institutionId,
                 email,
                 position
             },
-            instrument {
+            instruments {
                 id,
                 name,
                 shortCode,
