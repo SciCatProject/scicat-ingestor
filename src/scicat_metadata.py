@@ -168,8 +168,7 @@ def collect_schemas(dir_path: pathlib.Path) -> OrderedDict[str, MetadataSchema]:
 
 def select_applicable_schema(
     nexus_file: pathlib.Path,
-    h5_file: any,
-    schemas: OrderedDict[str, MetadataSchema]
+    schemas: OrderedDict[str, MetadataSchema],
 ) -> MetadataSchema:
     """
     Evaluates which metadata schema configuration is applicable to ``nexus_file``.

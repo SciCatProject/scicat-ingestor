@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 import logging
-from urllib.parse import urljoin
 
 import requests
 from scicat_configuration import SciCatOptions
@@ -10,13 +9,12 @@ from scicat_configuration import SciCatOptions
 def retrieve_value_from_scicat(
     *,
     config: SciCatOptions,
-    scicat_endpoint_url: str,  # It should be already rendered from variable_recipe["url"]
+    scicat_endpoint_url: str,  # It should be already rendered
+    # from variable_recipe["url"]
     field_name: str,  # variable_recipe["field"]
 ) -> str:
     response: dict = requests.get(
-        scicat_endpoint_url,
-        headers=config.headers,
-        timeout=config.timeout
+        scicat_endpoint_url, headers=config.headers, timeout=config.timeout
     ).json()
     return response[field_name] if field_name else response
 
@@ -45,7 +43,7 @@ def create_scicat_dataset(
     """
     logger.info("Sending POST request to create new dataset")
     response = _post_to_scicat(
-        url= config.urls["datasets"],
+        url=config.urls["datasets"],
         posting_obj=dataset,
         headers=config.headers,
         timeout=config.timeout,
@@ -70,10 +68,7 @@ class ScicatOrigDatablockAPIError(Exception):
 
 
 def create_scicat_origdatablock(
-    *,
-    origdatablock: dict,
-    config: SciCatOptions,
-    logger: logging.Logger
+    *, origdatablock: dict, config: SciCatOptions, logger: logging.Logger
 ) -> dict:
     """
     Execute a POST request to scicat to create a new origdatablock
@@ -102,6 +97,7 @@ def create_scicat_origdatablock(
     )
     return result
 
+
 def render_full_url(
     url: str,
     config: SciCatOptions,
@@ -109,6 +105,6 @@ def render_full_url(
     if not url.startswith("http://") and not url.startswith("https://"):
         for endpoint in config.urls.keys():
             if url.startswith(endpoint):
-                url = url.replace(endpoint,config.urls[endpoint])
+                url = url.replace(endpoint, config.urls[endpoint])
                 break
     return url
