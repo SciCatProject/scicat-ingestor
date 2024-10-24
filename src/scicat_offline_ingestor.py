@@ -7,9 +7,10 @@ import h5py
 from scicat_communication import create_scicat_dataset, create_scicat_origdatablock
 from scicat_configuration import (
     OfflineIngestorConfig,
+    SciCatOptions,
     build_arg_parser,
     build_dataclass,
-    merge_config_and_input_args, SciCatOptions,
+    merge_config_and_input_args,
 )
 from scicat_dataset import (
     create_data_file_list,
@@ -69,13 +70,11 @@ def main() -> None:
         # open nexus file with h5py
         with h5py.File(nexus_file_path) as h5file:
             # load instrument metadata configuration
-            metadata_schema = select_applicable_schema(nexus_file_path, h5file, schemas)
+            metadata_schema = select_applicable_schema(nexus_file_path, schemas)
 
             # define variables values
             variable_map = extract_variables_values(
-                metadata_schema.variables,
-                h5file,
-                config
+                metadata_schema.variables, h5file, config
             )
 
         # Collect data-file descriptions
@@ -103,9 +102,7 @@ def main() -> None:
         logger.debug("Scicat dataset: %s", local_dataset)
         # Create dataset in scicat
         scicat_dataset = create_scicat_dataset(
-            dataset=local_dataset,
-            config=config.scicat,
-            logger=logger
+            dataset=local_dataset, config=config.scicat, logger=logger
         )
 
         # Prepare origdatablock
@@ -120,9 +117,7 @@ def main() -> None:
         logger.debug("Scicat origdatablock: %s", local_origdatablock)
         # create origdatablock in scicat
         scicat_origdatablock = create_scicat_origdatablock(
-            origdatablock=local_origdatablock,
-            config=config.scicat,
-            logger=logger
+            origdatablock=local_origdatablock, config=config.scicat, logger=logger
         )
 
         # check one more time if we successfully created the entries in scicat
@@ -134,6 +129,7 @@ def main() -> None:
                 scicat_origdatablock,
             )
             raise RuntimeError("Failed to create dataset or origdatablock.")
+
 
 if __name__ == "__main__":
     main()
