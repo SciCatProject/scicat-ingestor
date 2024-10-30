@@ -112,9 +112,9 @@ def render_full_url(
     config: SciCatOptions,
 ) -> str:
     if not url.startswith("http://") and not url.startswith("https://"):
-        for endpoint in config.urls.keys():
+        for endpoint in config.urls.__dict__.keys():
             if url.startswith(endpoint):
-                url = url.replace(endpoint, config.urls[endpoint])
+                url = url.replace(endpoint, config.urls.__getattribute__(endpoint))
                 break
     return url
 

@@ -110,6 +110,7 @@ class MetadataSchema:
     name: str
     instrument: str
     selector: str | dict
+    order: int
     variables: dict[str, MetadataSchemaVariable]
     schema: dict[str, MetadataItem]
 
@@ -158,11 +159,11 @@ def collect_schemas(dir_path: pathlib.Path) -> OrderedDict[str, MetadataSchema]:
             MetadataSchema.from_file(schema_file_path)
             for schema_file_path in list_schema_file_names(dir_path)
         ],
-        key=lambda schema: schema.name,
+        key=lambda schema: (schema.order, schema.name),
     )
     schemas = OrderedDict()
     for metadata_schema in metadata_schemas:
-        schemas[metadata_schema.name] = metadata_schema
+        schemas[metadata_schema.id] = metadata_schema
     return schemas
 
 
