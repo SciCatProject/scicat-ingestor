@@ -93,7 +93,7 @@ _OPERATOR_REGISTRY = MappingProxyType(
         "join_with_space": lambda value: ", ".join(
             ast.literal_eval(value) if isinstance(value, str) else value
         ),
-        "evaluate": lambda value: ast.literal_eval(value),
+        "evaluate": lambda value: eval(value),
         "filename": lambda value: os.path.basename(value),
         "dirname-2": lambda value: os.path.dirname(os.path.dirname(value)),
     }
@@ -137,12 +137,13 @@ def extract_variables_values(
         if isinstance(variable_recipe, NexusFileMetadataVariable):
             value = _retrieve_values_from_file(variable_recipe, h5file)
         elif isinstance(variable_recipe, ScicatMetadataVariable):
+            full_endpoint_url = render_full_url(
+                render_variable_value(variable_recipe.url, variable_map),
+                config.scicat,
+            )
             value = retrieve_value_from_scicat(
                 config=config.scicat,
-                scicat_endpoint_url=render_full_url(
-                    render_variable_value(variable_recipe.url, variable_map),
-                    config.scicat,
-                ),
+                scicat_endpoint_url=full_endpoint_url,
                 field_name=variable_recipe.field,
             )
         elif isinstance(variable_recipe, ValueMetadataVariable):
