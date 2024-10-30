@@ -43,7 +43,7 @@ def create_scicat_dataset(
     """
     logger.info("Sending POST request to create new dataset")
     response = _post_to_scicat(
-        url=config.urls["datasets"],
+        url=config.urls.datasets,
         posting_obj=dataset,
         headers=config.headers,
         timeout=config.timeout,
@@ -75,7 +75,7 @@ def create_scicat_origdatablock(
     """
     logger.info("Sending POST request to create new origdatablock")
     response = _post_to_scicat(
-        url=config.urls["origdatablocks"],
+        url=config.urls.origdatablocks,
         posting_obj=origdatablock,
         headers=config.headers,
         timeout=config.timeout,
@@ -103,8 +103,8 @@ def render_full_url(
     config: SciCatOptions,
 ) -> str:
     if not url.startswith("http://") and not url.startswith("https://"):
-        for endpoint in config.urls.keys():
+        for endpoint in config.urls.__dict__.keys():
             if url.startswith(endpoint):
-                url = url.replace(endpoint, config.urls[endpoint])
+                url = url.replace(endpoint, config.urls.__getattribute__(endpoint))
                 break
     return url

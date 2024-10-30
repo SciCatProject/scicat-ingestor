@@ -95,6 +95,7 @@ _OPERATOR_REGISTRY = MappingProxyType(
         ),
         "evaluate": lambda value: eval(value),
         "filename": lambda value: os.path.basename(value),
+        "dirname": lambda value: os.path.dirname(value),
         "dirname-2": lambda value: os.path.dirname(os.path.dirname(value)),
     }
 )
@@ -129,6 +130,7 @@ def extract_variables_values(
     config: OfflineIngestorConfig,
 ) -> dict:
     variable_map = {
+        "ingestor_run_id": str(uuid.uuid4()),
         "filepath": pathlib.Path(config.nexus_file),
         "now": datetime.datetime.now(tz=datetime.UTC).isoformat(),
     }
@@ -166,7 +168,7 @@ def extract_paths_from_h5_file(
     _path: list[str],
 ) -> list[str]:
     master_key = _path.pop(0)
-    output_paths = [master_key]
+    output_paths = []
     if "*" in master_key:
         temp_keys = [k2 for k2 in _h5_object.keys() if re.search(master_key, k2)]
         for key in temp_keys:
@@ -217,6 +219,8 @@ class ScicatDataset:
     proposalId: str | None = None
     ownerGroup: str | None = None
     accessGroups: list[str] | None = None
+    startTime: str | None = None
+    endTime: str | None = None
 
 
 @dataclass(kw_only=True)
