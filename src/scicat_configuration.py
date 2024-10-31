@@ -211,6 +211,9 @@ class IngestionOptions:
     dry_run: bool = False
     offline_ingestor_executable: str = "background_ingestor"
     schemas_directory: str = "schemas"
+    check_if_dataset_exists_by_pid: bool = True
+    check_if_dataset_exists_by_metadata: bool = True
+    check_if_dataset_exists_by_metadata_key: str = "job_id"
     file_handling: FileHandlingOptions = field(default_factory=FileHandlingOptions)
 
 
@@ -220,7 +223,6 @@ def default_access_groups() -> list[str]:
 
 @dataclass(kw_only=True)
 class DatasetOptions:
-    check_by_job_id: bool = True
     allow_dataset_pid: bool = True
     generate_dataset_pid: bool = False
     dataset_pid_prefix: str = "20.500.12269"
@@ -250,7 +252,7 @@ class ScicatEndpoints:
 class SciCatOptions:
     host: str = "https://scicat.host"
     token: str = "JWT_TOKEN"
-    headers: dict = field(default_factory=dict)
+    additional_headers: dict = field(default_factory=dict)
     timeout: int = 0
     stream: bool = True
     verify: bool = False
@@ -265,16 +267,17 @@ class SciCatOptions:
             instruments=urljoin(self.host, self.api_endpoints.instruments),
         )
 
-    @classmethod
-    def from_configurations(cls, config: dict) -> "SciCatOptions":
-        """Create SciCatOptions from a dictionary."""
-        options = cls(**config)
-        options.host = options.host.removesuffix('/') + "/"
-        options.headers = {
-            **options.headers,
-            **{"Authorization": f"Bearer {options.token}"},
+    @property
+    def headers(self) -> dict:
+        return {
+            **self.additional_headers,
+            **{"Authorization": f"Bearer {self.token}"},
         }
-        return options
+
+    @property
+    def host_address(self) -> str:
+        """Return the host address ready to be used."""
+        return self.host.removesuffix('/') + "/"
 
 
 @dataclass(kw_only=True)
