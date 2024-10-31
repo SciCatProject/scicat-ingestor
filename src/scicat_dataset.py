@@ -168,8 +168,8 @@ def extract_variables_values(
                 else value
             )
             _operator = _get_operator(variable_recipe.operator)
-            if variable_recipe.argument:
-                value = _operator(value, variable_recipe.argument)
+            if variable_recipe.field:
+                value = _operator(value, variable_recipe.field)
             else:
                 value = _operator(value)
 

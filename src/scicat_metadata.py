@@ -67,8 +67,8 @@ class ValueMetadataVariable(MetadataSchemaVariable):
 
     operator: str = ""
     value: str
-    argument: str | None = None
-    # We only allow one argument for now
+    field: str | None = None
+    # We only allow one field(argument) for now
 
 
 @dataclass(kw_only=True)
