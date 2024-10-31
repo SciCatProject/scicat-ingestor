@@ -12,14 +12,14 @@ from scicat_configuration import SciCatOptions
 def retrieve_value_from_scicat(
     *,
     config: SciCatOptions,
-    variable_url: str,  # It should be already rendered from variable_recipe["url"]
+    scicat_endpoint_url: str,  # It should be already rendered
+    # from variable_recipe["url"]
     field_name: str,  # variable_recipe["field"]
 ) -> str:
-    url = config.host.removesuffix('/') + variable_url
     response: dict = requests.get(
-        url, headers={"token": config.token}, timeout=config.timeout
+        scicat_endpoint_url, headers=config.additional_headers, timeout=config.timeout
     ).json()
-    return response[field_name]
+    return response[field_name] if field_name else response
 
 
 class ScicatDatasetAPIError(Exception):
@@ -52,9 +52,9 @@ def create_scicat_dataset(
     """
     logger.info("Sending POST request to create new dataset")
     response = _post_to_scicat(
-        url=urljoin(config.host, "datasets"),
+        url=config.urls.datasets,
         posting_obj=dataset,
-        headers={"token": config.token, **config.headers},
+        headers=config.additional_headers,
         timeout=config.timeout,
     )
     result: dict = response.json()
@@ -84,9 +84,9 @@ def create_scicat_origdatablock(
     """
     logger.info("Sending POST request to create new origdatablock")
     response = _post_to_scicat(
-        url=urljoin(config.host, "origdatablocks"),
+        url=config.urls.origdatablocks,
         posting_obj=origdatablock,
-        headers={"token": config.token, **config.headers},
+        headers=config.additional_headers,
         timeout=config.timeout,
     )
     result: dict = response.json()
@@ -107,12 +107,24 @@ def create_scicat_origdatablock(
     return result
 
 
+def render_full_url(
+    url: str,
+    config: SciCatOptions,
+) -> str:
+    if not url.startswith("http://") and not url.startswith("https://"):
+        for endpoint in config.urls.keys():
+            if url.startswith(endpoint):
+                url = url.replace(endpoint, config.urls[endpoint])
+                break
+    return url
+
+
 def check_dataset_by_pid(
     pid: str, config: SciCatOptions, logger: logging.Logger
 ) -> bool:
     response = _get_from_scicat(
-        url=urljoin(config.host, f"datasets/{quote(pid)}"),
-        headers=config.headers,
+        url=urljoin(config.host_address, f"datasets/{quote(pid)}"),
+        headers=config.additional_headers,
         timeout=config.timeout,
         stream=config.stream,
         verify=config.verify,
@@ -145,11 +157,11 @@ def check_dataset_by_metadata(
 ) -> bool:
     metadata_dict = {f"scientificMetadata.{metadata_key}.value": metadata_value}
     filter_string = '?filter={"where":' + json.dumps(metadata_dict) + "}"
-    url = urljoin(config.host, "datasets") + filter_string
+    url = urljoin(config.host_address, "datasets") + filter_string
     logger.info("Checking if dataset exists by metadata with url: %s", url)
     response = _get_from_scicat(
         url=url,
-        headers=config.headers,
+        headers=config.additional_headers,
         timeout=config.timeout,
         stream=config.stream,
         verify=config.verify,
