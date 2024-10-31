@@ -2,6 +2,7 @@
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 import json
 import logging
+from dataclasses import asdict
 from typing import Any
 from urllib.parse import quote, urljoin
 
@@ -107,15 +108,13 @@ def create_scicat_origdatablock(
     return result
 
 
-def render_full_url(
-    url: str,
-    config: SciCatOptions,
-) -> str:
+def render_full_url(url: str, config: SciCatOptions) -> str:
+    urls = asdict(config.urls)
     if not url.startswith("http://") and not url.startswith("https://"):
-        for endpoint in config.urls.__dict__.keys():
+        for endpoint in urls.keys():
             if url.startswith(endpoint):
-                url = url.replace(endpoint, config.urls.__getattribute__(endpoint))
-                break
+                return url.replace(endpoint, urls[endpoint])
+
     return url
 
 
