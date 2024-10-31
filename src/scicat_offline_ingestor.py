@@ -82,7 +82,7 @@ def main() -> None:
             nexus_file=nexus_file_path,
             ingestor_directory=ingestor_directory,
             config=fh_options,
-            source_folder=variable_map["source_folder"] if config.ingestion.file_handling.use_full_file_path==False else "",
+            source_folder=variable_map["source_folder"],
             logger=logger,
             # TODO: add done_writing_message_file and nexus_structure_file
         )
