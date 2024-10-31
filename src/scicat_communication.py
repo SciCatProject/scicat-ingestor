@@ -52,7 +52,7 @@ def create_scicat_dataset(
     """
     logger.info("Sending POST request to create new dataset")
     response = _post_to_scicat(
-        url=config.urls["datasets"],
+        url=config.urls.datasets,
         posting_obj=dataset,
         headers=config.additional_headers,
         timeout=config.timeout,
@@ -84,7 +84,7 @@ def create_scicat_origdatablock(
     """
     logger.info("Sending POST request to create new origdatablock")
     response = _post_to_scicat(
-        url=config.urls["origdatablocks"],
+        url=config.urls.origdatablocks,
         posting_obj=origdatablock,
         headers=config.additional_headers,
         timeout=config.timeout,
@@ -123,7 +123,7 @@ def check_dataset_by_pid(
     pid: str, config: SciCatOptions, logger: logging.Logger
 ) -> bool:
     response = _get_from_scicat(
-        url=urljoin(config.host, f"datasets/{quote(pid)}"),
+        url=urljoin(config.host_address, f"datasets/{quote(pid)}"),
         headers=config.additional_headers,
         timeout=config.timeout,
         stream=config.stream,
@@ -157,7 +157,7 @@ def check_dataset_by_metadata(
 ) -> bool:
     metadata_dict = {f"scientificMetadata.{metadata_key}.value": metadata_value}
     filter_string = '?filter={"where":' + json.dumps(metadata_dict) + "}"
-    url = urljoin(config.host, "datasets") + filter_string
+    url = urljoin(config.host_address, "datasets") + filter_string
     logger.info("Checking if dataset exists by metadata with url: %s", url)
     response = _get_from_scicat(
         url=url,

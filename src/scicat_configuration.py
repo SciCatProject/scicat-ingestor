@@ -261,10 +261,12 @@ class SciCatOptions:
     @property
     def urls(self) -> _ScicatAPIURLs:
         return _ScicatAPIURLs(
-            datasets=urljoin(self.host, self.api_endpoints.datasets),
-            proposals=urljoin(self.host, self.api_endpoints.proposals),
-            origdatablocks=urljoin(self.host, self.api_endpoints.origdatablocks),
-            instruments=urljoin(self.host, self.api_endpoints.instruments),
+            datasets=urljoin(self.host_address, self.api_endpoints.datasets),
+            proposals=urljoin(self.host_address, self.api_endpoints.proposals),
+            origdatablocks=urljoin(
+                self.host_address, self.api_endpoints.origdatablocks
+            ),
+            instruments=urljoin(self.host_address, self.api_endpoints.instruments),
         )
 
     @property

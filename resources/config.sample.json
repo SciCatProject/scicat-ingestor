@@ -59,7 +59,7 @@
   "scicat": {
     "host": "https://scicat.host",
     "token": "JWT_TOKEN",
-    "headers": {},
+    "additional_headers": {},
     "timeout": 0,
     "stream": true,
     "verify": false,
