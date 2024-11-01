@@ -208,6 +208,8 @@ def extract_paths_from_h5_file(
                 master_key + "/" + subkey
                 for subkey in extract_paths_from_h5_file(_h5_object[master_key], _path)
             ]
+        else:
+            output_paths = [master_key]
 
     return output_paths
 
@@ -424,7 +426,7 @@ def create_data_file_list(
                     file_path=hash_file_path, compute_file_hash=False
                 )
             )
-        if source_folder:
+        if source_folder and config.file_path_type == "relative":
             for data_file in data_file_list:
                 data_file.path = str(
                     pathlib.Path(data_file.path).relative_to(source_folder)
@@ -603,18 +605,29 @@ def scicat_dataset_to_dict(dataset: ScicatDataset) -> dict:
     return {k: v for k, v in asdict(dataset).items() if v is not None}
 
 
-def _define_dataset_source_folder(datafilelist: list[DataFileListItem]) -> pathlib.Path:
+def _define_dataset_source_folder(
+    datafilelist: list[DataFileListItem],
+    data_file_path: pathlib.Path,
+    source_folder_config: str = "common_path",
+) -> pathlib.Path | None:
     """
     Return the dataset source folder, which is the common path
     between all the data files associated with the dataset
     """
     import os
 
-    return pathlib.Path(os.path.commonpath([item.path for item in datafilelist]))
+    if source_folder_config == "data_file":
+        return pathlib.Path(os.path.dirname(data_file_path))
+    elif source_folder_config == "common_path":
+        return pathlib.Path(os.path.commonpath([item.path for item in datafilelist]))
+    else:
+        return None
 
 
 def _path_to_relative(
-    datafilelist_item: DataFileListItem, dataset_source_folder: pathlib.Path
+    datafilelist_item: DataFileListItem,
+    dataset_source_folder: pathlib.Path,
+    file_path_type: str = "relative",
 ) -> DataFileListItem:
     """
     Copy the datafiles item and transform the path to the relative path
@@ -623,22 +636,28 @@ def _path_to_relative(
     from copy import copy
 
     origdatablock_datafilelist_item = copy(datafilelist_item)
-    origdatablock_datafilelist_item.path = (
-        pathlib.Path(datafilelist_item.path)
-        .relative_to(dataset_source_folder)
-        .as_posix()
-    )
+    if file_path_type == "relative":
+        origdatablock_datafilelist_item.path = (
+            pathlib.Path(datafilelist_item.path)
+            .relative_to(dataset_source_folder)
+            .as_posix()
+        )
     return origdatablock_datafilelist_item
 
 
 def _prepare_origdatablock_datafilelist(
-    datafiles_list: list[DataFileListItem], dataset_source_folder: pathlib.Path
+    datafiles_list: list[DataFileListItem],
+    dataset_source_folder: pathlib.Path,
+    file_path_type: str = "relative",
 ) -> list[DataFileListItem]:
     """
     Prepare the datafiles list for the origdatablock entry in scicat
     That means that the file paths needs to be relative to the dataset source folder
     """
-    return [_path_to_relative(item, dataset_source_folder) for item in datafiles_list]
+    return [
+        _path_to_relative(item, dataset_source_folder, file_path_type)
+        for item in datafiles_list
+    ]
 
 
 def create_origdatablock_instance(
@@ -646,9 +665,8 @@ def create_origdatablock_instance(
     scicat_dataset: dict,
     config: FileHandlingOptions,
 ) -> OrigDataBlockInstance:
-    dataset_source_folder = _define_dataset_source_folder(data_file_list)
     origdatablock_datafiles_list = _prepare_origdatablock_datafilelist(
-        data_file_list, dataset_source_folder
+        data_file_list, scicat_dataset["sourceFolder"], config.file_path_type
     )
     return OrigDataBlockInstance(
         datasetId=scicat_dataset["pid"],

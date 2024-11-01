@@ -28,7 +28,7 @@
       "ingestor_files_directory": "../ingestor",
       "message_to_file": true,
       "message_file_extension": "message.json",
-      "use_full_file_path": false
+      "file_path_type": "relative"
     }
   },
   "kafka": {

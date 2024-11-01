@@ -204,7 +204,7 @@ class FileHandlingOptions:
     ingestor_files_directory: str = "../ingestor"
     message_to_file: bool = True
     message_file_extension: str = "message.json"
-    use_full_file_path: bool = False
+    file_path_type: str = "relative"  # allowed values: absolute and relative
 
 
 @dataclass(kw_only=True)

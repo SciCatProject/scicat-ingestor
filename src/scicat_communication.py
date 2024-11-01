@@ -114,7 +114,6 @@ def render_full_url(url: str, config: SciCatOptions) -> str:
         for endpoint in urls.keys():
             if url.startswith(endpoint):
                 return url.replace(endpoint, urls[endpoint])
-
     return url
 
 
