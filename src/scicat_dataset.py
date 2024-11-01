@@ -103,6 +103,13 @@ _OPERATOR_REGISTRY = MappingProxyType(
             ast.literal_eval(value) if isinstance(value, str) else value
         ),
         # "evaluate": lambda value: ast.literal_eval(value),
+        # We are not adding the evaluate function here since
+        # ``evaluate`` function should be avoided if possible.
+        # It might seem easy to use, but it is very easy to break
+        # when the input is not as expected.
+        # It is better to use the specific converters for the types.
+        # However, if it is the only way to go, you can add it here.
+        # Please add a comment to explain why it is needed.
         "filename": lambda value: os.path.basename(value),
         "dirname": lambda value: os.path.dirname(value),
         "dirname-2": lambda value: os.path.dirname(os.path.dirname(value)),
