@@ -48,17 +48,25 @@ def test_collect_metadata_schema() -> None:
     assert len(schemas) == len(ALL_SCHEMA_EXAMPLES)
     for schema_name, schema in schemas.items():
         assert isinstance(schema, MetadataSchema)
-        assert schema_name == schema.name
+        assert schema_name == schema.id
 
     assert isinstance(schemas, OrderedDict)
-    # Check if the schema is ordered by the schema name
-    assert list(schemas.keys()) == sorted(schemas.keys())
+    # Check if the schema is ordered by the schema order and name.
+    # The expected keys are hardcoded on purpose.
+    # Always hardcode the expected keys to avoid the test being too flexible.
+    assert list(schemas.keys()) == [
+        "715ce7ba-3f91-11ef-932f-37a5c6fd60b1",  # Coda, 1, Coda Metadata Schema
+        "72a991ee-437a-11ef-8fd2-1f95660accb7",  # Dream, 1, dream Metadata Schema
+        "c5bed39a-4379-11ef-ba5a-ffbc783163b6",  # Base, 1, Generic metadata schema
+        "891322f6-437a-11ef-980a-7bdc756bd0b3",  # Loki, 1, Loki Metadata Schema
+    ]
 
 
 def test_metadata_schema_selection() -> None:
     schemas = OrderedDict(
         {
             "schema1": MetadataSchema(
+                order=1,
                 id="schema1",
                 name="Schema 1",
                 instrument="",
@@ -67,6 +75,7 @@ def test_metadata_schema_selection() -> None:
                 schema={},
             ),
             "schema2": MetadataSchema(
+                order=2,
                 id="schema2",
                 name="Schema 2",
                 instrument="",
@@ -75,6 +84,7 @@ def test_metadata_schema_selection() -> None:
                 schema={},
             ),
             "schema3": MetadataSchema(
+                order=3,
                 id="schema3",
                 name="Schema 3",
                 instrument="",
@@ -96,6 +106,7 @@ def test_metadata_schema_selection_wrong_selector_target_name_raises() -> None:
             OrderedDict(
                 {
                     "schema1": MetadataSchema(
+                        order=1,
                         id="schema1",
                         name="Schema 1",
                         instrument="",
@@ -115,6 +126,7 @@ def test_metadata_schema_selection_wrong_selector_function_name_raises() -> None
             OrderedDict(
                 {
                     "schema1": MetadataSchema(
+                        order=1,
                         id="schema1",
                         name="Schema 1",
                         instrument="",

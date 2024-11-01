@@ -2,7 +2,6 @@
   "config_file": "",
   "id": "",
   "dataset": {
-    "check_by_job_id": true,
     "allow_dataset_pid": true,
     "generate_dataset_pid": false,
     "dataset_pid_prefix": "20.500.12269",
@@ -17,6 +16,9 @@
     "dry_run": false,
     "offline_ingestor_executable": "background_ingestor",
     "schemas_directory": "schemas",
+    "check_if_dataset_exists_by_pid": true,
+    "check_if_dataset_exists_by_metadata": true,
+    "check_if_dataset_exists_by_metadata_key": "job_id",
     "file_handling": {
       "compute_file_stats": true,
       "compute_file_hash": true,
@@ -25,7 +27,8 @@
       "hash_file_extension": "b2b",
       "ingestor_files_directory": "../ingestor",
       "message_to_file": true,
-      "message_file_extension": "message.json"
+      "message_file_extension": "message.json",
+      "use_full_file_path": false
     }
   },
   "kafka": {
@@ -57,7 +60,7 @@
   "scicat": {
     "host": "https://scicat.host",
     "token": "JWT_TOKEN",
-    "headers": {},
+    "additional_headers": {},
     "timeout": 0,
     "stream": true,
     "verify": false,

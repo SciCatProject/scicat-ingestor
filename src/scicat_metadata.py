@@ -67,6 +67,8 @@ class ValueMetadataVariable(MetadataSchemaVariable):
 
     operator: str = ""
     value: str
+    field: str | None = None
+    # We only allow one field(argument) for now
 
 
 @dataclass(kw_only=True)
@@ -139,6 +141,12 @@ class MetadataSchema:
 
 
 def render_variable_value(var_value: str, variable_registry: dict) -> str:
+    # If it is only one variable, then it is a simple replacement
+    if (var_key := var_value.removesuffix(">").removeprefix("<")) in variable_registry:
+        return variable_registry[var_key]
+
+    # If it is a complex variable, then it is a combination of variables
+    # similar to f-string in python
     for reg_var_name, reg_var_value in variable_registry.items():
         var_value = var_value.replace("<" + reg_var_name + ">", str(reg_var_value))
 
@@ -159,7 +167,9 @@ def collect_schemas(dir_path: pathlib.Path) -> OrderedDict[str, MetadataSchema]:
             MetadataSchema.from_file(schema_file_path)
             for schema_file_path in list_schema_file_names(dir_path)
         ],
-        key=lambda schema: (schema.order, schema.name),
+        key=lambda schema: (schema.order, schema.name.capitalize()),
+        # name is capitalized to make sure that the order is
+        # alphabetically sorted in a non-case-sensitive way
     )
     schemas = OrderedDict()
     for metadata_schema in metadata_schemas:
