@@ -60,6 +60,15 @@ def to_date(value: Any) -> str | None:
 
 
 def to_dict(value: Any) -> dict:
+    if isinstance(value, str):
+        result = ast.literal_eval(value)
+        if isinstance(result, dict):
+            return result
+        else:
+            raise ValueError(
+                "Invalid value. Must be able to convert to a dictionary. Got ", value
+            )
+
     return dict(value)
 
 
@@ -93,10 +102,13 @@ _OPERATOR_REGISTRY = MappingProxyType(
         "join_with_space": lambda value: ", ".join(
             ast.literal_eval(value) if isinstance(value, str) else value
         ),
-        "evaluate": lambda value: eval(value),
+        # "evaluate": lambda value: ast.literal_eval(value),
         "filename": lambda value: os.path.basename(value),
         "dirname": lambda value: os.path.dirname(value),
         "dirname-2": lambda value: os.path.dirname(os.path.dirname(value)),
+        "getitem": lambda value, key: value[
+            key
+        ],  # The only operator that takes an argument
     }
 )
 
@@ -155,7 +167,12 @@ def extract_variables_values(
                 if isinstance(value, str)
                 else value
             )
-            value = _get_operator(variable_recipe.operator)(value)
+            _operator = _get_operator(variable_recipe.operator)
+            if variable_recipe.field:
+                value = _operator(value, variable_recipe.field)
+            else:
+                value = _operator(value)
+
         else:
             raise Exception("Invalid variable source: ", source)
         variable_map[variable_name] = convert_to_type(value, variable_recipe.value_type)
