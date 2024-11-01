@@ -167,7 +167,9 @@ def collect_schemas(dir_path: pathlib.Path) -> OrderedDict[str, MetadataSchema]:
             MetadataSchema.from_file(schema_file_path)
             for schema_file_path in list_schema_file_names(dir_path)
         ],
-        key=lambda schema: (schema.order, schema.name),
+        key=lambda schema: (schema.order, schema.name.capitalize()),
+        # name is capitalized to make sure that the order is
+        # alphabetically sorted in a non-case-sensitive way
     )
     schemas = OrderedDict()
     for metadata_schema in metadata_schemas:
