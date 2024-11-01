@@ -198,8 +198,7 @@ def extract_paths_from_h5_file(
         for key in temp_keys:
             output_paths += [
                 key + "/" + subkey
-                for subkey
-                in extract_paths_from_h5_file(
+                for subkey in extract_paths_from_h5_file(
                     _h5_object[key], copy.deepcopy(_path)
                 )
             ]
@@ -607,9 +606,9 @@ def scicat_dataset_to_dict(dataset: ScicatDataset) -> dict:
 
 
 def _define_dataset_source_folder(
-        datafilelist: list[DataFileListItem],
-        data_file_path: pathlib.Path,
-        source_folder_config: str = "common_path"
+    datafilelist: list[DataFileListItem],
+    data_file_path: pathlib.Path,
+    source_folder_config: str = "common_path",
 ) -> pathlib.Path | None:
     """
     Return the dataset source folder, which is the common path
@@ -624,10 +623,11 @@ def _define_dataset_source_folder(
     else:
         return None
 
+
 def _path_to_relative(
     datafilelist_item: DataFileListItem,
     dataset_source_folder: pathlib.Path,
-    file_path_type: str = "relative"
+    file_path_type: str = "relative",
 ) -> DataFileListItem:
     """
     Copy the datafiles item and transform the path to the relative path
@@ -648,20 +648,15 @@ def _path_to_relative(
 def _prepare_origdatablock_datafilelist(
     datafiles_list: list[DataFileListItem],
     dataset_source_folder: pathlib.Path,
-    file_path_type: str = "relative"
+    file_path_type: str = "relative",
 ) -> list[DataFileListItem]:
     """
     Prepare the datafiles list for the origdatablock entry in scicat
     That means that the file paths needs to be relative to the dataset source folder
     """
     return [
-        _path_to_relative(
-            item,
-            dataset_source_folder,
-            file_path_type
-        )
-        for item
-        in datafiles_list
+        _path_to_relative(item, dataset_source_folder, file_path_type)
+        for item in datafiles_list
     ]
 
 
@@ -671,9 +666,7 @@ def create_origdatablock_instance(
     config: FileHandlingOptions,
 ) -> OrigDataBlockInstance:
     origdatablock_datafiles_list = _prepare_origdatablock_datafilelist(
-        data_file_list,
-        scicat_dataset["sourceFolder"],
-        config.file_path_type
+        data_file_list, scicat_dataset["sourceFolder"], config.file_path_type
     )
     return OrigDataBlockInstance(
         datasetId=scicat_dataset["pid"],
