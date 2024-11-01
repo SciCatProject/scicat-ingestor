@@ -146,11 +146,16 @@ def main() -> None:
             )
 
         # Collect data-file descriptions
+        if not config.ingestion.file_handling.use_full_file_path:
+            source_folder = variable_map["source_folder"]
+        else:
+            source_folder = None
+
         data_file_list = create_data_file_list(
             nexus_file=nexus_file_path,
             ingestor_directory=ingestor_directory,
             config=fh_options,
-            source_folder=variable_map["source_folder"],
+            source_folder=source_folder,
             logger=logger,
             # TODO: add done_writing_message_file and nexus_structure_file
         )

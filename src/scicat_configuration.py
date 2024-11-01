@@ -204,6 +204,7 @@ class FileHandlingOptions:
     ingestor_files_directory: str = "../ingestor"
     message_to_file: bool = True
     message_file_extension: str = "message.json"
+    use_full_file_path: bool = False
 
 
 @dataclass(kw_only=True)

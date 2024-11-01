@@ -60,6 +60,15 @@ def to_date(value: Any) -> str | None:
 
 
 def to_dict(value: Any) -> dict:
+    if isinstance(value, str):
+        result = ast.literal_eval(value)
+        if isinstance(result, dict):
+            return result
+        else:
+            raise ValueError(
+                "Invalid value. Must be able to convert to a dictionary. Got ", value
+            )
+
     return dict(value)
 
 
@@ -93,9 +102,20 @@ _OPERATOR_REGISTRY = MappingProxyType(
         "join_with_space": lambda value: ", ".join(
             ast.literal_eval(value) if isinstance(value, str) else value
         ),
-        "evaluate": lambda value: ast.literal_eval(value),
+        # "evaluate": lambda value: ast.literal_eval(value),
+        # We are not adding the evaluate function here since
+        # ``evaluate`` function should be avoided if possible.
+        # It might seem easy to use, but it is very easy to break
+        # when the input is not as expected.
+        # It is better to use the specific converters for the types.
+        # However, if it is the only way to go, you can add it here.
+        # Please add a comment to explain why it is needed.
         "filename": lambda value: os.path.basename(value),
+        "dirname": lambda value: os.path.dirname(value),
         "dirname-2": lambda value: os.path.dirname(os.path.dirname(value)),
+        "getitem": lambda value, key: value[
+            key
+        ],  # The only operator that takes an argument
     }
 )
 
@@ -129,6 +149,7 @@ def extract_variables_values(
     config: OfflineIngestorConfig,
 ) -> dict:
     variable_map = {
+        "ingestor_run_id": str(uuid.uuid4()),
         "filepath": pathlib.Path(config.nexus_file),
         "now": datetime.datetime.now(tz=datetime.UTC).isoformat(),
     }
@@ -137,12 +158,13 @@ def extract_variables_values(
         if isinstance(variable_recipe, NexusFileMetadataVariable):
             value = _retrieve_values_from_file(variable_recipe, h5file)
         elif isinstance(variable_recipe, ScicatMetadataVariable):
+            full_endpoint_url = render_full_url(
+                render_variable_value(variable_recipe.url, variable_map),
+                config.scicat,
+            )
             value = retrieve_value_from_scicat(
                 config=config.scicat,
-                scicat_endpoint_url=render_full_url(
-                    render_variable_value(variable_recipe.url, variable_map),
-                    config.scicat,
-                ),
+                scicat_endpoint_url=full_endpoint_url,
                 field_name=variable_recipe.field,
             )
         elif isinstance(variable_recipe, ValueMetadataVariable):
@@ -152,7 +174,12 @@ def extract_variables_values(
                 if isinstance(value, str)
                 else value
             )
-            value = _get_operator(variable_recipe.operator)(value)
+            _operator = _get_operator(variable_recipe.operator)
+            if variable_recipe.field:
+                value = _operator(value, variable_recipe.field)
+            else:
+                value = _operator(value)
+
         else:
             raise Exception("Invalid variable source: ", source)
         variable_map[variable_name] = convert_to_type(value, variable_recipe.value_type)
@@ -165,7 +192,7 @@ def extract_paths_from_h5_file(
     _path: list[str],
 ) -> list[str]:
     master_key = _path.pop(0)
-    output_paths = [master_key]
+    output_paths = []
     if "*" in master_key:
         temp_keys = [k2 for k2 in _h5_object.keys() if re.search(master_key, k2)]
         for key in temp_keys:
@@ -216,6 +243,8 @@ class ScicatDataset:
     proposalId: str | None = None
     ownerGroup: str | None = None
     accessGroups: list[str] | None = None
+    startTime: str | None = None
+    endTime: str | None = None
 
 
 @dataclass(kw_only=True)
