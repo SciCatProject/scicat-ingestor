@@ -22,7 +22,7 @@ You can start the ingestor daemon with certain configurations.
 It will continuously process `wrdn` messages and ingest the nexus files.
 
 ```bash
-scicat_ingestor --verbose -c PATH_TO_CONFIGURATION_FILE.yaml
+scicat_ingestor --logging.verbose -c PATH_TO_CONFIGURATION_FILE.yaml
 ```
 
 See [configuration](#configuration) for how to use configuration files.
@@ -34,11 +34,28 @@ You need to know the path to the nexus file you want to ingest
 and also the path to the ``done_writing_message_file`` as a json file.
 
 ```bash
-background_ingestor \\
-    --verbose \\
-    -c PATH_TO_CONFIGURATION_FILE.yaml \\
-    --nexus-file PATH_TO_THE_NEXUS_FILE.nxs \\
+background_ingestor \
+    --logging.verbose \
+    -c PATH_TO_CONFIGURATION_FILE.yaml \
+    --nexus-file PATH_TO_THE_NEXUS_FILE.nxs \
     --done-writing-message-file PATH_TO_THE_MESSAGE_FILE.json
+```
+
+### Dry run
+
+You can add ``--ingestion.dry-run`` flag for dry-run testings.
+
+```bash
+scicat_ingestor --logging.verbose -c PATH_TO_CONFIGURATION_FILE.yaml --ingestion.dry-run
+```
+
+```bash
+background_ingestor \
+    --logging.verbose \
+    -c PATH_TO_CONFIGURATION_FILE.yaml \
+    --nexus-file PATH_TO_THE_NEXUS_FILE.nxs \
+    --done-writing-message-file PATH_TO_THE_MESSAGE_FILE.json \
+    --ingestion.dry-run
 ```
 
 ## Configuration
