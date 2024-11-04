@@ -68,8 +68,25 @@ def to_dict(value: Any) -> dict:
             raise ValueError(
                 "Invalid value. Must be able to convert to a dictionary. Got ", value
             )
+    elif isinstance(value, dict):
+        return value
 
     return dict(value)
+
+
+def to_list(value: Any) -> list:
+    if isinstance(value, str):
+        result = ast.literal_eval(value)
+        if isinstance(result, list):
+            return result
+        else:
+            raise ValueError(
+                "Invalid value. Must be able to convert to a dictionary. Got ", value
+            )
+    elif isinstance(value, list):
+        return value
+    else:
+        raise TypeError()
 
 
 _DtypeConvertingMap = MappingProxyType(
@@ -80,6 +97,7 @@ _DtypeConvertingMap = MappingProxyType(
         "float": to_float,
         "date": to_date,
         "dict": to_dict,
+        "list": to_list,
         "email": to_string,
         # TODO: Add email converter
     }
@@ -175,7 +193,7 @@ def extract_variables_values(
                 else value
             )
             _operator = _get_operator(variable_recipe.operator)
-            if variable_recipe.field:
+            if variable_recipe.field is not None:
                 value = _operator(value, variable_recipe.field)
             else:
                 value = _operator(value)
