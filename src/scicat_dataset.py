@@ -81,8 +81,10 @@ def to_list(value: Any) -> list:
             raise ValueError(
                 "Invalid value. Must be able to convert to a dictionary. Got ", value
             )
-
-    raise TypeError()
+    elif isinstance(value, list):
+        return value
+    else:
+        raise TypeError()
 
 
 _DtypeConvertingMap = MappingProxyType(
