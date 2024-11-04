@@ -68,6 +68,8 @@ def to_dict(value: Any) -> dict:
             raise ValueError(
                 "Invalid value. Must be able to convert to a dictionary. Got ", value
             )
+    elif isinstance(value, dict):
+        return value
 
     return dict(value)
 
