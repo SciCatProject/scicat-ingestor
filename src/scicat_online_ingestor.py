@@ -153,17 +153,19 @@ def main() -> None:
                 ]
                 if config.ingestion.file_handling.message_to_file:
                     cmd += ["-m", done_writing_message_file_path]
-                proc = subprocess.Popen(cmd)  #  noqa: S603
-                # save info about the background process
-                offline_ingestors[job_id] = {
-                    "proc": proc,
-                    "message": message,
-                }
+                if config.ingestion.dry_run:
+                    logger.info("Dry run mode enabled. Skipping background ingestor.")
+                    logger.info("Command that would have been run: \n\n%s\n\n", cmd)
+                else:
+                    logger.info("Running background ingestor with command: %s", cmd)
+                    proc = subprocess.Popen(cmd)  #  noqa: S603
+                    # save info about the background process
+                    offline_ingestors[job_id] = {"proc": proc, "message": message}
 
-                # if background process is successful
-                # check if we need to commit the individual message
-                if config.kafka.individual_message_commit:
-                    _individual_message_commit(offline_ingestors, consumer, logger)
+                    # if background process is successful
+                    # check if we need to commit the individual message
+                    if config.kafka.individual_message_commit:
+                        _individual_message_commit(offline_ingestors, consumer, logger)
 
 
 if __name__ == "__main__":
