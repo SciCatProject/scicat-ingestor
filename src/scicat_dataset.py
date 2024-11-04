@@ -72,6 +72,19 @@ def to_dict(value: Any) -> dict:
     return dict(value)
 
 
+def to_list(value: Any) -> list:
+    if isinstance(value, str):
+        result = ast.literal_eval(value)
+        if isinstance(result, list):
+            return result
+        else:
+            raise ValueError(
+                "Invalid value. Must be able to convert to a dictionary. Got ", value
+            )
+
+    raise TypeError()
+
+
 _DtypeConvertingMap = MappingProxyType(
     {
         "string": to_string,
@@ -80,6 +93,7 @@ _DtypeConvertingMap = MappingProxyType(
         "float": to_float,
         "date": to_date,
         "dict": to_dict,
+        "list": to_list,
         "email": to_string,
         # TODO: Add email converter
     }
