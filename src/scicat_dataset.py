@@ -193,7 +193,7 @@ def extract_variables_values(
                 else value
             )
             _operator = _get_operator(variable_recipe.operator)
-            if variable_recipe.field:
+            if variable_recipe.field is not None:
                 value = _operator(value, variable_recipe.field)
             else:
                 value = _operator(value)
