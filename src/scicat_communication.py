@@ -18,7 +18,7 @@ def retrieve_value_from_scicat(
     field_name: str,  # variable_recipe["field"]
 ) -> str:
     response: dict = requests.get(
-        scicat_endpoint_url, headers=config.additional_headers, timeout=config.timeout
+        scicat_endpoint_url, headers=config.headers, timeout=config.timeout
     ).json()
     return response[field_name] if field_name else response
 
@@ -55,7 +55,7 @@ def create_scicat_dataset(
     response = _post_to_scicat(
         url=config.urls.datasets,
         posting_obj=dataset,
-        headers=config.additional_headers,
+        headers=config.headers,
         timeout=config.timeout,
     )
     result: dict = response.json()
@@ -87,7 +87,7 @@ def create_scicat_origdatablock(
     response = _post_to_scicat(
         url=config.urls.origdatablocks,
         posting_obj=origdatablock,
-        headers=config.additional_headers,
+        headers=config.headers,
         timeout=config.timeout,
     )
     result: dict = response.json()
@@ -122,7 +122,7 @@ def check_dataset_by_pid(
 ) -> bool:
     response = _get_from_scicat(
         url=urljoin(config.host_address, f"datasets/{quote(pid)}"),
-        headers=config.additional_headers,
+        headers=config.headers,
         timeout=config.timeout,
         stream=config.stream,
         verify=config.verify,
@@ -159,7 +159,7 @@ def check_dataset_by_metadata(
     logger.info("Checking if dataset exists by metadata with url: %s", url)
     response = _get_from_scicat(
         url=url,
-        headers=config.additional_headers,
+        headers=config.headers,
         timeout=config.timeout,
         stream=config.stream,
         verify=config.verify,
