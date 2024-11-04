@@ -28,5 +28,5 @@ jobs:
       - run: validate_ingestor_config resources/config.sample.json
       - run: docker-compose version
       - run: docker-compose -f tests/docker-compose-file-writer.yml up -d
-      - run: python tests/_scicat_ingestor.py -c resources/config.sample.json --verbose
+      - run: python tests/_scicat_ingestor.py -c resources/config.sample.json --logging.verbose
       - run: docker-compose -f tests/docker-compose-file-writer.yml down
