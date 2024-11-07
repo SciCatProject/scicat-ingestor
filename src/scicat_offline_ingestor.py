@@ -139,6 +139,7 @@ def main() -> None:
         with h5py.File(nexus_file_path) as h5file:
             # load instrument metadata configuration
             metadata_schema = select_applicable_schema(nexus_file_path, schemas)
+            logger.info("Metadata Schema selected : %s (Id: %s)", metadata_schema.name, metadata_schema.id)
 
             # define variables values
             variable_map = extract_variables_values(
