@@ -170,7 +170,7 @@ def extract_variables_values(
         "ingestor_run_id": str(uuid.uuid4()),
         "data_file_path": pathlib.Path(config.nexus_file),
         "now": datetime.datetime.now(tz=datetime.UTC).isoformat(),
-        "ingestor_files_directory": config.ingestion.file_handling.ingestor_files_directory
+        "ingestor_files_directory": config.ingestion.file_handling.ingestor_files_directory,
     }
     for variable_name, variable_recipe in variables.items():
         source = variable_recipe.source
@@ -264,6 +264,7 @@ class ScicatDataset:
     endTime: str | None = None
     runNumber: str | None = None
     keywords: list[str] | None = None
+
 
 @dataclass(kw_only=True)
 class DataFileListItem:
@@ -457,11 +458,7 @@ def _filter_by_field_type(
     return [field for field in schemas if field.field_type == field_type]
 
 
-def _render_variable_as_type(
-        value: Any,
-        variable_map: dict,
-        dtype: str
-) -> Any:
+def _render_variable_as_type(value: Any, variable_map: dict, dtype: str) -> Any:
     return convert_to_type(render_variable_value(value, variable_map), dtype)
 
 

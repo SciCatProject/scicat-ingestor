@@ -141,26 +141,29 @@ class MetadataSchema:
         return cls.from_dict(_load_json_schema(schema_file_name))
 
 
-def render_variable_value(
-        var_value: Any,
-        variable_registry: dict
-) -> str:
+def render_variable_value(var_value: Any, variable_registry: dict) -> str:
     # if input is not a string it converts it to string
-    output_value = var_value if isinstance(var_value,str) else json.dumps(var_value)
+    output_value = var_value if isinstance(var_value, str) else json.dumps(var_value)
 
     # If it is only one variable, then it is a simple replacement
-    if (var_key := output_value.removesuffix(">").removeprefix("<")) in variable_registry:
+    if (
+        var_key := output_value.removesuffix(">").removeprefix("<")
+    ) in variable_registry:
         return variable_registry[var_key]
 
     # If it is a complex variable, then it is a combination of variables
     # similar to f-string in python
     for reg_var_name, reg_var_value in variable_registry.items():
-        output_value = output_value.replace("<" + reg_var_name + ">", str(reg_var_value))
+        output_value = output_value.replace(
+            "<" + reg_var_name + ">", str(reg_var_value)
+        )
 
     if "<" in var_value and ">" in var_value:
         raise Exception(f"Unresolved variable: {var_value}")
 
-    output_value = output_value if isinstance(var_value,str) else json.loads(output_value)
+    output_value = (
+        output_value if isinstance(var_value, str) else json.loads(output_value)
+    )
     return output_value
 
 
