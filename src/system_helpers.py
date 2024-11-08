@@ -57,8 +57,7 @@ def handle_daemon_loop_exceptions(
         exit(logger, unexpected=False)
     except ignored_exceptions as ignored_err:
         logger.error(
-            "An exception occurred, "
-            "but it is in the ignored list: %s \n. Ignored exception is: %s",
+            "An exception occurred, " "but it is in the ignored list: %s \n. Ignored exception is: %s",
             ignored_exceptions,
             ignored_err,
         )

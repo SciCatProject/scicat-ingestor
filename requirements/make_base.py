@@ -8,8 +8,7 @@ parser = ArgumentParser()
 parser.add_argument(
     "--nightly",
     default="",
-    help="List of dependencies to install from main branch for nightly tests, "
-    "separated by commas.",
+    help="List of dependencies to install from main branch for nightly tests, " "separated by commas.",
 )
 args = parser.parse_args()
 

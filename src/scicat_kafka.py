@@ -65,8 +65,7 @@ def validate_consumer(consumer: Consumer, logger: logging.Logger) -> bool:
         consumer.list_topics(timeout=1)
     except Exception as err:
         logger.error(
-            "Kafka consumer could not be instantiated. "
-            "Error message from kafka thread: \n%s",
+            "Kafka consumer could not be instantiated. " "Error message from kafka thread: \n%s",
             err,
         )
         return False
@@ -91,17 +90,14 @@ def _filter_error_encountered(
     """Filter out messages with the ``error_encountered`` flag set to True."""
     if wrdn_content.error_encountered:
         logger.error(
-            "``error_encountered`` flag True. "
-            "Unable to deserialize message. Skipping the message."
+            "``error_encountered`` flag True. " "Unable to deserialize message. Skipping the message."
         )
         return wrdn_content
     else:
         return None
 
 
-def _deserialise_wrdn(
-    message_content: bytes, logger: logging.Logger
-) -> WritingFinished | None:
+def _deserialise_wrdn(message_content: bytes, logger: logging.Logger) -> WritingFinished | None:
     if _validate_data_type(message_content, logger):
         logger.info("Deserialising WRDN message")
         wrdn_content: WritingFinished = deserialise_wrdn(message_content)

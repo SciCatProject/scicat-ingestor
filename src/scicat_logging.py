@@ -32,9 +32,7 @@ def build_logger(
     if logging_options.file_log:
         file_name_components = [logging_options.file_log_base_name]
         if logging_options.file_log_timestamp:
-            file_name_components.append(
-                datetime.datetime.now(datetime.UTC).strftime('%Y%m%d%H%M%S%f')
-            )
+            file_name_components.append(datetime.datetime.now(datetime.UTC).strftime('%Y%m%d%H%M%S%f'))
         file_name_components.append('.log')
 
         file_name = '_'.join(file_name_components)

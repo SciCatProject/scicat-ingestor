@@ -45,9 +45,7 @@ def _post_to_scicat(*, url: str, posting_obj: dict, headers: dict, timeout: int)
     )
 
 
-def create_scicat_dataset(
-    *, dataset: dict, config: SciCatOptions, logger: logging.Logger
-) -> dict:
+def create_scicat_dataset(*, dataset: dict, config: SciCatOptions, logger: logging.Logger) -> dict:
     """
     Execute a POST request to scicat to create a dataset
     """
@@ -93,13 +91,10 @@ def create_scicat_origdatablock(
     result: dict = response.json()
     if not response.ok:
         logger.error(
-            "Failed to create new origdatablock. "
-            "Error message from scicat backend: \n%s",
+            "Failed to create new origdatablock. " "Error message from scicat backend: \n%s",
             result.get("error", {}),
         )
-        raise ScicatOrigDatablockAPIError(
-            f"Error creating new origdatablock: \n{origdatablock}"
-        )
+        raise ScicatOrigDatablockAPIError(f"Error creating new origdatablock: \n{origdatablock}")
 
     logger.info(
         "Origdatablock created successfully. Origdatablock pid: %s",
@@ -117,9 +112,7 @@ def render_full_url(url: str, config: SciCatOptions) -> str:
     return url
 
 
-def check_dataset_by_pid(
-    pid: str, config: SciCatOptions, logger: logging.Logger
-) -> bool:
+def check_dataset_by_pid(pid: str, config: SciCatOptions, logger: logging.Logger) -> bool:
     response = _get_from_scicat(
         url=urljoin(config.host_address, f"datasets/{quote(pid)}"),
         headers=config.headers,

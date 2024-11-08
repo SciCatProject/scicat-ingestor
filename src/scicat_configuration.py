@@ -74,18 +74,14 @@ def build_arg_parser(
     def _add_arguments(dataclass_tp: type, prefixes: tuple[str, ...] = ()) -> None:
         # Add argument group if prefixes are provided
         if len(prefixes) > 0:
-            group_name = " ".join(
-                prefix.replace("_", " ").capitalize() for prefix in prefixes
-            )
+            group_name = " ".join(prefix.replace("_", " ").capitalize() for prefix in prefixes)
             group = parser.add_argument_group(group_name)
         else:
             group = parser
 
         all_types = get_annotations(dataclass_tp)
         # Add arguments for atomic types
-        atomic_types = {
-            name: tp for name, tp in all_types.items() if not is_dataclass(tp)
-        }
+        atomic_types = {name: tp for name, tp in all_types.items() if not is_dataclass(tp)}
 
         for name, tp in atomic_types.items():
             arg_names = _wrap_arg_names(name, *prefixes)
@@ -95,28 +91,19 @@ def build_arg_parser(
                 arg_adder(action="store_true")
             elif tp in (int, float, str):
                 arg_adder(type=tp)
-            elif (
-                tp is list
-                or tp is tuple
-                or (orig := get_origin(tp)) is list
-                or orig is tuple
-            ):
+            elif tp is list or tp is tuple or (orig := get_origin(tp)) is list or orig is tuple:
                 arg_adder(nargs="+")
             elif tp is dict:
                 ...  # dict type is not supported from the command line
             elif tp == str | None:
                 arg_adder(type=str)
             else:
-                raise ValueError(
-                    f"Unsupported type for argument parsing: {tp} in {dataclass_tp}"
-                )
+                raise ValueError(f"Unsupported type for argument parsing: {tp} in {dataclass_tp}")
 
         # Recursively add arguments for nested dataclasses
         # It is done separately to use argument groups
         sub_dataclasses = {
-            name: tp
-            for name, tp in all_types.items()
-            if is_dataclass(tp) and isinstance(tp, type)
+            name: tp for name, tp in all_types.items() if is_dataclass(tp) and isinstance(tp, type)
         }
 
         for name, tp in sub_dataclasses.items():
@@ -264,9 +251,7 @@ class SciCatOptions:
         return _ScicatAPIURLs(
             datasets=urljoin(self.host_address, self.api_endpoints.datasets),
             proposals=urljoin(self.host_address, self.api_endpoints.proposals),
-            origdatablocks=urljoin(
-                self.host_address, self.api_endpoints.origdatablocks
-            ),
+            origdatablocks=urljoin(self.host_address, self.api_endpoints.origdatablocks),
             instruments=urljoin(self.host_address, self.api_endpoints.instruments),
         )
 
@@ -328,9 +313,7 @@ def build_dataclass(tp: type[T], data: dict, prefixes: tuple[str, ...] = ()) -> 
     type_hints = get_annotations(tp)
     if unused_keys := (set(data.keys()) - set(type_hints.keys())):
         # If ``data`` contains unnecessary fields.
-        unused_keys_repr = "\n\t\t- ".join(
-            ".".join((*prefixes, unused_key)) for unused_key in unused_keys
-        )
+        unused_keys_repr = "\n\t\t- ".join(".".join((*prefixes, unused_key)) for unused_key in unused_keys)
         raise ValueError(f"Invalid argument found: \n\t\t- {unused_keys_repr}")
     return tp(
         **{
@@ -348,13 +331,8 @@ def _merge_config_and_input_args(config_dict: dict, input_args_dict: dict) -> di
     ``input_args_dict`` has higher priority than ``config_dict``.
     """
     return {
-        key: _merge_config_and_input_args(
-            config_dict.get(key, {}), input_args_dict.get(key, {})
-        )
-        if (
-            isinstance(config_dict.get(key), dict)
-            or isinstance(input_args_dict.get(key), dict)
-        )
+        key: _merge_config_and_input_args(config_dict.get(key, {}), input_args_dict.get(key, {}))
+        if (isinstance(config_dict.get(key), dict) or isinstance(input_args_dict.get(key), dict))
         else i_value
         if (i_value := input_args_dict.get(key)) is not None
         else config_dict.get(key)
@@ -362,13 +340,9 @@ def _merge_config_and_input_args(config_dict: dict, input_args_dict: dict) -> di
     }
 
 
-def merge_config_and_input_args(
-    config_file: Path, arg_namespace: argparse.Namespace
-) -> dict[str, Any]:
+def merge_config_and_input_args(config_file: Path, arg_namespace: argparse.Namespace) -> dict[str, Any]:
     config_from_file = _load_config(config_file)
-    return _merge_config_and_input_args(
-        config_from_file, _parse_nested_input_args(arg_namespace)
-    )
+    return _merge_config_and_input_args(config_from_file, _parse_nested_input_args(arg_namespace))
 
 
 def _validate_config_file(target_type: type[T], config_file: Path) -> T:
@@ -384,9 +358,7 @@ def validate_config_file() -> None:
     import logging
 
     arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument(
-        help="Configuration file path to validate.", dest="config_file"
-    )
+    arg_parser.add_argument(help="Configuration file path to validate.", dest="config_file")
     config_file = Path(arg_parser.parse_args().config_file)
 
     logger = logging.getLogger()

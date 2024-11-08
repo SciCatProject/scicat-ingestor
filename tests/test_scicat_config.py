@@ -35,10 +35,7 @@ def test_template_config_file_synchronized(template_config_file: Path) -> None:
     """
     import json
 
-    assert (
-        json.loads(template_config_file.read_text())
-        == OnlineIngestorConfig(config_file="").to_dict()
-    )
+    assert json.loads(template_config_file.read_text()) == OnlineIngestorConfig(config_file="").to_dict()
 
 
 def test_config_validator(template_config_file: Path) -> None:

@@ -38,9 +38,7 @@ def to_string(value: Any) -> str:
 
 
 def to_string_array(value: list[Any]) -> list[str]:
-    return [
-        str(v) for v in (ast.literal_eval(value) if isinstance(value, str) else value)
-    ]
+    return [str(v) for v in (ast.literal_eval(value) if isinstance(value, str) else value)]
 
 
 def to_integer(value: Any) -> int:
@@ -65,9 +63,7 @@ def to_dict(value: Any) -> dict:
         if isinstance(result, dict):
             return result
         else:
-            raise ValueError(
-                "Invalid value. Must be able to convert to a dictionary. Got ", value
-            )
+            raise ValueError("Invalid value. Must be able to convert to a dictionary. Got ", value)
     elif isinstance(value, dict):
         return value
 
@@ -80,9 +76,7 @@ def to_list(value: Any) -> list:
         if isinstance(result, list):
             return result
         else:
-            raise ValueError(
-                "Invalid value. Must be able to convert to a dictionary. Got ", value
-            )
+            raise ValueError("Invalid value. Must be able to convert to a dictionary. Got ", value)
     elif isinstance(value, list):
         return value
     else:
@@ -131,9 +125,7 @@ _OPERATOR_REGISTRY = MappingProxyType(
         "filename": lambda value: os.path.basename(value),
         "dirname": lambda value: os.path.dirname(value),
         "dirname-2": lambda value: os.path.dirname(os.path.dirname(value)),
-        "getitem": lambda value, key: value[
-            key
-        ],  # The only operator that takes an argument
+        "getitem": lambda value, key: value[key],  # The only operator that takes an argument
     }
 )
 
@@ -142,15 +134,11 @@ def _get_operator(operator: str | None) -> Callable:
     return _OPERATOR_REGISTRY.get(operator or "DO_NOTHING", lambda _: _)
 
 
-def _retrieve_as_string(
-    h5file: h5py.File, path: str, *, encoding: str = "utf-8"
-) -> str:
+def _retrieve_as_string(h5file: h5py.File, path: str, *, encoding: str = "utf-8") -> str:
     return h5file[path][...].item().decode(encoding)
 
 
-def _retrieve_values_from_file(
-    variable_recipe: NexusFileMetadataVariable, h5file: h5py.File
-) -> Any:
+def _retrieve_values_from_file(variable_recipe: NexusFileMetadataVariable, h5file: h5py.File) -> Any:
     if "*" in variable_recipe.path:  # Selectors are used
         path = variable_recipe.path.split("/")[1:]
         path[0] += "/"
@@ -187,11 +175,7 @@ def extract_variables_values(
             )
         elif isinstance(variable_recipe, ValueMetadataVariable):
             value = variable_recipe.value
-            value = (
-                render_variable_value(value, variable_map)
-                if isinstance(value, str)
-                else value
-            )
+            value = render_variable_value(value, variable_map) if isinstance(value, str) else value
             _operator = _get_operator(variable_recipe.operator)
             if variable_recipe.field is not None:
                 value = _operator(value, variable_recipe.field)
@@ -216,9 +200,7 @@ def extract_paths_from_h5_file(
         for key in temp_keys:
             output_paths += [
                 key + "/" + subkey
-                for subkey in extract_paths_from_h5_file(
-                    _h5_object[key], copy.deepcopy(_path)
-                )
+                for subkey in extract_paths_from_h5_file(_h5_object[key], copy.deepcopy(_path))
             ]
     else:
         if _path:
@@ -323,16 +305,14 @@ def _create_single_data_file_list_item(
 
     file_info: dict[str, Any] = {
         "path": file_path.absolute().as_posix(),
-        "time": datetime.datetime.now(tz=datetime.UTC).strftime(
-            "%Y-%m-%dT%H:%M:%S.000Z"
-        ),
+        "time": datetime.datetime.now(tz=datetime.UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
     }
     if file_path.exists():
         if compute_file_stats:
             file_stats = file_path.stat()
-            timestamp_str = datetime.datetime.fromtimestamp(
-                file_stats.st_ctime, tz=datetime.UTC
-            ).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+            timestamp_str = datetime.datetime.fromtimestamp(file_stats.st_ctime, tz=datetime.UTC).strftime(
+                "%Y-%m-%dT%H:%M:%S.000Z"
+            )
             file_info = {
                 **file_info,
                 **{
@@ -427,35 +407,25 @@ def create_data_file_list(
         )
         data_file_list.append(new_file_item)
         if config.save_file_hash:
-            logger.info(
-                "Computing hash of the file(%s) from disk...", minimum_file_path
-            )
+            logger.info("Computing hash of the file(%s) from disk...", minimum_file_path)
             hash_file_path = _build_hash_path(
                 original_file_instance=new_file_item,
                 dir_path=ingestor_directory,
                 hash_file_extension=config.hash_file_extension,
             )
             logger.info("Saving hash into a file ... %s", hash_file_path)
-            _save_hash_file(
-                original_file_instance=new_file_item, hash_path=hash_file_path
-            )
+            _save_hash_file(original_file_instance=new_file_item, hash_path=hash_file_path)
             data_file_list.append(
-                single_file_constructor(
-                    file_path=hash_file_path, compute_file_hash=False
-                )
+                single_file_constructor(file_path=hash_file_path, compute_file_hash=False)
             )
         if source_folder and config.file_path_type == "relative":
             for data_file in data_file_list:
-                data_file.path = str(
-                    pathlib.Path(data_file.path).relative_to(source_folder)
-                )
+                data_file.path = str(pathlib.Path(data_file.path).relative_to(source_folder))
 
     return data_file_list
 
 
-def _filter_by_field_type(
-    schemas: Iterable[MetadataItem], field_type: str
-) -> list[MetadataItem]:
+def _filter_by_field_type(schemas: Iterable[MetadataItem], field_type: str) -> list[MetadataItem]:
     return [field for field in schemas if field.field_type == field_type]
 
 
@@ -491,9 +461,7 @@ def _create_scientific_metadata(
         },
         **{
             field.machine_name: {
-                "value": _render_variable_as_type(
-                    field.value, variable_map, field.type
-                ),
+                "value": _render_variable_as_type(field.value, variable_map, field.type),
                 "unit": getattr(field, "unit", ""),
                 "human_name": getattr(field, "human_name", field.machine_name),
                 "type": field.type,
@@ -561,12 +529,8 @@ def create_scicat_dataset_instance(
             variable_map=variable_map,
         ),
         **{
-            field.machine_name: _render_variable_as_type(
-                field.value, variable_map, field.type
-            )
-            for field in _filter_by_field_type(
-                metadata_schema.values(), HIGH_LEVEL_METADATA_TYPE
-            )
+            field.machine_name: _render_variable_as_type(field.value, variable_map, field.type)
+            for field in _filter_by_field_type(metadata_schema.values(), HIGH_LEVEL_METADATA_TYPE)
             # High level schemas
         },
     )
@@ -656,9 +620,7 @@ def _path_to_relative(
     origdatablock_datafilelist_item = copy(datafilelist_item)
     if file_path_type == "relative":
         origdatablock_datafilelist_item.path = (
-            pathlib.Path(datafilelist_item.path)
-            .relative_to(dataset_source_folder)
-            .as_posix()
+            pathlib.Path(datafilelist_item.path).relative_to(dataset_source_folder).as_posix()
         )
     return origdatablock_datafilelist_item
 
@@ -672,10 +634,7 @@ def _prepare_origdatablock_datafilelist(
     Prepare the datafiles list for the origdatablock entry in scicat
     That means that the file paths needs to be relative to the dataset source folder
     """
-    return [
-        _path_to_relative(item, dataset_source_folder, file_path_type)
-        for item in datafiles_list
-    ]
+    return [_path_to_relative(item, dataset_source_folder, file_path_type) for item in datafiles_list]
 
 
 def create_origdatablock_instance(

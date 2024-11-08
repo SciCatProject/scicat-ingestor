@@ -13,9 +13,7 @@ from scicat_metadata import (
     select_applicable_schema,
 )
 
-ALL_SCHEMA_EXAMPLES = list_schema_file_names(
-    Path(__file__).parent.parent / Path("resources")
-)
+ALL_SCHEMA_EXAMPLES = list_schema_file_names(Path(__file__).parent.parent / Path("resources"))
 
 
 @pytest.fixture()
@@ -94,9 +92,7 @@ def test_metadata_schema_selection() -> None:
             ),
         }
     )
-    assert (
-        select_applicable_schema(Path("right_name.nxs"), schemas) == schemas["schema2"]
-    )
+    assert select_applicable_schema(Path("right_name.nxs"), schemas) == schemas["schema2"]
 
 
 def test_metadata_schema_selection_wrong_selector_target_name_raises() -> None:

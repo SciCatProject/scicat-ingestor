@@ -35,13 +35,9 @@ from system_helpers import exit, handle_exceptions
 
 
 def build_offline_config() -> OfflineIngestorConfig:
-    arg_parser = build_arg_parser(
-        OfflineIngestorConfig, mandatory_args=('--config-file',)
-    )
+    arg_parser = build_arg_parser(OfflineIngestorConfig, mandatory_args=('--config-file',))
     arg_namespace = arg_parser.parse_args()
-    merged_configuration = merge_config_and_input_args(
-        Path(arg_namespace.config_file), arg_namespace
-    )
+    merged_configuration = merge_config_and_input_args(Path(arg_namespace.config_file), arg_namespace)
     # Remove unused fields
     # It is because ``OfflineIngestorConfig`` shares the template config file
     # with ``OnlineIngestorConfig``.
@@ -62,12 +58,8 @@ def _check_if_dataset_exists_by_pid(
     Check if a dataset with the same pid exists already in SciCat.
     """
     if ingest_config.check_if_dataset_exists_by_pid and (local_dataset.pid is not None):
-        logger.info(
-            "Checking if dataset with pid %s already exists.", local_dataset.pid
-        )
-        return check_dataset_by_pid(
-            pid=local_dataset.pid, config=scicat_config, logger=logger
-        )
+        logger.info("Checking if dataset with pid %s already exists.", local_dataset.pid)
+        return check_dataset_by_pid(pid=local_dataset.pid, config=scicat_config, logger=logger)
 
     # Other cases, assuming dataset does not exist
     return False
@@ -90,8 +82,7 @@ def _check_if_dataset_exists_by_metadata(
 
         if metadata_value is not None:
             logger.info(
-                "Checking if dataset with scientific metadata key %s "
-                "set to value %s already exists.",
+                "Checking if dataset with scientific metadata key %s " "set to value %s already exists.",
                 metadata_key,
                 metadata_value,
             )
@@ -141,9 +132,7 @@ def main() -> None:
             metadata_schema = select_applicable_schema(nexus_file_path, schemas)
 
             # define variables values
-            variable_map = extract_variables_values(
-                metadata_schema.variables, h5file, config
-            )
+            variable_map = extract_variables_values(metadata_schema.variables, h5file, config)
 
         data_file_list = create_data_file_list(
             nexus_file=nexus_file_path,
@@ -193,9 +182,7 @@ def main() -> None:
 
         # Create dataset in scicat
         if config.ingestion.dry_run:
-            logger.info(
-                "Dry run mode. Skipping Scicat API calls for creating dataset ..."
-            )
+            logger.info("Dry run mode. Skipping Scicat API calls for creating dataset ...")
             exit(logger, unexpected=False)
         else:
             scicat_dataset = create_scicat_dataset(

@@ -64,26 +64,18 @@ def _individual_message_commit(offline_ingestors, consumer, logger: logging.Logg
     for job_id, job_item in offline_ingestors.items():
         result = job_item["proc"].poll()
         if result is not None:
-            logger.info(
-                "Offline ingestor for job id %s ended with result %s", job_id, result
-            )
+            logger.info("Offline ingestor for job id %s ended with result %s", job_id, result)
             if result == 0:
                 logger.info("Executing commit for message with job id %s", job_id)
                 consumer.commit(message=job_item["message"])
-            logger.info(
-                "Removed ingestor for message with job id %s from queue", job_id
-            )
+            logger.info("Removed ingestor for message with job id %s from queue", job_id)
             offline_ingestors.pop(job_id)
 
 
 def build_online_config() -> OnlineIngestorConfig:
-    arg_parser = build_arg_parser(
-        OnlineIngestorConfig, mandatory_args=('--config-file',)
-    )
+    arg_parser = build_arg_parser(OnlineIngestorConfig, mandatory_args=('--config-file',))
     arg_namespace = arg_parser.parse_args()
-    merged_configuration = merge_config_and_input_args(
-        Path(arg_namespace.config_file), arg_namespace
-    )
+    merged_configuration = merge_config_and_input_args(Path(arg_namespace.config_file), arg_namespace)
 
     return build_dataclass(OnlineIngestorConfig, merged_configuration)
 

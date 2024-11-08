@@ -15,9 +15,7 @@ VALID_METADATA_TYPES = (SCIENTIFIC_METADATA_TYPE, HIGH_LEVEL_METADATA_TYPE)
 def load_metadata_extractors(extractor_name: str) -> Callable:
     """Load metadata extractors from the entry points."""
 
-    return entry_points(group="scicat_ingestor.metadata_extractor")[
-        extractor_name
-    ].load()
+    return entry_points(group="scicat_ingestor.metadata_extractor")[extractor_name].load()
 
 
 def list_schema_file_names(schemas_directory: pathlib.Path) -> list[pathlib.Path]:
@@ -96,13 +94,10 @@ def build_metadata_variables(
             case "VALUE":
                 return ValueMetadataVariable(**variable)
             case _:
-                raise ValueError(
-                    f"Invalid source name: {variable['source']} for variable {variable}"
-                )
+                raise ValueError(f"Invalid source name: {variable['source']} for variable {variable}")
 
     return {
-        variable_name: _build_metadata_variable(variable)
-        for variable_name, variable in variables.items()
+        variable_name: _build_metadata_variable(variable) for variable_name, variable in variables.items()
     }
 
 
@@ -188,9 +183,7 @@ def select_applicable_schema(
     """
     for schema in schemas.values():
         if isinstance(schema.selector, str):
-            select_target_name, select_function_name, select_argument = (
-                schema.selector.split(":")
-            )
+            select_target_name, select_function_name, select_argument = schema.selector.split(":")
             if select_target_name in ["filename"]:
                 select_target_value = nexus_file.as_posix()
             else:
@@ -203,9 +196,7 @@ def select_applicable_schema(
                 raise ValueError(f"Invalid function name {select_function_name}")
 
         elif isinstance(schema.selector, dict):
-            raise NotImplementedError(
-                "Dictionary based selector is not implemented yet"
-            )
+            raise NotImplementedError("Dictionary based selector is not implemented yet")
         else:
             raise Exception(f"Invalid type for schema selector {type(schema.selector)}")
 
