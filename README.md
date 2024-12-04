@@ -34,7 +34,7 @@ You need to know the path to the nexus file you want to ingest
 and also the path to the ``done_writing_message_file`` as a json file.
 
 ```bash
-background_ingestor \
+scicat_background_ingestor \
     --logging.verbose \
     -c PATH_TO_CONFIGURATION_FILE.yaml \
     --nexus-file PATH_TO_THE_NEXUS_FILE.nxs \
@@ -69,10 +69,10 @@ The template file can be synchronized automatically by ``synchronize_config`` co
 
 ### Configuration Validator
 
-You can validate a configuration file with ``validate_ingestor_config`` command.
+You can validate a configuration file with ``scicat_validate_ingestor_config`` command.
 
 ```bash
-validate_ingestor_config
+scicat_validate_ingestor_config
 ```
 
 It tries building nested configuration dataclasses from the configuration file.
