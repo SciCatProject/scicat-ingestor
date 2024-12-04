@@ -48,8 +48,14 @@ def _parse_nested_input_args(input_args: argparse.Namespace) -> dict:
 _SHORTENED_ARG_NAMES = MappingProxyType(
     {
         "config-file": "c",
+        "ingestion.dry-run": "d",
     }
 )
+
+_HELP_TEXT = {
+    "config-file": "Path to the configuration file.",
+    "ingestion.dry-run": "Dry run mode. No data will be sent to SciCat.",
+}
 
 
 def _wrap_arg_names(name: str, *prefixes: str) -> tuple[str, ...]:
@@ -90,7 +96,13 @@ def build_arg_parser(
         for name, tp in atomic_types.items():
             arg_names = _wrap_arg_names(name, *prefixes)
             required = any(arg_name in mandatory_args for arg_name in arg_names)
-            arg_adder = partial(group.add_argument, *arg_names, required=required)
+            long_name = arg_names[-1].replace("--", "")
+            arg_adder = partial(
+                group.add_argument,
+                *arg_names,
+                required=required,
+                help=_HELP_TEXT.get(long_name),
+            )
             if tp is bool:
                 arg_adder(action="store_true")
             elif tp in (int, float, str):
