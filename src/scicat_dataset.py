@@ -168,8 +168,9 @@ def extract_variables_values(
 ) -> dict:
     variable_map = {
         "ingestor_run_id": str(uuid.uuid4()),
-        "filepath": pathlib.Path(config.nexus_file),
+        "data_file_path": pathlib.Path(config.nexus_file),
         "now": datetime.datetime.now(tz=datetime.UTC).isoformat(),
+        "ingestor_files_directory": config.ingestion.file_handling.ingestor_files_directory,
     }
     for variable_name, variable_recipe in variables.items():
         source = variable_recipe.source
@@ -187,11 +188,7 @@ def extract_variables_values(
             )
         elif isinstance(variable_recipe, ValueMetadataVariable):
             value = variable_recipe.value
-            value = (
-                render_variable_value(value, variable_map)
-                if isinstance(value, str)
-                else value
-            )
+            value = render_variable_value(value, variable_map)
             _operator = _get_operator(variable_recipe.operator)
             if variable_recipe.field is not None:
                 value = _operator(value, variable_recipe.field)
@@ -265,6 +262,8 @@ class ScicatDataset:
     accessGroups: list[str] | None = None
     startTime: str | None = None
     endTime: str | None = None
+    runNumber: str | None = None
+    keywords: list[str] | None = None
 
 
 @dataclass(kw_only=True)
@@ -459,7 +458,7 @@ def _filter_by_field_type(
     return [field for field in schemas if field.field_type == field_type]
 
 
-def _render_variable_as_type(value: str, variable_map: dict, dtype: str) -> Any:
+def _render_variable_as_type(value: Any, variable_map: dict, dtype: str) -> Any:
     return convert_to_type(render_variable_value(value, variable_map), dtype)
 
 

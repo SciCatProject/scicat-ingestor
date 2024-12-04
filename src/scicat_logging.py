@@ -47,7 +47,7 @@ def build_logger(
 
     # Add graylog handler
     if logging_options.graylog:
-        graylog_handler = graypy.GELFTCPHandler(
+        graylog_handler = graypy.GELFUDPHandler(
             logging_options.graylog_host,
             int(logging_options.graylog_port),
             facility=logging_options.graylog_facility,

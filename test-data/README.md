@@ -18,7 +18,7 @@ with h5py.File('copied_coda.hdf', 'r+') as f:
             del instrument_gr[name]
 
     # Copy the rest of the file
-    with h5py.File('small_coda.hdf', 'w') as new_f:
+    with h5py.File('small-coda.hdf', 'w') as new_f:
         # copy everything
         f.copy('entry', new_f)
 
@@ -39,7 +39,7 @@ with h5py.File('copied_ymir.hdf', 'r+') as f:
             del instrument_gr[name]
 
     # Copy the rest of the file
-    with h5py.File('small_ymir.hdf', 'w') as new_f:
+    with h5py.File('small-ymir.hdf', 'w') as new_f:
         # copy everything
         f.copy('entry', new_f)
 
