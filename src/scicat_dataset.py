@@ -116,8 +116,8 @@ def convert_to_type(input_value: Any, dtype_desc: str) -> Any:
 
 _OPERATOR_REGISTRY = MappingProxyType(
     {
-        "DO_NOTHING": lambda value: value,
-        "join_with_space": lambda value: ", ".join(
+        "DO_NOTHING": lambda value, recipe: value,
+        "join_with_space": lambda value, recipe: ", ".join(
             ast.literal_eval(value) if isinstance(value, str) else value
         ),
         # "evaluate": lambda value: ast.literal_eval(value),
@@ -128,12 +128,13 @@ _OPERATOR_REGISTRY = MappingProxyType(
         # It is better to use the specific converters for the types.
         # However, if it is the only way to go, you can add it here.
         # Please add a comment to explain why it is needed.
-        "filename": lambda value: os.path.basename(value),
-        "dirname": lambda value: os.path.dirname(value),
-        "dirname-2": lambda value: os.path.dirname(os.path.dirname(value)),
-        "getitem": lambda value, key: value[
-            key
+        "filename": lambda value, recipe: os.path.basename(value),
+        "dirname": lambda value, recipe: os.path.dirname(value),
+        "dirname-2": lambda value, recipe: os.path.dirname(os.path.dirname(value)),
+        "getitem": lambda value, recipe: value[
+            recipe.field
         ],  # The only operator that takes an argument
+        "str-replace": lambda value, recipe: str(value).replace(recipe.pattern,recipe.replacement),
     }
 )
 
@@ -190,10 +191,7 @@ def extract_variables_values(
             value = variable_recipe.value
             value = render_variable_value(value, variable_map)
             _operator = _get_operator(variable_recipe.operator)
-            if variable_recipe.field is not None:
-                value = _operator(value, variable_recipe.field)
-            else:
-                value = _operator(value)
+            value = _operator(value, variable_recipe)
 
         else:
             raise Exception("Invalid variable source: ", source)

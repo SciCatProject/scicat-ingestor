@@ -6,15 +6,11 @@ from scicat_configuration import FileHandlingOptions
 
 
 def compose_ingestor_directory(
-    fh_options: FileHandlingOptions, nexus_file_path: str | pathlib.Path
+    fh_options: FileHandlingOptions,
+    nexus_file_path: pathlib.Path
 ) -> pathlib.Path:
     """Select the ingestor directory based on the file path and the options."""
     directory = pathlib.Path(fh_options.ingestor_files_directory)
-    nexus_file_path = (
-        pathlib.Path(nexus_file_path)
-        if isinstance(nexus_file_path, str)
-        else nexus_file_path
-    )
     if directory.is_absolute():
         return directory
     else:
