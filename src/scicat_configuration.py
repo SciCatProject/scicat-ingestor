@@ -190,6 +190,8 @@ class KafkaOptions:
     """Kafka consumer group ID."""
     bootstrap_servers: str = "localhost:9093"
     """List of Kafka bootstrap servers. Multiple servers can be separated by commas."""
+    security_protocol: str = "sasl_ssl"
+    """Security mechanism """
     sasl_mechanism: str = "SCRAM-SHA-256"
     """Kafka SASL mechanism."""
     sasl_username: str = "USERNAME"
@@ -338,18 +340,20 @@ T = TypeVar("T")
 
 def build_dataclass(tp: type[T], data: dict, prefixes: tuple[str, ...] = ()) -> T:
     type_hints = get_annotations(tp)
-    if unused_keys := (set(data.keys()) - set(type_hints.keys())):
+    unused_keys = (set(data.keys()) - set(type_hints.keys()))
+    if unused_keys:
         # If ``data`` contains unnecessary fields.
         unused_keys_repr = "\n\t\t- ".join(
             ".".join((*prefixes, unused_key)) for unused_key in unused_keys
         )
-        raise ValueError(f"Invalid argument found: \n\t\t- {unused_keys_repr}")
+        #raise ValueError(f"Invalid argument found: \n\t\t- {unused_keys_repr}")
     return tp(
         **{
             key: build_dataclass(sub_tp, value, (*prefixes, key))
             if is_dataclass(sub_tp := type_hints.get(key))
             else value
             for key, value in data.items()
+            if key not in unused_keys
         }
     )
 

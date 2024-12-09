@@ -69,6 +69,8 @@ class ValueMetadataVariable(MetadataSchemaVariable):
     operator: str = ""
     value: str
     field: str | None = None
+    pattern: str | None = None
+    replacement: str | None = None
     # We only allow one field(argument) for now
 
 
@@ -141,7 +143,10 @@ class MetadataSchema:
         return cls.from_dict(_load_json_schema(schema_file_name))
 
 
-def render_variable_value(var_value: Any, variable_registry: dict) -> str:
+def render_variable_value(
+        var_value: Any, 
+        variable_registry: dict
+) -> str:
     # if input is not a string it converts it to string
     output_value = var_value if isinstance(var_value, str) else json.dumps(var_value)
 
@@ -158,8 +163,8 @@ def render_variable_value(var_value: Any, variable_registry: dict) -> str:
             "<" + reg_var_name + ">", str(reg_var_value)
         )
 
-    if "<" in var_value and ">" in var_value:
-        raise Exception(f"Unresolved variable: {var_value}")
+    if "<" in output_value and ">" in output_value:
+        raise Exception(f"Unresolved variable: {output_value}")
 
     output_value = (
         output_value if isinstance(var_value, str) else json.loads(output_value)
@@ -188,6 +193,47 @@ def collect_schemas(dir_path: pathlib.Path) -> OrderedDict[str, MetadataSchema]:
     return schemas
 
 
+def _select_applicable_schema(
+        selector: str | dict,
+        filename: str | None = None
+) -> bool:
+    if isinstance(selector, str):
+        # filename:starts_with:/ess/data/coda
+        select_target_name, select_function_name, select_argument = (
+            selector.split(":")
+        )
+        if select_target_name in ["filename"]:
+            select_target_value = filename
+        else:
+            raise ValueError(f"Invalid target name {select_target_name}")
+
+        if select_function_name == "starts_with":
+            return select_target_value.startswith(select_argument)
+        else:
+            raise ValueError(f"Invalid function name {select_function_name}")
+
+    elif isinstance(selector, dict):
+        output = True
+        for key, conditions in selector.items():
+            if key == "or":
+                output = output and any([
+                    _select_applicable_schema(item, filename)
+                    for item
+                    in conditions
+                ])
+            elif key == "and":
+                output = output and all([
+                    _select_applicable_schema(item, filename)
+                    for item
+                    in conditions
+                ])
+            else:
+                raise NotImplementedError("Invalid operator")
+        return output
+    else:
+        raise Exception(f"Invalid type for schema selector {type(selector)}")
+
+
 def select_applicable_schema(
     nexus_file: pathlib.Path,
     schemas: OrderedDict[str, MetadataSchema],
@@ -198,26 +244,7 @@ def select_applicable_schema(
     Order of the schemas matters and first schema that is suitable is selected.
     """
     for schema in schemas.values():
-        if isinstance(schema.selector, str):
-            select_target_name, select_function_name, select_argument = (
-                schema.selector.split(":")
-            )
-            if select_target_name in ["filename"]:
-                select_target_value = nexus_file.as_posix()
-            else:
-                raise ValueError(f"Invalid target name {select_target_name}")
-
-            if select_function_name == "starts_with":
-                if select_target_value.startswith(select_argument):
-                    return schema
-            else:
-                raise ValueError(f"Invalid function name {select_function_name}")
-
-        elif isinstance(schema.selector, dict):
-            raise NotImplementedError(
-                "Dictionary based selector is not implemented yet"
-            )
-        else:
-            raise Exception(f"Invalid type for schema selector {type(schema.selector)}")
+        if _select_applicable_schema(schema.selector, str(nexus_file)):
+            return schema
 
     raise Exception("No applicable metadata schema configuration found!!")
