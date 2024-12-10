@@ -46,9 +46,9 @@ dynamic = ["version"]
 
 [project.scripts]
 scicat_ingestor = "scicat_online_ingestor:main"
-background_ingestor = "scicat_offline_ingestor:main"
-validate_ingestor_config = "scicat_configuration:validate_config_file"
-synchronize_config = "scicat_configuration:synchronize_config_file"
+scicat_background_ingestor = "scicat_offline_ingestor:main"
+scicat_validate_ingestor_config = "scicat_configuration:validate_config_file"
+scicat_synchronize_config = "scicat_configuration:synchronize_config_file"
 
 [project.entry-points."scicat_ingestor.metadata_extractor"]
 max = "numpy:max"
@@ -89,6 +89,9 @@ ignore = [
 fixable = ["I001", "B010"]
 isort.known-first-party = ["scicat-filewriter-ingest"]
 pydocstyle.convention = "numpy"
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 108  # Clear and descriptive variable names are more valuable than short lines
 
 [tool.ruff.lint.per-file-ignores]
 # those files have an increased risk of relying on import order

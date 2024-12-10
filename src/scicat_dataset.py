@@ -171,7 +171,7 @@ def extract_variables_values(
         "ingestor_run_id": str(uuid.uuid4()),
         "data_file_path": pathlib.Path(config.nexus_file),
         "now": datetime.datetime.now(tz=datetime.UTC).isoformat(),
-        "ingestor_files_directory": config.ingestion.file_handling.ingestor_files_directory
+        "ingestor_files_directory": config.ingestion.file_handling.ingestor_files_directory,
     }
     for variable_name, variable_recipe in variables.items():
         source = variable_recipe.source
@@ -262,6 +262,7 @@ class ScicatDataset:
     endTime: str | None = None
     runNumber: str | None = None
     keywords: list[str] | None = None
+
 
 @dataclass(kw_only=True)
 class DataFileListItem:

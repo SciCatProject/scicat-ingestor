@@ -54,12 +54,16 @@ def test_collect_metadata_schema() -> None:
     # Check if the schema is ordered by the schema order and name.
     # The expected keys are hardcoded on purpose.
     # Always hardcode the expected keys to avoid the test being too flexible.
-    assert list(schemas.keys()) == [
-        "715ce7ba-3f91-11ef-932f-37a5c6fd60b1",  # Coda, 1, Coda Metadata Schema
-        "72a991ee-437a-11ef-8fd2-1f95660accb7",  # Dream, 1, dream Metadata Schema
-        "c5bed39a-4379-11ef-ba5a-ffbc783163b6",  # Base, 1, Generic metadata schema
-        "891322f6-437a-11ef-980a-7bdc756bd0b3",  # Loki, 1, Loki Metadata Schema
-    ]
+    assert (
+        list(schemas.keys())
+        == [
+            "715ce7ba-3f91-11ef-932f-37a5c6fd60b1",  # Coda, 1, Coda Metadata Schema
+            "72a991ee-437a-11ef-8fd2-1f95660accb7",  # Dream, 1, dream Metadata Schema
+            "c5bed39a-4379-11ef-ba5a-ffbc783163b6",  # Base, 1, Generic metadata schema
+            "891322f6-437a-11ef-980a-7bdc756bd0b3",  # Loki, 1, Loki Metadata Schema
+            "628b28d6-9c26-11ef-948d-0b2d405fc82f",  # Small-Coda, 110, Small-Coda Metadata Schema
+        ]
+    )
 
 
 def test_metadata_schema_selection() -> None:
