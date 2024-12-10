@@ -68,10 +68,14 @@ def _individual_message_commit(offline_ingestors, consumer, logger: logging.Logg
                 "Offline ingestor for job id %s ended with result %s", job_id, result
             )
             if result == 0:
+                logger.info("Offline ingestor successful for job id %s", job_id)
                 logger.info("Executing commit for message with job id %s", job_id)
                 consumer.commit(message=job_item["message"])
+            else:
+                logger.error("Offline ingestor error for job id %s", job_id)
             logger.info(
-                "Removed ingestor for message with job id %s from queue", job_id
+                "Removed ingestor for message with job id %s from queue",
+                job_id
             )
             offline_ingestors.pop(job_id)
 
