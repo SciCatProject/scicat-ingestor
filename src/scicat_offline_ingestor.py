@@ -34,7 +34,7 @@ from scicat_path_helpers import compose_ingestor_directory
 from system_helpers import exit, handle_exceptions
 
 
-def build_offline_config() -> OfflineIngestorConfig:
+def build_offline_config(logger: logging.Logger | None = None) -> OfflineIngestorConfig:
     arg_parser = build_arg_parser(
         OfflineIngestorConfig, mandatory_args=('--config-file',)
     )
@@ -47,7 +47,9 @@ def build_offline_config() -> OfflineIngestorConfig:
     # with ``OnlineIngestorConfig``.
     del merged_configuration["kafka"]
 
-    config = build_dataclass(OfflineIngestorConfig, merged_configuration)
+    config = build_dataclass(
+        tp=OfflineIngestorConfig, data=merged_configuration, logger=logger, strict=False
+    )
 
     return config
 
@@ -115,9 +117,10 @@ def _check_if_dataset_exists_by_metadata(
 
 def main() -> None:
     """Main entry point of the app."""
-    config = build_offline_config()
+    tmp_config = build_offline_config()
+    logger = build_logger(tmp_config)
+    config = build_offline_config(logger=logger)
     fh_options = config.ingestion.file_handling
-    logger = build_logger(config)
 
     # Log the configuration as dictionary so that it is easier to read from the logs
     logger.info(
