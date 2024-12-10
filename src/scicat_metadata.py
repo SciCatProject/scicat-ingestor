@@ -143,12 +143,9 @@ class MetadataSchema:
         return cls.from_dict(_load_json_schema(schema_file_name))
 
 
-def render_variable_value(
-        var_value: Any,
-        variable_registry: dict
-) -> str:
+def render_variable_value(var_value: Any, variable_registry: dict) -> str:
     # if input is not a string it converts it to string
-    output_value = var_value if isinstance(var_value,str) else json.dumps(var_value)
+    output_value = var_value if isinstance(var_value, str) else json.dumps(var_value)
 
     # If it is only one variable, then it is a simple replacement
     if (
@@ -192,15 +189,13 @@ def collect_schemas(dir_path: pathlib.Path) -> OrderedDict[str, MetadataSchema]:
         schemas[metadata_schema.id] = metadata_schema
     return schemas
 
+
 def _select_applicable_schema(
-        selector: str | dict,
-        filename: str | None = None
+    selector: str | dict, filename: str | None = None
 ) -> bool:
     if isinstance(selector, str):
         # filename:starts_with:/ess/data/coda
-        select_target_name, select_function_name, select_argument = (
-            selector.split(":")
-        )
+        select_target_name, select_function_name, select_argument = selector.split(":")
         if select_target_name in ["filename"]:
             select_target_value = filename
         else:
@@ -215,22 +210,19 @@ def _select_applicable_schema(
         output = True
         for key, conditions in selector.items():
             if key == "or":
-                output = output and any([
-                    _select_applicable_schema(item, filename)
-                    for item
-                    in conditions
-                ])
+                output = output and any(
+                    [_select_applicable_schema(item, filename) for item in conditions]
+                )
             elif key == "and":
-                output = output and all([
-                    _select_applicable_schema(item, filename)
-                    for item
-                    in conditions
-                ])
+                output = output and all(
+                    [_select_applicable_schema(item, filename) for item in conditions]
+                )
             else:
                 raise NotImplementedError("Invalid operator")
         return output
     else:
         raise Exception(f"Invalid type for schema selector {type(selector)}")
+
 
 def select_applicable_schema(
     nexus_file: pathlib.Path,

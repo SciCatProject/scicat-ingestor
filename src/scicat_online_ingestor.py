@@ -74,8 +74,7 @@ def _individual_message_commit(offline_ingestors, consumer, logger: logging.Logg
             else:
                 logger.error("Offline ingestor error for job id %s", job_id)
             logger.info(
-                "Removed ingestor for message with job id %s from queue",
-                job_id
+                "Removed ingestor for message with job id %s from queue", job_id
             )
             offline_ingestors.pop(job_id)
 
@@ -130,7 +129,7 @@ def main() -> None:
                 background_ingestor
                     -c configuration_file
                     --nexus-file nexus_filename
-                    --done-writing-message-file message_file_path  
+                    --done-writing-message-file message_file_path
                     # optional depending on the message_saving_options.message_output
                 """
                 cmd = [
@@ -142,8 +141,7 @@ def main() -> None:
                 ]
                 if config.ingestion.file_handling.message_to_file:
                     ingestor_directory = compose_ingestor_directory(
-                        config.ingestion.file_handling,
-                        nexus_file_path
+                        config.ingestion.file_handling, nexus_file_path
                     )
                     done_writing_message_file_path = compose_ingestor_output_file_path(
                         ingestor_directory=ingestor_directory,
@@ -156,7 +154,10 @@ def main() -> None:
                         message=message,
                         message_file_path=done_writing_message_file_path,
                     )
-                    cmd += ["--done-writing-message-file", done_writing_message_file_path]
+                    cmd += [
+                        "--done-writing-message-file",
+                        done_writing_message_file_path,
+                    ]
 
                 logger.info("Command to be run: \n\n%s\n\n", cmd)
                 if config.ingestion.dry_run:

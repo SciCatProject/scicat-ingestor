@@ -75,10 +75,7 @@ def validate_consumer(consumer: Consumer, logger: logging.Logger) -> bool:
         return True
 
 
-def _validate_wrdn_message_type(
-        message_content: bytes,
-        logger: logging.Logger
-) -> bool:
+def _validate_wrdn_message_type(message_content: bytes, logger: logging.Logger) -> bool:
     logger.info("Message type: %s", (message_type := message_content[4:8]))
     if message_type == WRDN_FILE_IDENTIFIER:
         logger.info("WRDN message received.")
@@ -98,9 +95,7 @@ def _filter_error_encountered(
         )
         return None
     else:
-        logger.info(
-            "Message successfully deserialized."
-        )
+        logger.info("Message successfully deserialized.")
         return deserialized_message
 
 

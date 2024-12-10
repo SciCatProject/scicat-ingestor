@@ -134,7 +134,9 @@ _OPERATOR_REGISTRY = MappingProxyType(
         "getitem": lambda value, recipe: value[
             recipe.field
         ],  # The only operator that takes an argument
-        "str-replace": lambda value, recipe: str(value).replace(recipe.pattern,recipe.replacement),
+        "str-replace": lambda value, recipe: str(value).replace(
+            recipe.pattern, recipe.replacement
+        ),
     }
 )
 
@@ -456,11 +458,7 @@ def _filter_by_field_type(
     return [field for field in schemas if field.field_type == field_type]
 
 
-def _render_variable_as_type(
-        value: Any,
-        variable_map: dict,
-        dtype: str
-) -> Any:
+def _render_variable_as_type(value: Any, variable_map: dict, dtype: str) -> Any:
     return convert_to_type(render_variable_value(value, variable_map), dtype)
 
 
