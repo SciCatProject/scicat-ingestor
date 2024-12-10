@@ -118,8 +118,10 @@ def main() -> None:
             if message:
                 # extract job id
                 job_id = message.job_id
+                logger.info("Processing file writer job id: %s", job_id)
                 # Extract nexus file path from the message.
                 nexus_file_path = pathlib.Path(message.file_name)
+                logger.info("Processing nexus file: %s", nexus_file_path)
 
 
                 # instantiate a new process and runs background ingestor
@@ -156,11 +158,12 @@ def main() -> None:
                         message_file_path=done_writing_message_file_path,
                     )
                     cmd += ["--done-writing-message-file", done_writing_message_file_path]
+
+                logger.info("Command to be run: \n\n%s\n\n", cmd)
                 if config.ingestion.dry_run:
                     logger.info("Dry run mode enabled. Skipping background ingestor.")
-                    logger.info("Command that would have been run: \n\n%s\n\n", cmd)
                 else:
-                    logger.info("Running background ingestor with command: %s", cmd)
+                    logger.info("Running background ingestor with command above")
                     proc = subprocess.Popen(cmd)  #  noqa: S603
                     # save info about the background process
                     offline_ingestors[job_id] = {"proc": proc, "message": message}
