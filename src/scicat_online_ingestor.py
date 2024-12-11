@@ -68,15 +68,18 @@ def _individual_message_commit(offline_ingestors, consumer, logger: logging.Logg
                 "Offline ingestor for job id %s ended with result %s", job_id, result
             )
             if result == 0:
+                logger.info("Offline ingestor successful for job id %s", job_id)
                 logger.info("Executing commit for message with job id %s", job_id)
                 consumer.commit(message=job_item["message"])
+            else:
+                logger.error("Offline ingestor error for job id %s", job_id)
             logger.info(
                 "Removed ingestor for message with job id %s from queue", job_id
             )
             offline_ingestors.pop(job_id)
 
 
-def build_online_config() -> OnlineIngestorConfig:
+def build_online_config(logger: logging.Logger | None = None) -> OnlineIngestorConfig:
     arg_parser = build_arg_parser(
         OnlineIngestorConfig, mandatory_args=('--config-file',)
     )
@@ -85,13 +88,16 @@ def build_online_config() -> OnlineIngestorConfig:
         Path(arg_namespace.config_file), arg_namespace
     )
 
-    return build_dataclass(OnlineIngestorConfig, merged_configuration)
+    return build_dataclass(
+        tp=OnlineIngestorConfig, data=merged_configuration, logger=logger, strict=False
+    )
 
 
 def main() -> None:
     """Main entry point of the app."""
-    config = build_online_config()
-    logger = build_logger(config)
+    tmp_config = build_online_config()
+    logger = build_logger(tmp_config)
+    config = build_online_config(logger=logger)
 
     # Log the configuration as dictionary so that it is easier to read from the logs
     logger.info('Starting the Scicat online Ingestor with the following configuration:')
@@ -114,22 +120,10 @@ def main() -> None:
             if message:
                 # extract job id
                 job_id = message.job_id
+                logger.info("Processing file writer job id: %s", job_id)
                 # Extract nexus file path from the message.
                 nexus_file_path = pathlib.Path(message.file_name)
-                ingestor_directory = compose_ingestor_directory(
-                    config.ingestion.file_handling, nexus_file_path
-                )
-                done_writing_message_file_path = compose_ingestor_output_file_path(
-                    ingestor_directory=ingestor_directory,
-                    file_name=nexus_file_path.stem,
-                    file_extension=config.ingestion.file_handling.message_file_extension,
-                )
-                dump_message_to_file_if_needed(
-                    logger=logger,
-                    file_handling_options=config.ingestion.file_handling,
-                    message=message,
-                    message_file_path=done_writing_message_file_path,
-                )
+                logger.info("Processing nexus file: %s", nexus_file_path)
 
                 # instantiate a new process and runs background ingestor
                 # on the nexus file
@@ -137,27 +131,42 @@ def main() -> None:
                 """
                 background_ingestor
                     -c configuration_file
-                    -f nexus_filename
-                    -j job_id
-                    -m message_file_path  # optional depending on the
-                                          # message_saving_options.message_output
+                    --nexus-file nexus_filename
+                    --done-writing-message-file message_file_path
+                    # optional depending on the message_saving_options.message_output
                 """
                 cmd = [
                     config.ingestion.offline_ingestor_executable,
                     "-c",
                     config.config_file,
-                    "-f",
-                    nexus_file_path,
-                    "-j",
-                    job_id,
+                    "--nexus-file",
+                    str(nexus_file_path),
                 ]
                 if config.ingestion.file_handling.message_to_file:
-                    cmd += ["-m", done_writing_message_file_path]
+                    ingestor_directory = compose_ingestor_directory(
+                        config.ingestion.file_handling, nexus_file_path
+                    )
+                    done_writing_message_file_path = compose_ingestor_output_file_path(
+                        ingestor_directory=ingestor_directory,
+                        file_name=nexus_file_path.stem,
+                        file_extension=config.ingestion.file_handling.message_file_extension,
+                    )
+                    dump_message_to_file_if_needed(
+                        logger=logger,
+                        file_handling_options=config.ingestion.file_handling,
+                        message=message,
+                        message_file_path=done_writing_message_file_path,
+                    )
+                    cmd += [
+                        "--done-writing-message-file",
+                        done_writing_message_file_path,
+                    ]
+
+                logger.info("Command to be run: \n\n%s\n\n", cmd)
                 if config.ingestion.dry_run:
                     logger.info("Dry run mode enabled. Skipping background ingestor.")
-                    logger.info("Command that would have been run: \n\n%s\n\n", cmd)
                 else:
-                    logger.info("Running background ingestor with command: %s", cmd)
+                    logger.info("Running background ingestor with command above")
                     proc = subprocess.Popen(cmd)  #  noqa: S603
                     # save info about the background process
                     offline_ingestors[job_id] = {"proc": proc, "message": message}

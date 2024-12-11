@@ -57,7 +57,7 @@ def build_consumer(kafka_options: KafkaOptions, logger: logging.Logger) -> Consu
     kafka_topics = collect_kafka_topics(kafka_options)
     logger.info("Subscribing to the following Kafka topics: %s", kafka_topics)
     consumer.subscribe(kafka_topics)
-    return Consumer(consumer_options)
+    return consumer
 
 
 def validate_consumer(consumer: Consumer, logger: logging.Logger) -> bool:
@@ -75,38 +75,41 @@ def validate_consumer(consumer: Consumer, logger: logging.Logger) -> bool:
         return True
 
 
-def _validate_data_type(message_content: bytes, logger: logging.Logger) -> bool:
-    logger.info("Data type: %s", (data_type := message_content[4:8]))
-    if data_type == WRDN_FILE_IDENTIFIER:
+def _validate_wrdn_message_type(message_content: bytes, logger: logging.Logger) -> bool:
+    logger.info("Message type: %s", (message_type := message_content[4:8]))
+    if message_type == WRDN_FILE_IDENTIFIER:
         logger.info("WRDN message received.")
         return True
     else:
-        logger.error("Unexpected data type: %s", data_type)
+        logger.info("Message of type %s ignored", message_type)
         return False
 
 
 def _filter_error_encountered(
-    wrdn_content: WritingFinished, logger: logging.Logger
+    deserialized_message: WritingFinished, logger: logging.Logger
 ) -> WritingFinished | None:
     """Filter out messages with the ``error_encountered`` flag set to True."""
-    if wrdn_content.error_encountered:
+    if deserialized_message.error_encountered:
         logger.error(
-            "``error_encountered`` flag True. "
-            "Unable to deserialize message. Skipping the message."
+            "Unable to deserialize message. ``error_encountered`` is true. Skipping the message."
         )
-        return wrdn_content
-    else:
         return None
+    else:
+        logger.info("Message successfully deserialized.")
+        return deserialized_message
 
 
 def _deserialise_wrdn(
     message_content: bytes, logger: logging.Logger
 ) -> WritingFinished | None:
-    if _validate_data_type(message_content, logger):
+    deserialized_message: WritingFinished | None = None
+    if _validate_wrdn_message_type(message_content, logger):
         logger.info("Deserialising WRDN message")
-        wrdn_content: WritingFinished = deserialise_wrdn(message_content)
-        logger.info("Deserialised WRDN message: %.5000s", wrdn_content)
-        return _filter_error_encountered(wrdn_content, logger)
+        deserialized_message: WritingFinished = deserialise_wrdn(message_content)
+        deserialized_message = _filter_error_encountered(deserialized_message, logger)
+        logger.info("Deserialised WRDN message: %.5000s", deserialized_message)
+
+    return deserialized_message
 
 
 def wrdn_messages(
@@ -130,10 +133,7 @@ def wrdn_messages(
             message_value = message.value()
             message_type = message_value[4:8]
             logger.info("Received message. Type : %s", message_type)
-            if message_type == b"wrdn":
-                yield _deserialise_wrdn(message_value, logger)
-            else:
-                yield None
+            yield _deserialise_wrdn(message_value, logger)
 
 
 # def compose_message_path(

@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 import argparse
+import logging
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field, is_dataclass
 from functools import partial
@@ -190,6 +191,8 @@ class KafkaOptions:
     """Kafka consumer group ID."""
     bootstrap_servers: str = "localhost:9093"
     """List of Kafka bootstrap servers. Multiple servers can be separated by commas."""
+    security_protocol: str = "sasl_ssl"
+    """Security protocol """
     sasl_mechanism: str = "SCRAM-SHA-256"
     """Kafka SASL mechanism."""
     sasl_username: str = "USERNAME"
@@ -336,20 +339,33 @@ class OfflineIngestorConfig:
 T = TypeVar("T")
 
 
-def build_dataclass(tp: type[T], data: dict, prefixes: tuple[str, ...] = ()) -> T:
+def build_dataclass(
+    *,
+    tp: type[T],
+    data: dict,
+    prefixes: tuple[str, ...] = (),
+    logger: logging.Logger | None = None,
+    strict: bool = False,
+) -> T:
     type_hints = get_annotations(tp)
-    if unused_keys := (set(data.keys()) - set(type_hints.keys())):
+    unused_keys = set(data.keys()) - set(type_hints.keys())
+    if unused_keys:
         # If ``data`` contains unnecessary fields.
         unused_keys_repr = "\n\t\t- ".join(
             ".".join((*prefixes, unused_key)) for unused_key in unused_keys
         )
-        raise ValueError(f"Invalid argument found: \n\t\t- {unused_keys_repr}")
+        error_message = f"Invalid argument found: \n\t\t- {unused_keys_repr}"
+        if logger is not None:
+            logger.warning(error_message)
+        if strict:
+            raise ValueError(error_message)
     return tp(
         **{
-            key: build_dataclass(sub_tp, value, (*prefixes, key))
+            key: build_dataclass(tp=sub_tp, data=value, prefixes=(*prefixes, key))
             if is_dataclass(sub_tp := type_hints.get(key))
             else value
             for key, value in data.items()
+            if key not in unused_keys
         }
     )
 
@@ -385,10 +401,7 @@ def merge_config_and_input_args(
 
 def _validate_config_file(target_type: type[T], config_file: Path) -> T:
     config = {**_load_config(config_file), "config_file": config_file.as_posix()}
-    return build_dataclass(
-        target_type,
-        config,
-    )
+    return build_dataclass(tp=target_type, data=config, strict=True)
 
 
 def validate_config_file() -> None:

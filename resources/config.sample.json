@@ -35,6 +35,7 @@
     "topics": "KAFKA_TOPIC_1,KAFKA_TOPIC_2",
     "group_id": "GROUP_ID",
     "bootstrap_servers": "localhost:9093",
+    "security_protocol": "sasl_ssl",
     "sasl_mechanism": "SCRAM-SHA-256",
     "sasl_username": "USERNAME",
     "sasl_password": "PASSWORD",

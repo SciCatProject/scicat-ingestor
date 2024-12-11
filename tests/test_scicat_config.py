@@ -57,11 +57,12 @@ def test_arg_types_match_online_ingestor_config(template_config_file: Path) -> N
     from typing import get_type_hints
 
     config_obj = build_dataclass(
-        OnlineIngestorConfig,
-        {
+        tp=OnlineIngestorConfig,
+        data={
             **_load_config(template_config_file),
             "config_file": template_config_file.as_posix(),
         },
+        strict=True,
     )
     for name, tp in get_type_hints(OnlineIngestorConfig).items():
         assert isinstance(getattr(config_obj, name), tp)
@@ -71,8 +72,8 @@ def test_arg_types_match_offline_ingestor_config(template_config_file: Path) -> 
     from typing import get_type_hints
 
     config_obj = build_dataclass(
-        OfflineIngestorConfig,
-        {
+        tp=OfflineIngestorConfig,
+        data={
             **{
                 key: value
                 for key, value in _load_config(template_config_file).items()
@@ -82,6 +83,7 @@ def test_arg_types_match_offline_ingestor_config(template_config_file: Path) -> 
             "nexus_file": '',
             "done_writing_message_file": '',
         },
+        strict=True,
     )
     for name, tp in get_type_hints(OfflineIngestorConfig).items():
         assert isinstance(getattr(config_obj, name), tp)
