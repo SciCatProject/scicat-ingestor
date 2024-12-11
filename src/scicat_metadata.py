@@ -211,11 +211,11 @@ def _select_applicable_schema(
         for key, conditions in selector.items():
             if key == "or":
                 output = output and any(
-                    [_select_applicable_schema(item, filename) for item in conditions]
+                    _select_applicable_schema(item, filename) for item in conditions
                 )
             elif key == "and":
                 output = output and all(
-                    [_select_applicable_schema(item, filename) for item in conditions]
+                    _select_applicable_schema(item, filename) for item in conditions
                 )
             else:
                 raise NotImplementedError("Invalid operator")

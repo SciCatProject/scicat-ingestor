@@ -79,7 +79,7 @@ def _individual_message_commit(offline_ingestors, consumer, logger: logging.Logg
             offline_ingestors.pop(job_id)
 
 
-def build_online_config() -> OnlineIngestorConfig:
+def build_online_config(logger: logging.Logger | None = None) -> OnlineIngestorConfig:
     arg_parser = build_arg_parser(
         OnlineIngestorConfig, mandatory_args=('--config-file',)
     )
@@ -88,13 +88,16 @@ def build_online_config() -> OnlineIngestorConfig:
         Path(arg_namespace.config_file), arg_namespace
     )
 
-    return build_dataclass(OnlineIngestorConfig, merged_configuration)
+    return build_dataclass(
+        tp=OnlineIngestorConfig, data=merged_configuration, logger=logger, strict=False
+    )
 
 
 def main() -> None:
     """Main entry point of the app."""
-    config = build_online_config()
-    logger = build_logger(config)
+    tmp_config = build_online_config()
+    logger = build_logger(tmp_config)
+    config = build_online_config(logger=logger)
 
     # Log the configuration as dictionary so that it is easier to read from the logs
     logger.info('Starting the Scicat online Ingestor with the following configuration:')
