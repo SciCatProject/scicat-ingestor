@@ -14,16 +14,22 @@ pip install -e .  # It will allow you to use entry-points of the scripts,
 
 ## How to RUN
 
+All commands have prefix of ``scicat`` so that you can use auto-complete in a terminal.
+
+Each command is connected to a free function in a module. It is defined in ``pyproject.toml``, under ``[project.scripts]`` section.
+
 All scripts parse the system arguments and configuration in the same way.
 
 ### Online ingestor (Highest level interface)
 You can start the ingestor daemon with certain configurations.
 
-It will continuously process `wrdn` messages and ingest the nexus files.
+It will continuously process `wrdn` messages and ingest the corresponding nexus files.
 
 ```bash
 scicat_ingestor --logging.verbose -c PATH_TO_CONFIGURATION_FILE.yaml
 ```
+
+**A topic can contain non-`wrdn` message so the ingestor filters messages and ignores irrelevant types of messages.**
 
 See [configuration](#configuration) for how to use configuration files.
 
@@ -65,7 +71,9 @@ There is a template, ``resources/config.sample.json`` you can copy/paste to make
 
 In order to update the configurations, you should update it the ``scicat_configuration`` module.
 
-The template file can be synchronized automatically by ``synchronize_config`` command.
+The template file can be synchronized automatically by ``scicat_synchronize_config`` command.
+
+**There is a unit test that checks if the online ingestor configuration dataclass is in sync with the ``resources/config.sample.json``.**
 
 ### Configuration Validator
 
@@ -78,6 +86,11 @@ scicat_validate_ingestor_config
 It tries building nested configuration dataclasses from the configuration file.
 
 It will throw errors if configuration is invalid.
+
+i.e. In the operation, it'll ignore extra keywords that do not match the configuration dataclass arguments
+but validator throws an error if there are extra keywords that do not match the arguments.
+
+This is part of CI tests.
 
 ## Developer's Guide
 
@@ -126,7 +139,8 @@ It used to be implemented with ``dict`` but it didn't have any verifying layer s
 
 ``Jinja`` template could handle a bit more complicated logic within the template, i.e. ``for`` loop or ``if`` statement could be applied to the variables.
 However, the dataset/data-block instances are not complicated to utilize these features of ``jinja``.
-#### Reason for using ``dataclasses.dataclass`
+
+#### Reason for using ``dataclasses.dataclass``
 First we did try using ``jinja`` but the dataset/data-block instances are simple enough so we replaced ``jinja`` template with ``dataclass``.
 ``dataclass`` can verify name and type (if we use static checks) of each field.
 It can be easily turned into a nested dictionary using ``dataclasses.asdict`` function.
