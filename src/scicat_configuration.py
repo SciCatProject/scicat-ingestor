@@ -225,7 +225,7 @@ class FileHandlingOptions:
 @dataclass(kw_only=True)
 class IngestionOptions:
     dry_run: bool = False
-    offline_ingestor_executable: str | list[str]= "background_ingestor"
+    offline_ingestor_executable: str | list[str] = "background_ingestor"
     max_offline_ingestors: int = 10
     offline_ingestors_wait_time: int = 10
     schemas_directory: str = "schemas"

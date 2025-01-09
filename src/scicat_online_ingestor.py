@@ -38,11 +38,11 @@ from system_helpers import handle_daemon_loop_exceptions
 
 
 def dump_message_to_file_if_needed(
-        *,
-        logger: logging.Logger,
-        message_file_path: pathlib.Path,
-        file_handling_options: FileHandlingOptions,
-        message: WritingFinished,
+    *,
+    logger: logging.Logger,
+    message_file_path: pathlib.Path,
+    file_handling_options: FileHandlingOptions,
+    message: WritingFinished,
 ) -> None:
     """Dump the message to a file according to the configuration."""
     if not file_handling_options.message_to_file:
@@ -60,21 +60,13 @@ def dump_message_to_file_if_needed(
     logger.info("Message file saved")
 
 
-def _individual_message_commit(
-        job_id,
-        message,
-        consumer,
-        logger: logging.Logger
-):
+def _individual_message_commit(job_id, message, consumer, logger: logging.Logger):
     logger.info("Executing commit for message with job id %s", job_id)
     consumer.commit(message=message)
 
 
 def _check_offline_ingestors(
-        offline_ingestors,
-        consumer,
-        config,
-        logger: logging.Logger
+    offline_ingestors, consumer, config, logger: logging.Logger
 ) -> int:
     logger.info("%s offline ingestors running", len(offline_ingestors))
     for job_id, job_item in offline_ingestors.items():
@@ -88,7 +80,9 @@ def _check_offline_ingestors(
                 # if background process is successful
                 # check if we need to commit the individual message
                 if config.kafka.individual_message_commit:
-                    _individual_message_commit(job_id,job_item["message"], consumer, logger)
+                    _individual_message_commit(
+                        job_id, job_item["message"], consumer, logger
+                    )
             else:
                 logger.error("Offline ingestor error for job id %s", job_id)
             logger.info(
@@ -127,7 +121,7 @@ def main() -> None:
     logger.info('Starting the Scicat online Ingestor with the following configuration:')
     logger.info(config.to_dict())
 
-    with ((handle_daemon_loop_exceptions(logger=logger))):
+    with handle_daemon_loop_exceptions(logger=logger):
         # Kafka consumer
         if (consumer := build_consumer(config.kafka, logger)) is None:
             raise RuntimeError("Failed to build the Kafka consumer")
@@ -159,7 +153,9 @@ def main() -> None:
                     --done-writing-message-file message_file_path
                     # optional depending on the message_saving_options.message_output
                 """
-                cmd = _pre_executable_offline_ingestor(config.ingestion.offline_ingestor_executable) + [
+                cmd = _pre_executable_offline_ingestor(
+                    config.ingestion.offline_ingestor_executable
+                ) + [
                     "-c",
                     config.config_file,
                     "--nexus-file",
@@ -191,19 +187,22 @@ def main() -> None:
                 else:
                     logger.info("Checking number of offline ingestor")
                     offline_ingestor_runnings: int = _check_offline_ingestors(
-                        offline_ingestors,
-                        consumer,
-                        config,
-                        logger)
-                    while offline_ingestor_runnings >= config.ingestion.max_offline_ingestors:
+                        offline_ingestors, consumer, config, logger
+                    )
+                    while (
+                        offline_ingestor_runnings
+                        >= config.ingestion.max_offline_ingestors
+                    ):
                         sleep(config.ingestion.offline_ingestors_wait_time)
                         offline_ingestor_runnings = _check_offline_ingestors(
-                            offline_ingestors,
-                            consumer,
-                            config,
-                            logger)
+                            offline_ingestors, consumer, config, logger
+                        )
 
-                    logger.info("Offline ingestors currently running {}".format(offline_ingestor_runnings))
+                    logger.info(
+                        "Offline ingestors currently running {}".format(
+                            offline_ingestor_runnings
+                        )
+                    )
                     logger.info("Running background ingestor with command above")
                     proc = subprocess.Popen(cmd)  #  noqa: S603
                     # save info about the background process
