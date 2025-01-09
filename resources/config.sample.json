@@ -1,4 +1,6 @@
 {
+  "nexus_file" : "",
+  "done_writing_message_file": "",
   "config_file": "",
   "id": "",
   "dataset": {
@@ -15,6 +17,8 @@
   "ingestion": {
     "dry_run": false,
     "offline_ingestor_executable": "background_ingestor",
+    "max_offline_ingestors": 10,
+    "offline_ingestors_wait_time": 10,
     "schemas_directory": "schemas",
     "check_if_dataset_exists_by_pid": true,
     "check_if_dataset_exists_by_metadata": true,
@@ -32,7 +36,7 @@
     }
   },
   "kafka": {
-    "topics": "KAFKA_TOPIC_1,KAFKA_TOPIC_2",
+    "topics": ["KAFKA_TOPIC_1", "KAFKA_TOPIC_2"],
     "group_id": "GROUP_ID",
     "bootstrap_servers": "localhost:9093",
     "security_protocol": "sasl_ssl",

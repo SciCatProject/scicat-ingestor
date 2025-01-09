@@ -226,6 +226,8 @@ class FileHandlingOptions:
 class IngestionOptions:
     dry_run: bool = False
     offline_ingestor_executable: str | list[str]= "background_ingestor"
+    max_offline_ingestors: int = 10
+    offline_ingestors_wait_time: int = 10
     schemas_directory: str = "schemas"
     check_if_dataset_exists_by_pid: bool = True
     check_if_dataset_exists_by_metadata: bool = True
