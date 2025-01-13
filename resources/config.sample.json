@@ -14,7 +14,9 @@
   },
   "ingestion": {
     "dry_run": false,
-    "offline_ingestor_executable": "background_ingestor",
+    "offline_ingestor_executable": [
+      "background_ingestor"
+    ],
     "schemas_directory": "schemas",
     "check_if_dataset_exists_by_pid": true,
     "check_if_dataset_exists_by_metadata": true,
