@@ -6,6 +6,7 @@ import importlib.metadata
 import logging
 import pathlib
 import subprocess
+from time import sleep
 
 try:
     __version__ = importlib.metadata.version(__package__ or __name__)
@@ -59,7 +60,14 @@ def dump_message_to_file_if_needed(
     logger.info("Message file saved")
 
 
-def _individual_message_commit(offline_ingestors, consumer, logger: logging.Logger):
+def _individual_message_commit(job_id, message, consumer, logger: logging.Logger):
+    logger.info("Executing commit for message with job id %s", job_id)
+    consumer.commit(message=message)
+
+
+def _check_offline_ingestors(
+    offline_ingestors, consumer, config, logger: logging.Logger
+) -> int:
     logger.info("%s offline ingestors running", len(offline_ingestors))
     for job_id, job_item in offline_ingestors.items():
         result = job_item["proc"].poll()
@@ -69,14 +77,20 @@ def _individual_message_commit(offline_ingestors, consumer, logger: logging.Logg
             )
             if result == 0:
                 logger.info("Offline ingestor successful for job id %s", job_id)
-                logger.info("Executing commit for message with job id %s", job_id)
-                consumer.commit(message=job_item["message"])
+                # if background process is successful
+                # check if we need to commit the individual message
+                if config.kafka.individual_message_commit:
+                    _individual_message_commit(
+                        job_id, job_item["message"], consumer, logger
+                    )
             else:
                 logger.error("Offline ingestor error for job id %s", job_id)
             logger.info(
                 "Removed ingestor for message with job id %s from queue", job_id
             )
             offline_ingestors.pop(job_id)
+
+    return len(offline_ingestors)
 
 
 def build_online_config(logger: logging.Logger | None = None) -> OnlineIngestorConfig:
@@ -136,7 +150,7 @@ def main() -> None:
                     # optional depending on the message_saving_options.message_output
                 """
                 cmd = [
-                    config.ingestion.offline_ingestor_executable,
+                    *config.ingestion.offline_ingestor_executable,
                     "-c",
                     config.config_file,
                     "--nexus-file",
@@ -166,15 +180,27 @@ def main() -> None:
                 if config.ingestion.dry_run:
                     logger.info("Dry run mode enabled. Skipping background ingestor.")
                 else:
+                    logger.info("Checking number of offline ingestor")
+                    offline_ingestor_runnings: int = _check_offline_ingestors(
+                        offline_ingestors, consumer, config, logger
+                    )
+                    while (
+                        offline_ingestor_runnings
+                        >= config.ingestion.max_offline_ingestors
+                    ):
+                        sleep(config.ingestion.offline_ingestors_wait_time)
+                        offline_ingestor_runnings = _check_offline_ingestors(
+                            offline_ingestors, consumer, config, logger
+                        )
+
+                    logger.info(
+                        "Offline ingestors currently running %s",
+                        offline_ingestor_runnings,
+                    )
                     logger.info("Running background ingestor with command above")
                     proc = subprocess.Popen(cmd)  #  noqa: S603
                     # save info about the background process
                     offline_ingestors[job_id] = {"proc": proc, "message": message}
-
-                    # if background process is successful
-                    # check if we need to commit the individual message
-                    if config.kafka.individual_message_commit:
-                        _individual_message_commit(offline_ingestors, consumer, logger)
 
 
 if __name__ == "__main__":

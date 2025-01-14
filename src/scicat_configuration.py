@@ -222,10 +222,18 @@ class FileHandlingOptions:
     file_path_type: str = "relative"  # allowed values: absolute and relative
 
 
+def default_offline_ingestor_executable() -> list[str]:
+    return ["background_ingestor"]
+
+
 @dataclass(kw_only=True)
 class IngestionOptions:
     dry_run: bool = False
-    offline_ingestor_executable: str = "background_ingestor"
+    offline_ingestor_executable: list[str] = field(
+        default_factory=default_offline_ingestor_executable
+    )
+    max_offline_ingestors: int = 10
+    offline_ingestors_wait_time: int = 10
     schemas_directory: str = "schemas"
     check_if_dataset_exists_by_pid: bool = True
     check_if_dataset_exists_by_metadata: bool = True
@@ -303,6 +311,8 @@ class OnlineIngestorConfig:
     # original_dict: Mapping
     """Original configuration dictionary in the json file."""
 
+    nexus_file: str = ""
+    done_writing_message_file: str = ""
     config_file: str
     id: str = ""
     dataset: DatasetOptions = field(default_factory=DatasetOptions)
