@@ -311,6 +311,8 @@ class OnlineIngestorConfig:
     # original_dict: Mapping
     """Original configuration dictionary in the json file."""
 
+    nexus_file: str = ""
+    done_writing_message_file: str = ""
     config_file: str
     id: str = ""
     dataset: DatasetOptions = field(default_factory=DatasetOptions)

@@ -1,5 +1,5 @@
 {
-  "nexus_file" : "",
+  "nexus_file": "",
   "done_writing_message_file": "",
   "config_file": "",
   "id": "",
@@ -38,7 +38,7 @@
     }
   },
   "kafka": {
-    "topics": ["KAFKA_TOPIC_1", "KAFKA_TOPIC_2"],
+    "topics": "KAFKA_TOPIC_1,KAFKA_TOPIC_2",
     "group_id": "GROUP_ID",
     "bootstrap_servers": "localhost:9093",
     "security_protocol": "sasl_ssl",
