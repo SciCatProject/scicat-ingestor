@@ -4,7 +4,7 @@ import json
 import logging
 from dataclasses import asdict
 from typing import Any
-from urllib.parse import quote, urljoin
+from urllib.parse import quote, urljoin, quote_plus
 
 import requests
 from scicat_configuration import SciCatOptions
@@ -121,7 +121,7 @@ def check_dataset_by_pid(
     pid: str, config: SciCatOptions, logger: logging.Logger
 ) -> bool:
     response = _get_from_scicat(
-        url=urljoin(config.host_address, f"datasets/{quote(pid)}"),
+        url=urljoin(config.host_address, f"datasets/{quote_plus(pid)}"),
         headers=config.headers,
         timeout=config.timeout,
         stream=config.stream,
@@ -129,6 +129,7 @@ def check_dataset_by_pid(
     )
     dataset_exists: bool
     if not response.ok:
+        logger.info("Request url : \n%s", response.url)
         logger.error(
             "Failed to check dataset existence by pid with status code: %s. "
             "Error message from scicat backend: \n%s\n"

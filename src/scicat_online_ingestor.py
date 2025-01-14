@@ -60,15 +60,24 @@ def dump_message_to_file_if_needed(
     logger.info("Message file saved")
 
 
-def _individual_message_commit(job_id, message, consumer, logger: logging.Logger):
+def _individual_message_commit(
+        job_id,
+        message,
+        consumer,
+        logger: logging.Logger
+):
     logger.info("Executing commit for message with job id %s", job_id)
     consumer.commit(message=message)
 
 
 def _check_offline_ingestors(
-    offline_ingestors, consumer, config, logger: logging.Logger
+        offline_ingestors,
+        consumer,
+        config,
+        logger: logging.Logger
 ) -> int:
     logger.info("%s offline ingestors running", len(offline_ingestors))
+    jobs_done = []
     for job_id, job_item in offline_ingestors.items():
         result = job_item["proc"].poll()
         if result is not None:
@@ -81,15 +90,20 @@ def _check_offline_ingestors(
                 # check if we need to commit the individual message
                 if config.kafka.individual_message_commit:
                     _individual_message_commit(
-                        job_id, job_item["message"], consumer, logger
+                        job_id,
+                        job_item["message"],
+                        consumer,
+                        logger
                     )
             else:
                 logger.error("Offline ingestor error for job id %s", job_id)
             logger.info(
                 "Removed ingestor for message with job id %s from queue", job_id
             )
-            offline_ingestors.pop(job_id)
-
+            jobs_done.append(job_id)
+    logger.info("%s offline ingestors done", len(jobs_done))
+    for job_id in jobs_done:
+        offline_ingestors.pop(job_id)
     return len(offline_ingestors)
 
 
