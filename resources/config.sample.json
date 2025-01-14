@@ -16,7 +16,9 @@
   },
   "ingestion": {
     "dry_run": false,
-    "offline_ingestor_executable": "background_ingestor",
+    "offline_ingestor_executable": [
+      "background_ingestor"
+    ],
     "max_offline_ingestors": 10,
     "offline_ingestors_wait_time": 10,
     "schemas_directory": "schemas",

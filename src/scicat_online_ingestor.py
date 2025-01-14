@@ -107,10 +107,6 @@ def build_online_config(logger: logging.Logger | None = None) -> OnlineIngestorC
     )
 
 
-def _pre_executable_offline_ingestor(offline_ingestor: str | list[str]) -> list[str]:
-    return [offline_ingestor] if isinstance(offline_ingestor, str) else offline_ingestor
-
-
 def main() -> None:
     """Main entry point of the app."""
     tmp_config = build_online_config()
@@ -153,9 +149,8 @@ def main() -> None:
                     --done-writing-message-file message_file_path
                     # optional depending on the message_saving_options.message_output
                 """
-                cmd = _pre_executable_offline_ingestor(
-                    config.ingestion.offline_ingestor_executable
-                ) + [
+                cmd = [
+                    *config.ingestion.offline_ingestor_executable,
                     "-c",
                     config.config_file,
                     "--nexus-file",
