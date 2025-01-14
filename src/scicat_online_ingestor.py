@@ -194,9 +194,8 @@ def main() -> None:
                         )
 
                     logger.info(
-                        "Offline ingestors currently running {}".format(
-                            offline_ingestor_runnings
-                        )
+                        "Offline ingestors currently running %s",
+                        offline_ingestor_runnings,
                     )
                     logger.info("Running background ingestor with command above")
                     proc = subprocess.Popen(cmd)  #  noqa: S603
