@@ -4,7 +4,7 @@ import json
 import logging
 from dataclasses import asdict
 from typing import Any
-from urllib.parse import quote, urljoin, quote_plus
+from urllib.parse import quote, quote_plus, urljoin
 
 import requests
 from scicat_configuration import SciCatOptions

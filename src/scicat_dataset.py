@@ -141,7 +141,7 @@ _OPERATOR_REGISTRY = MappingProxyType(
         ),
         "urlsafe": lambda value, recipe: urllib.parse.quote_plus(value),
         "to-lower": lambda value, recipe: str(value).lower(),
-        "to-upper": lambda value, recipe: str(value).upper()
+        "to-upper": lambda value, recipe: str(value).upper(),
     }
 )
 
@@ -173,7 +173,7 @@ def extract_variables_values(
     variables: dict[str, MetadataSchemaVariable],
     h5file: h5py.File,
     config: OfflineIngestorConfig,
-    schema_id: str
+    schema_id: str,
 ) -> dict:
     nexus_file = pathlib.Path(config.nexus_file)
     variable_map = {
@@ -490,9 +490,7 @@ def _create_scientific_metadata(
     """
     return {
         field.machine_name: {
-            "value": _render_variable_as_type(
-                field.value, variable_map, field.type
-            ),
+            "value": _render_variable_as_type(field.value, variable_map, field.type),
             "unit": getattr(field, "unit", ""),
             "human_name": getattr(field, "human_name", field.machine_name),
             "type": field.type,

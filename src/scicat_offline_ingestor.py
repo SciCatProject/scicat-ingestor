@@ -150,10 +150,7 @@ def main() -> None:
 
             # define variables values
             variable_map = extract_variables_values(
-                metadata_schema.variables,
-                h5file,
-                config,
-                metadata_schema.id
+                metadata_schema.variables, h5file, config, metadata_schema.id
             )
 
         data_file_list = create_data_file_list(
