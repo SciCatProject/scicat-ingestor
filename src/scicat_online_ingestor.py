@@ -69,6 +69,7 @@ def _check_offline_ingestors(
     offline_ingestors, consumer, config, logger: logging.Logger
 ) -> int:
     logger.info("%s offline ingestors running", len(offline_ingestors))
+    jobs_done = []
     for job_id, job_item in offline_ingestors.items():
         result = job_item["proc"].poll()
         if result is not None:
@@ -88,8 +89,10 @@ def _check_offline_ingestors(
             logger.info(
                 "Removed ingestor for message with job id %s from queue", job_id
             )
-            offline_ingestors.pop(job_id)
-
+            jobs_done.append(job_id)
+    logger.info("%s offline ingestors done", len(jobs_done))
+    for job_id in jobs_done:
+        offline_ingestors.pop(job_id)
     return len(offline_ingestors)
 
 
