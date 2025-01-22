@@ -5,14 +5,13 @@
 #
 #    pip-compile-multi
 #
--r basetest.txt
 certifi==2024.7.4
     # via requests
 charset-normalizer==3.3.2
     # via requests
 confluent-kafka==2.5.0
     # via -r nightly.in
-ess-streaming-data-types==0.26.1
+ess-streaming-data-types==0.27.0
     # via -r nightly.in
 flatbuffers==24.3.25
     # via ess-streaming-data-types
@@ -22,6 +21,8 @@ h5py==3.11.0
     # via -r nightly.in
 idna==3.7
     # via requests
+iniconfig==2.0.0
+    # via pytest
 kafka-python==2.0.2
     # via -r nightly.in
 markdown-it-py==3.0.0
@@ -32,8 +33,14 @@ numpy==2.0.1
     # via
     #   ess-streaming-data-types
     #   h5py
+packaging==24.1
+    # via pytest
+pluggy==1.5.0
+    # via pytest
 pygments==2.18.0
     # via rich
+pytest==8.3.2
+    # via -r basetest.in
 requests==2.32.3
     # via -r nightly.in
 rich==13.7.1

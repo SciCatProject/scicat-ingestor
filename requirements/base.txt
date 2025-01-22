@@ -11,7 +11,7 @@ charset-normalizer==3.3.2
     # via requests
 confluent-kafka==2.5.0
     # via -r base.in
-ess-streaming-data-types==0.26.1
+ess-streaming-data-types==0.27.0
     # via -r base.in
 flatbuffers==24.3.25
     # via ess-streaming-data-types
