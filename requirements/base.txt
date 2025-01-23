@@ -5,21 +5,21 @@
 #
 #    pip-compile-multi
 #
-certifi==2024.7.4
+certifi==2024.12.14
     # via requests
-charset-normalizer==3.3.2
+charset-normalizer==3.4.1
     # via requests
-confluent-kafka==2.5.0
+confluent-kafka==2.8.0
     # via -r base.in
-ess-streaming-data-types==0.26.1
+ess-streaming-data-types==0.27.0
     # via -r base.in
-flatbuffers==24.3.25
+flatbuffers==25.1.21
     # via ess-streaming-data-types
 graypy==2.1.0
     # via -r base.in
-h5py==3.11.0
+h5py==3.12.1
     # via -r base.in
-idna==3.7
+idna==3.10
     # via requests
 kafka-python==2.0.2
     # via -r base.in
@@ -27,15 +27,15 @@ markdown-it-py==3.0.0
     # via rich
 mdurl==0.1.2
     # via markdown-it-py
-numpy==2.0.1
+numpy==2.2.2
     # via
     #   ess-streaming-data-types
     #   h5py
-pygments==2.18.0
+pygments==2.19.1
     # via rich
 requests==2.32.3
     # via -r base.in
-rich==13.7.1
+rich==13.9.4
     # via -r base.in
-urllib3==2.2.2
+urllib3==2.3.0
     # via requests
