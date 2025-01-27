@@ -128,27 +128,26 @@ def check_dataset_by_pid(
         verify=config.verify,
     )
     dataset_exists = response.ok
-    if not response.ok:
-        # Filter 403 error code.
-        # Scicat returns 403 error code when the file does not exist.
-        # This function is trying to check the existence of the dataset,
-        # therefore 403 error code should not be considered as an error.
-        if response.status_code == 403:
-            logger.info("Dataset with pid %s does not exist.", pid)
-        else:
-            logger.error(
-                "Failed to check dataset existence by pid %s\n"
-                "with status code: %s. \n"
-                "Error message from scicat backend: \n%s\n"
-                "Assuming the dataset does not exist.",
-                pid,
-                response.status_code,
-                response.reason,
-            )
-    else:
+    # Log the result
+    if response.ok:
         logger.info("Retrieved %s dataset(s) from SciCat", len(response.json()))
         logger.info("Dataset with pid %s exists.", pid)
-        dataset_exists = True
+    # Filter 403 error code.
+    # Scicat returns 403 error code when the file does not exist.
+    # This function is trying to check the existence of the dataset,
+    # therefore 403 error code should not be considered as an error.
+    elif response.status_code == 403:
+        logger.info("Dataset with pid %s does not exist.", pid)
+    else:
+        logger.error(
+            "Failed to check dataset existence by pid %s\n"
+            "with status code: %s. \n"
+            "Error message from scicat backend: \n%s\n"
+            "Assuming the dataset does not exist.",
+            pid,
+            response.status_code,
+            response.reason,
+        )
 
     return dataset_exists
 
@@ -173,25 +172,24 @@ def check_dataset_by_metadata(
     dataset_exists = response.ok
 
     # Log the response
-    if not response.ok:
-        # Filter 403 error code.
-        # Scicat returns 403 error code when the file does not exist.
-        # This function is trying to check the existence of the dataset,
-        # therefore 403 error code should not be considered as an error.
-        if response.status_code == 403:
-            logger.info("Dataset with metadata %s does not exist.", metadata_dict)
-        else:
-            logger.error(
-                "Failed to check dataset existence by metadata key %s \n"
-                "with status code: %s \n"
-                "Error message from scicat backend: \n%s\n"
-                "Assuming the dataset does not exist.",
-                metadata_key,
-                response.status_code,
-                response.reason,
-            )
-    else:
+    if response.ok:
         logger.info("Retrieved %s dataset(s) from SciCat", len(response.json()))
         logger.info("Dataset with metadata %s exists.", metadata_dict)
+    # Filter 403 error code.
+    # Scicat returns 403 error code when the file does not exist.
+    # This function is trying to check the existence of the dataset,
+    # therefore 403 error code should not be considered as an error.
+    elif response.status_code == 403:
+        logger.info("Dataset with metadata %s does not exist.", metadata_dict)
+    else:
+        logger.error(
+            "Failed to check dataset existence by metadata key %s \n"
+            "with status code: %s \n"
+            "Error message from scicat backend: \n%s\n"
+            "Assuming the dataset does not exist.",
+            metadata_key,
+            response.status_code,
+            response.reason,
+        )
 
     return dataset_exists
