@@ -127,23 +127,27 @@ def check_dataset_by_pid(
         stream=config.stream,
         verify=config.verify,
     )
-    dataset_exists: bool
-    if not response.ok:
-        logger.info("Request url : \n%s", response.url)
+    dataset_exists = response.ok
+    # Log the result
+    if response.ok:
+        logger.info("Retrieved %s dataset(s) from SciCat", len(response.json()))
+        logger.info("Dataset with pid %s exists.", pid)
+    # Filter 403 error code.
+    # Scicat returns 403 error code when the file does not exist.
+    # This function is trying to check the existence of the dataset,
+    # therefore 403 error code should not be considered as an error.
+    elif response.status_code == 403:
+        logger.info("Dataset with pid %s does not exist.", pid)
+    else:
         logger.error(
-            "Failed to check dataset existence by pid with status code: %s. "
+            "Failed to check dataset existence by pid %s\n"
+            "with status code: %s. \n"
             "Error message from scicat backend: \n%s\n"
             "Assuming the dataset does not exist.",
+            pid,
             response.status_code,
             response.reason,
         )
-        dataset_exists = False
-    elif response.json():
-        logger.info("Dataset with pid %s exists.", pid)
-        dataset_exists = True
-    else:
-        logger.info("Dataset with pid %s does not exist.", pid)
-        dataset_exists = False
 
     return dataset_exists
 
@@ -157,7 +161,7 @@ def check_dataset_by_metadata(
     metadata_dict = {f"scientificMetadata.{metadata_key}.value": metadata_value}
     filter_string = '?filter={"where":' + json.dumps(metadata_dict) + "}"
     url = urljoin(config.host_address, "datasets") + filter_string
-    logger.info("Checking if dataset exists by metadata with url: %s", url)
+    logger.info("Checking if dataset exists by metadata key: %s", metadata_key)
     response = _get_from_scicat(
         url=url,
         headers=config.headers,
@@ -165,23 +169,27 @@ def check_dataset_by_metadata(
         stream=config.stream,
         verify=config.verify,
     )
-    dataset_exists: bool
-    if not response.ok:
+    dataset_exists = response.ok
+
+    # Log the response
+    if response.ok:
+        logger.info("Retrieved %s dataset(s) from SciCat", len(response.json()))
+        logger.info("Dataset with metadata %s exists.", metadata_dict)
+    # Filter 403 error code.
+    # Scicat returns 403 error code when the file does not exist.
+    # This function is trying to check the existence of the dataset,
+    # therefore 403 error code should not be considered as an error.
+    elif response.status_code == 403:
+        logger.info("Dataset with metadata %s does not exist.", metadata_dict)
+    else:
         logger.error(
-            "Failed to check dataset existence by metadata key %s with status code: %s "
+            "Failed to check dataset existence by metadata key %s \n"
+            "with status code: %s \n"
             "Error message from scicat backend: \n%s\n"
             "Assuming the dataset does not exist.",
             metadata_key,
             response.status_code,
             response.reason,
         )
-        dataset_exists = False
-    elif response.json():
-        logger.info("Retrieved %s dataset(s) from SciCat", len(response.json()))
-        logger.info("Dataset with metadata %s exists.", metadata_dict)
-        dataset_exists = True
-    else:
-        logger.info("Dataset with metadata %s does not exist.", metadata_dict)
-        dataset_exists = False
 
     return dataset_exists
