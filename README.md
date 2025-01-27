@@ -1,13 +1,14 @@
 [![License: BSD 3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](LICENSE)
 
-# Scicat Filewriter Ingest
+# Scicat Ingestor
 
-A daemon that creates a raw dataset using scicat interface whenever a new file is written by a file-writer.
+Scicat ingestor creates a raw dataset along with metadata using
+``wrdn`` messages and scicat api whenever a new file is written by a file-writer.
 
 ## How to INSTALL
 ```bash
-git clone https://github.com/SciCatProject/scicat-filewriter-ingest.git
-cd scicat-filewriter-ingest
+git clone https://github.com/SciCatProject/scicat-ingestor.git
+cd scicat-ingestor
 pip install -e .  # It will allow you to use entry-points of the scripts,
                   # defined in ``pyproject.toml``, under ``[project.scripts]`` section.
 ```
@@ -56,7 +57,7 @@ scicat_ingestor --logging.verbose -c PATH_TO_CONFIGURATION_FILE.yaml --ingestion
 ```
 
 ```bash
-background_ingestor \
+scicat_background_ingestor \
     --logging.verbose \
     -c PATH_TO_CONFIGURATION_FILE.yaml \
     --nexus-file PATH_TO_THE_NEXUS_FILE.nxs \
@@ -122,6 +123,15 @@ We can apply common updates/dependency updates using
 ```bash
 copier update
 ```
+
+### Release
+We use github release to create a new tag and release notes.
+Typically we do not include dependabot PRs from the auto generated release notes.
+
+Release versions are [calendar version](https://calver.org/).
+For example, if it is 27.01.2025 and if it is the first version of this month, the version will be ``v25.01.0``.
+If another release or a patch release is made within the same month,
+the minor version can increase, i.e. ``v25.01.1``.
 
 ### Tox
 `tox` controls virtual environment and commands for various purposes.
