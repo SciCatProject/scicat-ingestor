@@ -17,7 +17,7 @@ flatbuffers==25.1.21
     # via ess-streaming-data-types
 graypy==2.1.0
     # via -r nightly.in
-h5py==3.12.1
+h5py==3.13.0
     # via -r nightly.in
 idna==3.10
     # via requests
