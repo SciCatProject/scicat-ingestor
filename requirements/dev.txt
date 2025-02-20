@@ -51,7 +51,7 @@ gitpython==3.1.44
     # via -r ci.in
 graypy==2.1.0
     # via -r base.in
-h5py==3.12.1
+h5py==3.13.0
     # via -r base.in
 identify==2.6.6
     # via pre-commit
