@@ -21,7 +21,7 @@ h5py==3.13.0
     # via -r base.in
 idna==3.10
     # via requests
-kafka-python==2.0.3
+kafka-python==2.0.4
     # via -r base.in
 markdown-it-py==3.0.0
     # via rich
