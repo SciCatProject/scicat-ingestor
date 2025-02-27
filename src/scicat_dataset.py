@@ -13,6 +13,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass, field
 from types import MappingProxyType
 from typing import Any
+import logging
 
 import h5py
 from scicat_communication import render_full_url, retrieve_value_from_scicat
@@ -52,9 +53,17 @@ def to_float(value: Any) -> float:
     return float(value)
 
 
-def to_date(value: Any) -> str | None:
+def to_date(value: Any) -> str | None:        
     if isinstance(value, str):
-        return datetime.datetime.fromisoformat(value).isoformat()
+        try:
+            # Try ISO format first
+            return datetime.datetime.fromisoformat(value).isoformat()
+        except ValueError:
+            try:
+                # Try custom format "dd-MMM-yy HH:mm:ss"
+                return datetime.datetime.strptime(value, "%d-%b-%y %H:%M:%S").replace(tzinfo=datetime.UTC).isoformat()
+            except ValueError:
+                return None
     elif isinstance(value, int | float):
         return datetime.datetime.fromtimestamp(value, tz=datetime.UTC).isoformat()
     return None
@@ -165,7 +174,15 @@ def _retrieve_values_from_file(
         paths = extract_paths_from_h5_file(h5file, path)
         value = [_retrieve_as_string(h5file, p) for p in paths]
     else:
-        value = _retrieve_as_string(h5file, variable_recipe.path)
+        try:
+            value = _retrieve_as_string(h5file, variable_recipe.path)
+        except KeyError:
+            value = None
+            logging.warning(
+                "Key %s not found in the file: %s",
+                variable_recipe.path,
+                h5file.filename
+            )
     return value
 
 

@@ -260,16 +260,28 @@ class DatasetOptions:
 class _ScicatAPIURLs:
     datasets: str
     proposals: str
+    samples: str
     origdatablocks: str
     instruments: str
+    login: str
+    logout: str
 
 
 @dataclass(kw_only=True)
 class ScicatEndpoints:
     datasets: str = "datasets"
     proposals: str = "proposals"
+    samples: str = "samples"
     origdatablocks: str = "origdatablocks"
     instruments: str = "instruments"
+    login: str = "login"
+    logout: str = "logout"
+
+
+@dataclass(kw_only=True)
+class ScicatAuth:
+    username: str = "USERNAME"
+    password: str = "PASSWORD"
 
 
 @dataclass(kw_only=True)
@@ -281,16 +293,20 @@ class SciCatOptions:
     stream: bool = True
     verify: bool = False
     api_endpoints: ScicatEndpoints = field(default_factory=ScicatEndpoints)
+    auth: ScicatAuth = field(default_factory=ScicatAuth)
 
     @property
     def urls(self) -> _ScicatAPIURLs:
         return _ScicatAPIURLs(
             datasets=urljoin(self.host_address, self.api_endpoints.datasets),
             proposals=urljoin(self.host_address, self.api_endpoints.proposals),
+            samples=urljoin(self.host_address, self.api_endpoints.samples),
             origdatablocks=urljoin(
                 self.host_address, self.api_endpoints.origdatablocks
             ),
             instruments=urljoin(self.host_address, self.api_endpoints.instruments),
+            login=urljoin(self.host_address, self.api_endpoints.login),
+            logout=urljoin(self.host_address, self.api_endpoints.logout),
         )
 
     @property
