@@ -17,11 +17,11 @@ flatbuffers==25.1.21
     # via ess-streaming-data-types
 graypy==2.1.0
     # via -r base.in
-h5py==3.12.1
+h5py==3.13.0
     # via -r base.in
 idna==3.10
     # via requests
-kafka-python==2.0.2
+kafka-python==2.0.5
     # via -r base.in
 markdown-it-py==3.0.0
     # via rich
