@@ -10,11 +10,13 @@ from scicat_communication import (
     logout,
     check_dataset_by_metadata,
     check_dataset_by_pid,
+    check_datafiles,
     get_instrument_by_name,
     get_proposal_by_id,
     get_sample_by_id,
-    get_dataset_by_metadata,
+    get_dataset_by_pid,
     create_scicat_dataset,
+    patch_scicat_dataset,
     create_scicat_origdatablock,
     create_instrument,
     create_proposal,
@@ -123,30 +125,48 @@ def _check_if_dataset_exists_by_metadata(
     # Other cases, assuming dataset does not exist
     return False
 
-def _check_if_dataset_exists_by_pid_and_sample_id(
+def _check_if_datafile_exists(
     local_dataset: ScicatDataset,
-    ingest_config: IngestionOptions,
+    nexus_file_path: Path,
     scicat_config: SciCatOptions,
     logger: logging.Logger,
 ) -> bool:
     """
-    Check if a dataset with the same pid and sample_id exists already in SciCat.
+    Check if a datafile exists already in SciCat.
     """
-    datasets = get_dataset_by_metadata(
-            metadata_key="sampleId",
-            metadata_value=local_dataset.sampleId,
-            config=scicat_config,
-            logger=logger
-        )
-    return _check_if_dataset_exists_by_pid(
-            local_dataset, ingest_config, scicat_config, logger
-        ) and any(ds.get('_id') == local_dataset.pid for ds in datasets)
+    return check_datafiles(
+        datafiles=[nexus_file_path.name],
+        proposalId=local_dataset.proposalId,
+        config=scicat_config,
+        logger=logger
+    )
 
 def _increment_dataset_number(pid: str) -> str:
     """Increment the dataset number in the PID.
     """
     base, number = pid.rsplit('DS', 1)
     return f"{base}DS{int(number) + 1}"
+
+def _generate_or_get_dataset_pid(
+    local_dataset: ScicatDataset,
+    scicat_config: SciCatOptions,
+    logger: logging.Logger,
+) -> str:
+    """Generate a dataset PID or get it from SciCat
+    if a dataset for same proposal and sampl already exists.
+    """
+    pid = f"{local_dataset.proposalId}_DS0"
+    existing_dataset = get_dataset_by_pid(
+        pid=pid, config=scicat_config, logger=logger
+    )
+    while existing_dataset:
+        if local_dataset.sampleId == existing_dataset.get("sampleId"):
+            return pid
+        pid = _increment_dataset_number(pid)
+        existing_dataset = get_dataset_by_pid(
+            pid=pid, config=scicat_config, logger=logger
+        )
+    return pid
 
 
 def main() -> None:
@@ -214,45 +234,34 @@ def main() -> None:
                     "Dataset name is set to 'Internal use'. Skipping ingestion of this dataset."
                 )
                 exit(logger, unexpected=False)
-            local_dataset_instance.pid  += "_DS0"
-            while  _check_if_dataset_exists_by_pid(
-                local_dataset_instance, config.ingestion, config.scicat, logger
-            ): 
-                if _check_if_dataset_exists_by_pid_and_sample_id(
-                    local_dataset_instance, config.ingestion, config.scicat, logger
-                ):
-                    logger.warning(
-                        "Dataset with pid %s and sampleId %s already present in SciCat. Skipping it!!!",
-                        local_dataset_instance.pid, local_dataset_instance.scientificMetadata.get('sampleId').get('value'),
-                    )
-                    logout(config.scicat, logger)
-                    exit(logger, unexpected=False)
-                local_dataset_instance.pid = _increment_dataset_number(
-                    local_dataset_instance.pid
-                )
-
-            if local_dataset_instance.sampleId is not None:
-                sample_data = get_sample_by_id(
-                    local_dataset_instance.sampleId, config.scicat, logger
-                )
-                if not sample_data:
-                    sample_data = create_sample(
-                        local_dataset=local_dataset_instance,
-                        config=config.scicat,
-                        logger=logger,
-                    )
 
             if "instrument_name" in variable_map:
-                instrument_data = get_instrument_by_name(
+                instrument_data_list = get_instrument_by_name(
                     variable_map["instrument_name"], config.scicat, logger
                 )
-                if not instrument_data:
+                if not instrument_data_list:
                     instrument_data = create_instrument(
                         instrument_name=variable_map["instrument_name"],
                         config=config.scicat,
                         logger=logger,
                     )
+                else:
+                    instrument_data = instrument_data_list[0]
                 local_dataset_instance.instrumentId = instrument_data["pid"]
+            else:
+                logger.error("Instrument name is not set in the variables.")
+                logout(config.scicat, logger)
+                exit(logger, unexpected=True)
+            
+            if _check_if_datafile_exists(
+                local_dataset_instance, nexus_file_path, config.scicat, logger
+            ):
+                logger.warning(
+                    "Datafile %s of proposal %s already present in SciCat. Skipping it!!!",
+                    nexus_file_path.name, local_dataset_instance.proposalId,
+                )
+                logout(config.scicat, logger)
+                exit(logger, unexpected=False)
 
             if "proposal_id" in variable_map:
                 proposal_data = get_proposal_by_id(
@@ -264,7 +273,34 @@ def main() -> None:
                         config=config.scicat,
                         logger=logger,
                     )
+                    if not proposal_data:
+                        logger.error("Failed to create proposal with ID: %s", local_dataset_instance.proposalId)
+                        logout(config.scicat, logger)
+                        exit(logger, unexpected=True)
                 local_dataset_instance.proposalId = proposal_data.get("proposalId")
+            else:
+                logger.error("Proposal ID is not set in the variables.")
+                logout(config.scicat, logger)
+                exit(logger, unexpected=True)
+
+            if local_dataset_instance.sampleId is not None:
+                sample_data = get_sample_by_id(
+                    local_dataset_instance.sampleId, config.scicat, logger
+                )
+                if not sample_data:
+                    sample_data = create_sample(
+                        local_dataset=local_dataset_instance,
+                        config=config.scicat,
+                        logger=logger,
+                    )
+            else:
+                logger.error("Sample ID is not set in the variables.")
+                logout(config.scicat, logger)
+                exit(logger, unexpected=True)
+
+            local_dataset_instance.pid = _generate_or_get_dataset_pid(
+                local_dataset_instance, config.scicat, logger
+            )
         else:
             # Check if dataset already exists in SciCat
             if _check_if_dataset_exists_by_pid(
@@ -302,9 +338,16 @@ def main() -> None:
             logout(config.scicat, logger)
             exit(logger, unexpected=False)
         else:
-            scicat_dataset = create_scicat_dataset(
-                dataset=local_dataset, config=config.scicat, logger=logger
-            )
+            if _check_if_dataset_exists_by_pid(
+                local_dataset_instance, config.ingestion, config.scicat, logger
+            ):
+                scicat_dataset = patch_scicat_dataset(
+                    dataset=local_dataset, config=config.scicat, logger=logger
+                )
+            else:
+                scicat_dataset = create_scicat_dataset(
+                    dataset=local_dataset, config=config.scicat, logger=logger
+                )
 
             # create origdatablock in scicat
             scicat_origdatablock = create_scicat_origdatablock(

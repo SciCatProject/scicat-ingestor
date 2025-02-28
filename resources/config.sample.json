@@ -29,7 +29,7 @@
       "compute_file_stats": true,
       "compute_file_hash": true,
       "file_hash_algorithm": "blake2b",
-      "save_file_hash": true,
+      "save_file_hash": false,
       "hash_file_extension": "b2b",
       "ingestor_files_directory": "../ingestor",
       "message_to_file": true,
