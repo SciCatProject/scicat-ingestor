@@ -3,6 +3,7 @@
 
 import logging
 from pathlib import Path
+import re
 
 import h5py
 from scicat_communication import (
@@ -149,6 +150,17 @@ def _increment_dataset_number(pid: str) -> str:
     base, number = pid.rsplit('DS', 1)
     return f"{base}DS{int(number) + 1}"
 
+def is_valid_email(email: str) -> bool:
+    """
+    Validates if a string is in a valid email format.
+    """
+    if not email:
+        return False
+        
+    # Standard email validation pattern
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return bool(re.match(pattern, email))
+
 def _generate_or_get_dataset_pid(
     local_dataset: ScicatDataset,
     scicat_config: SciCatOptions,
@@ -230,12 +242,18 @@ def main() -> None:
 
         config.scicat.token = login(config.scicat, logger)
 
-        if local_dataset_instance.principalInvestigator == "ILL":
+        if local_dataset_instance.creationLocation == "ILL":
             if local_dataset_instance.datasetName == "Internal use":
                 logger.warning(
                     "Dataset name is set to 'Internal use'. Skipping ingestion of this dataset."
                 )
                 exit(logger, unexpected=False)
+
+            if not is_valid_email(local_dataset_instance.contactEmail):
+                local_dataset_instance.contactEmail += "@ill.fr"
+                logger.warning(
+                    "Contact email is not a valid email address. Appending '@ill.fr' to it."
+                )
 
             if "instrument_name" in variable_map:
                 instrument_data_list = get_instrument_by_name(
