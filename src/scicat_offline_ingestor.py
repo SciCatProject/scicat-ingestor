@@ -11,12 +11,14 @@ from scicat_communication import (
     check_dataset_by_metadata,
     check_dataset_by_pid,
     check_datafiles,
+    check_origdatablock_by_datasetId,
     get_instrument_by_name,
     get_proposal_by_id,
     get_sample_by_id,
     get_dataset_by_pid,
     create_scicat_dataset,
     patch_scicat_dataset,
+    patch_scicat_origdatablock,
     create_scicat_origdatablock,
     create_instrument,
     create_proposal,
@@ -349,10 +351,16 @@ def main() -> None:
                     dataset=local_dataset, config=config.scicat, logger=logger
                 )
 
-            # create origdatablock in scicat
-            scicat_origdatablock = create_scicat_origdatablock(
-                origdatablock=local_origdatablock, config=config.scicat, logger=logger
-            )
+            if check_origdatablock_by_datasetId(
+                datasetId=local_origdatablock.get("datasetId", None), config=config.scicat, logger=logger
+            ):
+                scicat_origdatablock = patch_scicat_origdatablock(
+                    origdatablock=local_origdatablock, config=config.scicat, logger=logger
+                )
+            else:
+                scicat_origdatablock = create_scicat_origdatablock(
+                    origdatablock=local_origdatablock, config=config.scicat, logger=logger
+                )
 
             # check one more time if we successfully created the entries in scicat
             if not ((len(scicat_dataset) > 0) and (len(scicat_origdatablock) > 0)):

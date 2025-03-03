@@ -6,6 +6,7 @@ from dataclasses import asdict
 from typing import Any
 from urllib.parse import quote_plus, urljoin
 import dateutil.parser
+import copy
 
 import requests
 from scicat_configuration import SciCatOptions
@@ -108,7 +109,7 @@ def patch_scicat_dataset(
         raise ScicatDatasetAPIError(f"Error updating dataset: \n{dataset}")
 
     # Format the dataset object to be sent to the backend
-    patch_dataset = dataset.copy()
+    patch_dataset = copy.deepcopy(dataset)
     if 'creation_time' in patch_dataset:
         patch_dataset['creation_time'] = min(
             dateutil.parser.parse(patch_dataset['creation_time']),
@@ -145,6 +146,54 @@ def patch_scicat_dataset(
     logger.info(
         "Dataset updated successfully. Dataset pid: %s",
         result.get("pid"),
+    )
+    return result
+
+def patch_scicat_origdatablock(
+    *, origdatablock: dict, config: SciCatOptions, logger: logging.Logger
+) -> dict:
+    """
+    Execute a PATCH request to scicat to update an origdatablock
+    """
+    logger.info("Sending PATCH request to update origdatablock")
+    current_origdatablock = get_origdatablock_by_datasetId(origdatablock['datasetId'], config, logger)[0]
+    if not current_origdatablock:
+        logger.error("Origdatablock with datasetId %s does not exist", origdatablock['datasetId'])
+        raise ScicatOrigDatablockAPIError(f"Error updating origdatablock: \n{origdatablock}")
+
+    # Format the origdatablock object to be sent to the backend
+    patch_dataFileList = current_origdatablock['dataFileList'][:]
+    for file_info in origdatablock['dataFileList']:
+        if file_info not in patch_dataFileList:
+            patch_dataFileList.append(file_info)
+    for file_info in patch_dataFileList:
+        file_info.pop("_id", None)
+        file_info.pop("id", None)
+
+    patch_origdatablock = {
+        "ownerGroup": origdatablock['ownerGroup'],
+        "accessGroups": list(set(origdatablock['accessGroups'] + current_origdatablock['accessGroups'])),
+        "dataFileList": patch_dataFileList,
+        "size": sum([file_info.get("size", 0) for file_info in patch_dataFileList]),
+    }
+
+    response = requests.patch(
+        urljoin(config.host_address, f"{config.api_endpoints.origdatablocks}/{quote_plus(current_origdatablock['_id'])}"),
+        json=patch_origdatablock,
+        headers=config.headers,
+        timeout=config.timeout,
+    )
+    result: dict = response.json()
+    if not response.ok:
+        logger.error(
+            "Failed to update origdatablock. \nError message from scicat backend: \n%s",
+            result.get("error", {}),
+        )
+        raise ScicatOrigDatablockAPIError(f"Error updating origdatablock: \n{origdatablock}")
+
+    logger.info(
+        "Origdatablock updated successfully. Origdatablock pid: %s",
+        result.get("_id"),
     )
     return result
 
@@ -444,6 +493,12 @@ def check_datafiles(
             response.reason,
         )
         return False
+    
+def check_origdatablock_by_datasetId(
+    datasetId: str, config: SciCatOptions, logger: logging.Logger
+)-> bool:
+    origdatablock = get_origdatablock_by_datasetId(datasetId, config, logger)
+    return origdatablock is not None and len(origdatablock) > 0
 
 def get_instrument_by_name(
     instrument_name: str, config: SciCatOptions, logger: logging.Logger
@@ -547,7 +602,7 @@ def get_sample_by_id(
     elif response.status_code == 403:
         logger.info("Sample with id %s does not exist.", sample_id)
     else:
-        logger.error(
+        logger.warning(
             "Failed to check sample existence by id %s \n"
             "with status code: %s \n"
             "Error message from scicat backend: \n%s"
@@ -583,6 +638,48 @@ def get_dataset_by_sample_id(
             "Error message from scicat backend: \n%s\n"
             "Assuming the dataset does not exist.",
             sample_id,
+            response.status_code,
+            response.reason,
+        )
+    return None
+
+def get_origdatablock_by_datasetId(
+    datasetId: str, config: SciCatOptions, logger: logging.Logger
+):
+    if not datasetId:
+        logger.error("DatasetId is missing")
+        return None
+    filter_string = '?filter={"where":{"datasetId":"' + datasetId + '"}}'
+    url = urljoin(config.host_address, config.api_endpoints.origdatablocks) + filter_string
+    logger.info("Checking if origdatablock exists by datasetId: %s", datasetId)
+    response = _get_from_scicat(
+        url=url,
+        headers=config.headers,
+        timeout=config.timeout,
+        stream=config.stream,
+        verify=config.verify,
+    )
+    dataset = response.json()
+    if response.ok:
+        logger.info("Retrieved %s origdatablock(s) from SciCat", len(dataset))
+        if len(dataset) > 0:
+            logger.info("Origdatablock with datasetId %s exists.", datasetId)
+        else:
+            logger.info("Origdatablock with datasetId %s does not exist.", datasetId)
+        return dataset
+    # Filter 403 error code.
+    # Scicat returns 403 error code when the file does not exist.
+    # This function is trying to check the existence of the dataset,
+    # therefore 403 error code should not be considered as an error.
+    elif response.status_code == 403:
+        logger.info("Origdatablock with datasetId %s does not exist.", datasetId)
+    else:
+        logger.error(
+            "Failed to check origdatablock existence by datasetId %s \n"
+            "with status code: %s \n"
+            "Error message from scicat backend: \n%s\n"
+            "Assuming the origdatablock does not exist.",
+            datasetId,
             response.status_code,
             response.reason,
         )
