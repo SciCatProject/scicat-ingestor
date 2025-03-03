@@ -27,7 +27,7 @@ colorama==0.4.6
     # via
     #   copier
     #   tox
-confluent-kafka==2.8.0
+confluent-kafka==2.8.2
     # via -r base.in
 copier==9.5.0
     # via -r dev.in
