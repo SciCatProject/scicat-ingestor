@@ -162,7 +162,10 @@ def _get_operator(operator: str | None) -> Callable:
 def _retrieve_as_string(
     h5file: h5py.File, path: str, *, encoding: str = "utf-8"
 ) -> str:
-    return h5file[path][...].item().decode(encoding)
+    value = h5file[path][...].item()
+    
+    # Handle bytes specifically, otherwise just convert to string
+    return value.decode(encoding) if isinstance(value, bytes) else str(value)
 
 
 def _retrieve_values_from_file(
@@ -171,8 +174,27 @@ def _retrieve_values_from_file(
     if "*" in variable_recipe.path:  # Selectors are used
         path = variable_recipe.path.split("/")[1:]
         path[0] += "/"
-        paths = extract_paths_from_h5_file(h5file, path)
-        value = [_retrieve_as_string(h5file, p) for p in paths]
+        paths = extract_paths_from_h5_file(h5file, path[:])
+        if variable_recipe.value_type == "dict":
+            # Build a nested dictionary reflecting the HDF5 structure
+            result = {}
+            for p in paths:
+                # Skip the common base path parts
+                parts = p.split("/")[len(path):]
+                
+                # Navigate to the correct position in the dict
+                current = result
+                for i, part in enumerate(parts[:-1]):
+                    if part not in current:
+                        current[part] = {}
+                    current = current[part]
+                    
+                # Set the leaf value
+                if parts:
+                    current[parts[-1]] = _retrieve_as_string(h5file, p)                    
+            value = result
+        else:
+            value = [_retrieve_as_string(h5file, p) for p in paths]
     else:
         try:
             value = _retrieve_as_string(h5file, variable_recipe.path)
@@ -234,15 +256,27 @@ def extract_paths_from_h5_file(
 ) -> list[str]:
     master_key = _path.pop(0)
     output_paths = []
+
     if "*" in master_key:
-        temp_keys = [k2 for k2 in _h5_object.keys() if re.search(master_key, k2)]
+        regex_pattern = master_key.replace("*", ".*")
+        temp_keys = [k2 for k2 in _h5_object.keys() if re.search(regex_pattern, k2)]
         for key in temp_keys:
-            output_paths += [
-                key + "/" + subkey
-                for subkey in extract_paths_from_h5_file(
-                    _h5_object[key], copy.deepcopy(_path)
-                )
-            ]
+            if _h5_object[key].__class__ == h5py.Group:
+                output_paths += [
+                    key + "/" + subkey
+                    for subkey in extract_paths_from_h5_file(
+                        _h5_object[key], copy.deepcopy(_path + [master_key])
+                    )
+                ]
+            elif _path:
+                output_paths += [
+                    key + "/" + subkey
+                    for subkey in extract_paths_from_h5_file(
+                        _h5_object[key], copy.deepcopy(_path)
+                    )
+                ]
+            else:
+                output_paths.append(key)
     else:
         if _path:
             output_paths = [

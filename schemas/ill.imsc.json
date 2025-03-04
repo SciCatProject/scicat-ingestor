@@ -116,19 +116,24 @@
       "value_type": "date"
     },
     "contactEmail": {
-      "source": "VALUE",
-      "value": "nomad@ill.fr",
+      "source": "NXS",
+      "path": "/entry0/user/namelocalcontact",
       "value_type": "string"
     },
     "principalInvestigator": {
-      "source": "VALUE",
-      "value": "ILL",
+      "source": "NXS",
+      "path": "/entry0/user/name",
       "value_type": "string"
     },
     "sourceFolder": {
       "source": "VALUE",
       "value": "/users/data",
       "value_type": "string"
+    },
+    "sampleProperties": {
+      "source": "NXS",
+      "path": "/entry0/sample/*",
+      "value_type": "dict"
     }
   },
   "schema": {
@@ -293,6 +298,13 @@
       "human_name": "Source Folder",
       "value": "<sourceFolder>",
       "type": "string"
+    },
+    "sampleProperties": {
+      "field_type": "scientific_metadata",
+      "machine_name": "sampleProperties",
+      "human_name": "Sample Properties",
+      "value": "<sampleProperties>",
+      "type": "dict"
     }
   }
 }

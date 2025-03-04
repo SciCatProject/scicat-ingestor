@@ -566,7 +566,7 @@ def get_proposal_by_id(
     elif response.status_code == 403:
         logger.info("Proposal with id %s does not exist.", proposal_id)
     else:
-        logger.error(
+        logger.warning(
             "Failed to check proposal existence by id %s \n"
             "with status code: %s \n"
             "Error message from scicat backend: \n%s\n"
