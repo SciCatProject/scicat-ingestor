@@ -203,6 +203,8 @@ def _select_applicable_schema(
 
         if select_function_name == "starts_with":
             return select_target_value.startswith(select_argument)
+        elif select_function_name == "contains":
+            return select_argument in select_target_value
         else:
             raise ValueError(f"Invalid function name {select_function_name}")
 
@@ -231,10 +233,28 @@ def select_applicable_schema(
     """
     Evaluates which metadata schema configuration is applicable to ``nexus_file``.
 
-    Order of the schemas matters and first schema that is suitable is selected.
+    Order of the schemas matters and first schema that is suitable is selected in priority.
+    if other schemas are also suitable, keep only what is not in conflict.
     """
+    result_schema = None
     for schema in schemas.values():
         if _select_applicable_schema(schema.selector, str(nexus_file)):
-            return schema
-
+            if result_schema is None:
+                result_schema = schema
+            else:
+                # Merge the schema
+                result_schema.id += '_' + schema.id
+                result_schema.name += ' & ' + schema.name
+                result_schema.order = min(result_schema.order, schema.order)
+                result_schema.selector = {
+                    "and": [result_schema.selector, schema.selector]
+                }
+                for key, value in schema.variables.items():
+                    if key not in result_schema.variables:
+                        result_schema.variables[key] = value
+                for key, value in schema.schema.items():
+                    if key not in result_schema.schema:
+                        result_schema.schema[key] = value
+    if result_schema:
+        return result_schema
     raise Exception("No applicable metadata schema configuration found!!")
