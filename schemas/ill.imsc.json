@@ -40,6 +40,11 @@
       "path": "/entry0/end_time",
       "value_type": "date"
     },
+    "duration": {
+      "source": "NXS",
+      "path": "/entry0/duration",
+      "value_type": "string"
+    },
     "owner_group": {
       "source": "VALUE",
       "value": "ingestor",
@@ -174,6 +179,12 @@
       "human_name": "End Time",
       "value": "<end_time>",
       "type": "date"
+    },
+    "duration": {
+      "field_type": "scientific_metadata",
+      "machine_name": "duration",
+      "value": "<duration>",
+      "type": "string"
     },
     "owner_group": {
       "field_type": "high_level",

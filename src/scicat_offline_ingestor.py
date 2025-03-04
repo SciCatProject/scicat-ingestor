@@ -283,6 +283,18 @@ def main() -> None:
                 logout(config.scicat, logger)
                 exit(logger, unexpected=False)
 
+            if "duration" in variable_map and "duration" in local_dataset_instance.scientificMetadata:
+                try:
+                    # Create a clean relative path for use as the key
+                    source_folder = local_dataset_instance.sourceFolder
+                    rel_path = nexus_file_path.relative_to(source_folder) if nexus_file_path.is_relative_to(source_folder) else nexus_file_path.name
+                    
+                    # Store duration as a mapping from file path to duration value
+                    duration_value = local_dataset_instance.scientificMetadata["duration"]["value"]
+                    local_dataset_instance.scientificMetadata["duration"]["value"] = {str(rel_path): duration_value}
+                except (ValueError, TypeError) as e:
+                    logger.warning("Failed to process duration metadata: %s", str(e))
+
             if "proposal_id" in variable_map:
                 proposal_data = get_proposal_by_id(
                     local_dataset_instance.proposalId, config.scicat, logger

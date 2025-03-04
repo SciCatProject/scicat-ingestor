@@ -126,6 +126,12 @@ def patch_scicat_dataset(
                 dateutil.parser.parse(patch_dataset['scientificMetadata']['end_time']['value']),
                 dateutil.parser.parse(current_dataset['scientificMetadata']['end_time']['value'])
             ).isoformat()
+        if 'duration' in patch_dataset['scientificMetadata']:
+            current_value = current_dataset.get('scientificMetadata', {}).get('duration', {}).get('value', {})
+            patch_dataset['scientificMetadata']['duration']['value'] = {
+                **current_value,
+                **patch_dataset['scientificMetadata']['duration']['value']
+            }
     patch_dataset.pop("pid", None)
     patch_dataset.pop("type", None)
 
