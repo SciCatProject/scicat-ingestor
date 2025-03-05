@@ -132,6 +132,13 @@ def patch_scicat_dataset(
                 **current_value,
                 **patch_dataset['scientificMetadata']['duration']['value']
             }
+        if 'sampleProperties' in patch_dataset['scientificMetadata']:
+            if 'additional_environment' in patch_dataset['scientificMetadata']['sampleProperties']['value']:
+                current_value = current_dataset.get('scientificMetadata', {}).get('sampleProperties', {}).get('value', {})
+                patch_dataset['scientificMetadata']['sampleProperties']['value'] = {
+                    **current_value,
+                    **patch_dataset['scientificMetadata']['sampleProperties']['value']
+                }
     patch_dataset.pop("pid", None)
     patch_dataset.pop("type", None)
 

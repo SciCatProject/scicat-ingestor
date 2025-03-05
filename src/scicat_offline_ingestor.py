@@ -4,6 +4,7 @@
 import logging
 from pathlib import Path
 import re
+from typing import OrderedDict
 
 import h5py
 from scicat_communication import (
@@ -43,7 +44,7 @@ from scicat_dataset import (
     scicat_dataset_to_dict,
 )
 from scicat_logging import build_logger
-from scicat_metadata import collect_schemas, select_applicable_schema
+from scicat_metadata import MetadataSchema, collect_schemas, select_applicable_schema
 from scicat_path_helpers import compose_ingestor_directory
 from system_helpers import exit, handle_exceptions
 
@@ -182,24 +183,104 @@ def _generate_or_get_dataset_pid(
         )
     return pid
 
+def _process_ill_dataset(
+    local_dataset_instance: ScicatDataset,
+    nexus_file_path: Path,
+    variable_map: dict,
+    config: OfflineIngestorConfig,
+    logger: logging.Logger,
+) -> ScicatDataset:
+    if local_dataset_instance.datasetName == "Internal use":
+        logger.warning(
+            "Dataset name is set to 'Internal use'. Skipping ingestion of this dataset."
+        )
+        raise RuntimeError("Dataset name is set to 'Internal use'.")
 
-def main() -> None:
-    """Main entry point of the app."""
-    tmp_config = build_offline_config()
-    logger = build_logger(tmp_config)
-    config = build_offline_config(logger=logger)
-    fh_options = config.ingestion.file_handling
+    if not is_valid_email(local_dataset_instance.contactEmail):
+        local_dataset_instance.contactEmail += "@ill.fr"
+        logger.warning(
+            "Contact email is not a valid email address. Appending '@ill.fr' to it."
+        )
 
-    # Log the configuration as dictionary so that it is easier to read from the logs
-    logger.info(
-        'Starting the Scicat background Ingestor with the following configuration: %s',
-        config.to_dict(),
+    if "instrument_name" in variable_map:
+        instrument_data_list = get_instrument_by_name(
+            variable_map["instrument_name"], config.scicat, logger
+        )
+        if not instrument_data_list:
+            instrument_data = create_instrument(
+                instrument_name=variable_map["instrument_name"],
+                config=config.scicat,
+                logger=logger,
+            )
+        else:
+            instrument_data = instrument_data_list[0]
+        local_dataset_instance.instrumentId = instrument_data["pid"]
+    else:
+        logger.error("Instrument name is not set in the variables.")
+        raise RuntimeError("Instrument name is not set in the variables.")
+    
+    if _check_if_datafile_exists(
+        local_dataset_instance, nexus_file_path, config.scicat, logger
+    ):
+        logger.warning(
+            "Datafile %s of proposal %s already present in SciCat. Skipping it!!!",
+            nexus_file_path.name, local_dataset_instance.proposalId,
+        )
+        raise RuntimeError("Datafile already present in SciCat.")
+
+    if "duration" in variable_map and "duration" in local_dataset_instance.scientificMetadata:
+        try:
+            # Create a clean relative path for use as the key
+            source_folder = local_dataset_instance.sourceFolder
+            rel_path = nexus_file_path.relative_to(source_folder) if nexus_file_path.is_relative_to(source_folder) else nexus_file_path.name
+            
+            # Store duration as a mapping from file path to duration value
+            duration_value = local_dataset_instance.scientificMetadata["duration"]["value"]
+            local_dataset_instance.scientificMetadata["duration"]["value"] = {str(rel_path): duration_value}
+        except (ValueError, TypeError) as e:
+            logger.warning("Failed to process duration metadata: %s", str(e))
+
+    if "proposal_id" in variable_map:
+        proposal_data = get_proposal_by_id(
+            local_dataset_instance.proposalId, config.scicat, logger
+        )
+        if not proposal_data:
+            proposal_data = create_proposal(
+                local_dataset=local_dataset_instance,
+                config=config.scicat,
+                logger=logger,
+            )
+            if not proposal_data:
+                logger.error("Failed to create proposal with ID: %s", local_dataset_instance.proposalId)
+                raise RuntimeError("Failed to create proposal with ID: %s" % local_dataset_instance.proposalId)
+        local_dataset_instance.proposalId = proposal_data.get("proposalId")
+    else:
+        logger.error("Proposal ID is not set in the variables.")
+        raise RuntimeError("Proposal ID is not set in the variables.")
+
+    if local_dataset_instance.sampleId is not None:
+        sample_data = get_sample_by_id(
+            local_dataset_instance.sampleId, config.scicat, logger
+        )
+        if not sample_data:
+            sample_data = create_sample(
+                local_dataset=local_dataset_instance,
+                config=config.scicat,
+                logger=logger,
+            )
+    else:
+        logger.error("Sample ID is not set in the variables.")
+        raise RuntimeError("Sample ID is not set in the variables.")
+
+    local_dataset_instance.pid = _generate_or_get_dataset_pid(
+        local_dataset_instance, config.scicat, logger
     )
+    return local_dataset_instance
 
-    # Collect all metadata schema configurations
-    schemas = collect_schemas(config.ingestion.schemas_directory)
 
-    with handle_exceptions(logger):
+def _process_single_file(nexus_file_path: Path, schemas: OrderedDict[str, MetadataSchema], config: OfflineIngestorConfig, logger: logging.Logger) -> bool:
+    try:
+        fh_options = config.ingestion.file_handling
         nexus_file_path = Path(config.nexus_file)
         logger.info("Nexus file to be ingested: %s", nexus_file_path)
 
@@ -243,95 +324,8 @@ def main() -> None:
         config.scicat.token = login(config.scicat, logger)
 
         if local_dataset_instance.creationLocation == "ILL":
-            if local_dataset_instance.datasetName == "Internal use":
-                logger.warning(
-                    "Dataset name is set to 'Internal use'. Skipping ingestion of this dataset."
-                )
-                exit(logger, unexpected=False)
-
-            if not is_valid_email(local_dataset_instance.contactEmail):
-                local_dataset_instance.contactEmail += "@ill.fr"
-                logger.warning(
-                    "Contact email is not a valid email address. Appending '@ill.fr' to it."
-                )
-
-            if "instrument_name" in variable_map:
-                instrument_data_list = get_instrument_by_name(
-                    variable_map["instrument_name"], config.scicat, logger
-                )
-                if not instrument_data_list:
-                    instrument_data = create_instrument(
-                        instrument_name=variable_map["instrument_name"],
-                        config=config.scicat,
-                        logger=logger,
-                    )
-                else:
-                    instrument_data = instrument_data_list[0]
-                local_dataset_instance.instrumentId = instrument_data["pid"]
-            else:
-                logger.error("Instrument name is not set in the variables.")
-                logout(config.scicat, logger)
-                exit(logger, unexpected=True)
-            
-            if _check_if_datafile_exists(
-                local_dataset_instance, nexus_file_path, config.scicat, logger
-            ):
-                logger.warning(
-                    "Datafile %s of proposal %s already present in SciCat. Skipping it!!!",
-                    nexus_file_path.name, local_dataset_instance.proposalId,
-                )
-                logout(config.scicat, logger)
-                exit(logger, unexpected=False)
-
-            if "duration" in variable_map and "duration" in local_dataset_instance.scientificMetadata:
-                try:
-                    # Create a clean relative path for use as the key
-                    source_folder = local_dataset_instance.sourceFolder
-                    rel_path = nexus_file_path.relative_to(source_folder) if nexus_file_path.is_relative_to(source_folder) else nexus_file_path.name
-                    
-                    # Store duration as a mapping from file path to duration value
-                    duration_value = local_dataset_instance.scientificMetadata["duration"]["value"]
-                    local_dataset_instance.scientificMetadata["duration"]["value"] = {str(rel_path): duration_value}
-                except (ValueError, TypeError) as e:
-                    logger.warning("Failed to process duration metadata: %s", str(e))
-
-            if "proposal_id" in variable_map:
-                proposal_data = get_proposal_by_id(
-                    local_dataset_instance.proposalId, config.scicat, logger
-                )
-                if not proposal_data:
-                    proposal_data = create_proposal(
-                        local_dataset=local_dataset_instance,
-                        config=config.scicat,
-                        logger=logger,
-                    )
-                    if not proposal_data:
-                        logger.error("Failed to create proposal with ID: %s", local_dataset_instance.proposalId)
-                        logout(config.scicat, logger)
-                        exit(logger, unexpected=True)
-                local_dataset_instance.proposalId = proposal_data.get("proposalId")
-            else:
-                logger.error("Proposal ID is not set in the variables.")
-                logout(config.scicat, logger)
-                exit(logger, unexpected=True)
-
-            if local_dataset_instance.sampleId is not None:
-                sample_data = get_sample_by_id(
-                    local_dataset_instance.sampleId, config.scicat, logger
-                )
-                if not sample_data:
-                    sample_data = create_sample(
-                        local_dataset=local_dataset_instance,
-                        config=config.scicat,
-                        logger=logger,
-                    )
-            else:
-                logger.error("Sample ID is not set in the variables.")
-                logout(config.scicat, logger)
-                exit(logger, unexpected=True)
-
-            local_dataset_instance.pid = _generate_or_get_dataset_pid(
-                local_dataset_instance, config.scicat, logger
+            local_dataset_instance = _process_ill_dataset(
+                local_dataset_instance, nexus_file_path, variable_map, config, logger
             )
         else:
             # Check if dataset already exists in SciCat
@@ -344,8 +338,7 @@ def main() -> None:
                     "Dataset with pid %s already present in SciCat. Skipping it!!!",
                     local_dataset_instance.pid,
                 )
-                logout(config.scicat, logger)
-                exit(logger, unexpected=False)
+                raise RuntimeError("Dataset already present in SciCat.")
 
         # If dataset does not exist, continue with the creation of the dataset
         local_dataset = scicat_dataset_to_dict(local_dataset_instance)
@@ -367,8 +360,7 @@ def main() -> None:
             logger.info(
                 "Dry run mode. Skipping Scicat API calls for creating dataset ..."
             )
-            logout(config.scicat, logger)
-            exit(logger, unexpected=False)
+            raise RuntimeError("Dry run mode. Skipping Scicat API calls for creating dataset.")
         else:
             if _check_if_dataset_exists_by_pid(
                 local_dataset_instance, config.ingestion, config.scicat, logger
@@ -403,13 +395,96 @@ def main() -> None:
                 raise RuntimeError("Failed to create dataset or origdatablock.")
 
             # check one more time if we successfully created the entries in scicat
-            logout(config.scicat, logger)
-            exit(
-                logger,
-                unexpected=not (bool(scicat_dataset) and bool(scicat_origdatablock)),
-            )
-            raise RuntimeError("Failed to create dataset or origdatablock.")
+            if not (bool(scicat_dataset) and bool(scicat_origdatablock)):
+                raise RuntimeError("Failed to create dataset or origdatablock.")
+            
+        logout(config.scicat, logger)
+        return True        
+    except Exception as e:
+        logger.error("Failed to process file %s: %s", nexus_file_path, str(e))
+        logout(config.scicat, logger)
+        return False
 
+def main() -> None:
+    """Main entry point of the app."""
+    tmp_config = build_offline_config()
+    logger = build_logger(tmp_config)
+    config = build_offline_config(logger=logger)
+
+    # Log the configuration as dictionary so that it is easier to read from the logs
+    logger.info(
+        'Starting the Scicat background Ingestor with the following configuration: %s',
+        config.to_dict(),
+    )
+
+    # Collect all metadata schema configurations
+    schemas = collect_schemas(config.ingestion.schemas_directory)
+
+    # Determine files to process
+    path = Path(config.nexus_file)
+    if not path.exists():
+        logger.error("Path %s does not exist.", path)
+        exit(logger, unexpected=True)
+        
+    files_to_process = []
+    
+    if path.is_dir():
+        # Process directory recursively
+        logger.info("Processing directory: %s", path)
+        # Find all .nxs files recursively
+        for nexus_file in path.glob('**/*.nxs'):
+            files_to_process.append(nexus_file)
+        logger.info("Found %d Nexus files to process", len(files_to_process))
+    else:
+        # Process single file
+        files_to_process.append(path)
+        
+    if not files_to_process:
+        logger.warning("No files found to process")
+        exit(logger, unexpected=False)
+        
+    # Track overall success
+    success_count = 0
+    total_files = len(files_to_process)
+    
+    # Process each file
+    for index, nexus_file_path in enumerate(files_to_process):
+        logger.info(
+            "Processing file %d of %d: %s", 
+            index + 1, 
+            total_files, 
+            nexus_file_path
+        )
+        
+        # Create a modified config with the current file path
+        file_config = config
+        file_config.nexus_file = str(nexus_file_path)
+        
+        try:
+            # Process the file
+            result = _process_single_file(nexus_file_path, schemas, file_config, logger)
+            if result:
+                success_count += 1
+                logger.info("Successfully processed file: %s", nexus_file_path)
+            else:
+                logger.warning("Failed to process file: %s", nexus_file_path)
+        except Exception as e:
+            logger.error(
+                "Error processing file %s: %s", 
+                nexus_file_path, 
+                str(e), 
+                exc_info=True
+            )
+    
+    # Report results
+    logger.info(
+        "Processing complete. Successfully processed %d of %d files.", 
+        success_count, 
+        total_files
+    )
+    
+    # Exit with status based on overall success
+    exit(logger, unexpected=(success_count == 0 and total_files > 0))
 
 if __name__ == "__main__":
     main()
