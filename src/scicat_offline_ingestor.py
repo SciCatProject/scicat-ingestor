@@ -253,6 +253,9 @@ def _process_ill_dataset(
         raise RuntimeError("Proposal ID is not set in the variables.")
 
     if local_dataset_instance.sampleId is not None:
+        if local_dataset_instance.sampleId.strip() == "":
+            local_dataset_instance.sampleId =  f"UNKNOWN_{local_dataset_instance.proposalId}"
+            logger.debug("Sample ID is empty. Setting it to default: %s", local_dataset_instance.sampleId)
         sample_data = get_sample_by_id(
             local_dataset_instance.sampleId, config.scicat, logger
         )

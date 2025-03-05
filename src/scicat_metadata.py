@@ -193,37 +193,64 @@ def collect_schemas(dir_path: pathlib.Path) -> OrderedDict[str, MetadataSchema]:
 def _select_applicable_schema(
     selector: str | dict, filename: str | None = None
 ) -> bool:
-    if isinstance(selector, str):
-        # filename:starts_with:/ess/data/coda
-        select_target_name, select_function_name, select_argument = selector.split(":")
-        if select_target_name in ["filename"]:
+    """
+    Evaluate if a schema applies to a file based on its selector.
+    
+    Iteratively processes the selector to avoid recursion limit issues.
+    """
+    # Use a stack to avoid recursion
+    stack = [(selector, True)]  # (selector, is_and_context)
+    final_result = True
+    
+    while stack:
+        current_selector, is_and_context = stack.pop()
+        
+        if isinstance(current_selector, str):
+            parts = current_selector.split(":")
+            if len(parts) != 3:
+                raise ValueError(f"Invalid selector format: {current_selector}")
+                
+            select_target_name, select_function_name, select_argument = parts
+            
+            if select_target_name not in ["filename"]:
+                raise ValueError(f"Invalid target name {select_target_name}")
+                
             select_target_value = filename
-        else:
-            raise ValueError(f"Invalid target name {select_target_name}")
-
-        if select_function_name == "starts_with":
-            return select_target_value.startswith(select_argument)
-        elif select_function_name == "contains":
-            return select_argument in select_target_value
-        else:
-            raise ValueError(f"Invalid function name {select_function_name}")
-
-    elif isinstance(selector, dict):
-        output = True
-        for key, conditions in selector.items():
-            if key == "or":
-                output = output and any(
-                    _select_applicable_schema(item, filename) for item in conditions
-                )
-            elif key == "and":
-                output = output and all(
-                    _select_applicable_schema(item, filename) for item in conditions
-                )
+            
+            if select_function_name == "starts_with":
+                result = select_target_value.startswith(select_argument)
+            elif select_function_name == "contains":
+                result = select_argument in select_target_value
             else:
-                raise NotImplementedError("Invalid operator")
-        return output
-    else:
-        raise Exception(f"Invalid type for schema selector {type(selector)}")
+                raise ValueError(f"Invalid function name {select_function_name}")
+                
+            # Apply the result based on current context
+            if is_and_context:
+                final_result = final_result and result
+                if not final_result:  # Short-circuit AND
+                    break
+            else:
+                final_result = final_result or result
+                if final_result:  # Short-circuit OR
+                    break
+                    
+        # Dictionary selectors are broken down into their components
+        elif isinstance(current_selector, dict):
+            for key, conditions in current_selector.items():
+                if key == "or":
+                    # Push each condition onto the stack with OR context
+                    for item in reversed(conditions):  # Reverse to maintain order with stack
+                        stack.append((item, False))
+                elif key == "and":
+                    # Push each condition onto the stack with AND context
+                    for item in reversed(conditions):
+                        stack.append((item, True))
+                else:
+                    raise NotImplementedError(f"Invalid operator: {key}")
+        else:
+            raise ValueError(f"Invalid selector type: {type(current_selector)}")
+            
+    return final_result
 
 
 def select_applicable_schema(

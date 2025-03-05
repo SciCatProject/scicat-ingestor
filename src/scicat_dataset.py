@@ -205,7 +205,7 @@ def _retrieve_values_from_file(
                 variable_recipe.path,
                 h5file.filename
             )
-    return value
+    return value.strip() if isinstance(value, str) else value
 
 
 def extract_variables_values(

@@ -346,12 +346,16 @@ def create_sample(
         headers=config.headers,
         timeout=config.timeout,
     )
-    result: dict = response.json()
+    result = response.json()
     if not response.ok:
+        if result is dict:
+            error_message = result.get("error", {})
+        else:
+            error_message = result
         logger.error(
             "Failed to create new sample. "
             "Error message from scicat backend: \n%s",
-            result.get("error", {}),
+            error_message,
         )
         raise ScicatOrigDatablockAPIError(
             f"Error creating new sample: \n{sample_obj}"
