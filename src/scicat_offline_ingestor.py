@@ -79,7 +79,7 @@ def _check_if_dataset_exists_by_pid(
     Check if a dataset with the same pid exists already in SciCat.
     """
     if ingest_config.check_if_dataset_exists_by_pid and (local_dataset.pid is not None):
-        logger.info(
+        logger.debug(
             "Checking if dataset with pid %s already exists.", local_dataset.pid
         )
         return check_dataset_by_pid(
@@ -106,7 +106,7 @@ def _check_if_dataset_exists_by_metadata(
         metadata_value = target_metadata.get("value")
 
         if metadata_value is not None:
-            logger.info(
+            logger.debug(
                 "Checking if dataset with scientific metadata key %s "
                 "set to value %s already exists.",
                 metadata_key,
@@ -119,12 +119,12 @@ def _check_if_dataset_exists_by_metadata(
                 logger=logger,
             )
         else:
-            logger.info(
+            logger.debug(
                 "No value found for metadata key %s specified for checking dataset.",
                 metadata_key,
             )
     else:
-        logger.info("No metadata key specified for checking dataset existence.")
+        logger.debug("No metadata key specified for checking dataset existence.")
 
     # Other cases, assuming dataset does not exist
     return False
@@ -191,14 +191,11 @@ def _process_ill_dataset(
     logger: logging.Logger,
 ) -> ScicatDataset:
     if local_dataset_instance.datasetName == "Internal use":
-        logger.warning(
-            "Dataset name is set to 'Internal use'. Skipping ingestion of this dataset."
-        )
         raise RuntimeError("Dataset name is set to 'Internal use'.")
 
     if not is_valid_email(local_dataset_instance.contactEmail):
         local_dataset_instance.contactEmail += "@ill.fr"
-        logger.warning(
+        logger.debug(
             "Contact email is not a valid email address. Appending '@ill.fr' to it."
         )
 
@@ -216,7 +213,6 @@ def _process_ill_dataset(
             instrument_data = instrument_data_list[0]
         local_dataset_instance.instrumentId = instrument_data["pid"]
     else:
-        logger.error("Instrument name is not set in the variables.")
         raise RuntimeError("Instrument name is not set in the variables.")
     
     if _check_if_datafile_exists(
@@ -251,11 +247,9 @@ def _process_ill_dataset(
                 logger=logger,
             )
             if not proposal_data:
-                logger.error("Failed to create proposal with ID: %s", local_dataset_instance.proposalId)
                 raise RuntimeError("Failed to create proposal with ID: %s" % local_dataset_instance.proposalId)
         local_dataset_instance.proposalId = proposal_data.get("proposalId")
     else:
-        logger.error("Proposal ID is not set in the variables.")
         raise RuntimeError("Proposal ID is not set in the variables.")
 
     if local_dataset_instance.sampleId is not None:
@@ -269,7 +263,6 @@ def _process_ill_dataset(
                 logger=logger,
             )
     else:
-        logger.error("Sample ID is not set in the variables.")
         raise RuntimeError("Sample ID is not set in the variables.")
 
     local_dataset_instance.pid = _generate_or_get_dataset_pid(
@@ -282,16 +275,17 @@ def _process_single_file(nexus_file_path: Path, schemas: OrderedDict[str, Metada
     try:
         fh_options = config.ingestion.file_handling
         nexus_file_path = Path(config.nexus_file)
-        logger.info("Nexus file to be ingested: %s", nexus_file_path)
+        logger.debug("Nexus file to be ingested: %s", nexus_file_path)
 
         # Path to the directory where the ingestor saves the files it creates
         ingestor_directory = compose_ingestor_directory(fh_options, nexus_file_path)
+        logger.debug("Ingestor directory: %s", ingestor_directory)
 
         # open nexus file with h5py
         with h5py.File(nexus_file_path) as h5file:
             # load instrument metadata configuration
             metadata_schema = select_applicable_schema(nexus_file_path, schemas)
-            logger.info(
+            logger.debug(
                 "Metadata Schema selected : %s (Id: %s)",
                 metadata_schema.name,
                 metadata_schema.id,
@@ -312,7 +306,7 @@ def _process_single_file(nexus_file_path: Path, schemas: OrderedDict[str, Metada
         )
 
         # Prepare scicat dataset instance(entry)
-        logger.info("Preparing scicat dataset instance ...")
+        logger.debug("Preparing scicat dataset instance ...")
         local_dataset_instance = create_scicat_dataset_instance(
             metadata_schema=metadata_schema.schema,
             variable_map=variable_map,
@@ -334,18 +328,17 @@ def _process_single_file(nexus_file_path: Path, schemas: OrderedDict[str, Metada
             ) or _check_if_dataset_exists_by_metadata(
                 local_dataset_instance, config.ingestion, config.scicat, logger
             ):
-                logger.warning(
+                raise RuntimeError(
                     "Dataset with pid %s already present in SciCat. Skipping it!!!",
                     local_dataset_instance.pid,
                 )
-                raise RuntimeError("Dataset already present in SciCat.")
 
         # If dataset does not exist, continue with the creation of the dataset
         local_dataset = scicat_dataset_to_dict(local_dataset_instance)
         logger.debug("Scicat dataset: %s", local_dataset)
 
         # Prepare origdatablock
-        logger.info("Preparing scicat origdatablock instance ...")
+        logger.debug("Preparing scicat origdatablock instance ...")
         local_origdatablock = origdatablock_to_dict(
             create_origdatablock_instance(
                 data_file_list=data_file_list,
@@ -412,7 +405,7 @@ def main() -> None:
     config = build_offline_config(logger=logger)
 
     # Log the configuration as dictionary so that it is easier to read from the logs
-    logger.info(
+    logger.debug(
         'Starting the Scicat background Ingestor with the following configuration: %s',
         config.to_dict(),
     )
@@ -466,8 +459,6 @@ def main() -> None:
             if result:
                 success_count += 1
                 logger.info("Successfully processed file: %s", nexus_file_path)
-            else:
-                logger.warning("Failed to process file: %s", nexus_file_path)
         except Exception as e:
             logger.error(
                 "Error processing file %s: %s", 

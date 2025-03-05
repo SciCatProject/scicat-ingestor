@@ -75,7 +75,7 @@ def create_scicat_dataset(
     """
     Execute a POST request to scicat to create a dataset
     """
-    logger.info("Sending POST request to create new dataset")
+    logger.debug("Sending POST request to create new dataset")
     response = _post_to_scicat(
         url=config.urls.datasets,
         posting_obj=dataset,
@@ -90,7 +90,7 @@ def create_scicat_dataset(
         )
         raise ScicatDatasetAPIError(f"Error creating new dataset: \n{dataset}")
 
-    logger.info(
+    logger.debug(
         "Dataset created successfully. Dataset pid: %s",
         result.get("pid"),
     )
@@ -102,7 +102,7 @@ def patch_scicat_dataset(
     """
     Execute a PATCH request to scicat to update a dataset
     """
-    logger.info("Sending PATCH request to update dataset")
+    logger.debug("Sending PATCH request to update dataset")
     current_dataset = get_dataset_by_pid(dataset['pid'], config, logger)
     if not current_dataset:
         logger.error("Dataset with pid %s does not exist", dataset['pid'])
@@ -156,7 +156,7 @@ def patch_scicat_dataset(
         )
         raise ScicatDatasetAPIError(f"Error updating dataset: \n{dataset}")
 
-    logger.info(
+    logger.debug(
         "Dataset updated successfully. Dataset pid: %s",
         result.get("pid"),
     )
@@ -168,7 +168,7 @@ def patch_scicat_origdatablock(
     """
     Execute a PATCH request to scicat to update an origdatablock
     """
-    logger.info("Sending PATCH request to update origdatablock")
+    logger.debug("Sending PATCH request to update origdatablock")
     current_origdatablock = get_origdatablock_by_datasetId(origdatablock['datasetId'], config, logger)[0]
     if not current_origdatablock:
         logger.error("Origdatablock with datasetId %s does not exist", origdatablock['datasetId'])
@@ -204,7 +204,7 @@ def patch_scicat_origdatablock(
         )
         raise ScicatOrigDatablockAPIError(f"Error updating origdatablock: \n{origdatablock}")
 
-    logger.info(
+    logger.debug(
         "Origdatablock updated successfully. Origdatablock pid: %s",
         result.get("_id"),
     )
@@ -220,7 +220,7 @@ def create_scicat_origdatablock(
     """
     Execute a POST request to scicat to create a new origdatablock
     """
-    logger.info("Sending POST request to create new origdatablock")
+    logger.debug("Sending POST request to create new origdatablock")
     response = _post_to_scicat(
         url=config.urls.origdatablocks,
         posting_obj=origdatablock,
@@ -238,7 +238,7 @@ def create_scicat_origdatablock(
             f"Error creating new origdatablock: \n{origdatablock}"
         )
 
-    logger.info(
+    logger.debug(
         "Origdatablock created successfully. Origdatablock pid: %s",
         result['_id'],
     )
@@ -250,7 +250,7 @@ def create_instrument(
     """
     Execute a POST request to scicat to create a new instrument
     """
-    logger.info("Sending POST request to create new instrument")
+    logger.debug("Sending POST request to create new instrument")
     instrument_obj = {
         "name": instrument_name,
         "uniqueName": instrument_name,
@@ -273,7 +273,7 @@ def create_instrument(
             f"Error creating new instrument: \n{instrument_name}"
         )
 
-    logger.info(
+    logger.debug(
         "Instrument created successfully. Instrument pid: %s",
         result['_id'],
     )
@@ -285,7 +285,7 @@ def create_proposal(
     """
     Execute a POST request to scicat to create a new proposal
     """
-    logger.info("Sending POST request to create new proposal")
+    logger.debug("Sending POST request to create new proposal")
 
     proposal_obj = {
         "proposalId": local_dataset.proposalId,
@@ -320,7 +320,7 @@ def create_proposal(
             f"Error creating new proposal: \n{proposal_obj['proposalId']}"
         )
 
-    logger.info(
+    logger.debug(
         "Proposal created successfully. Proposal pid: %s",
         result['_id'],
     )
@@ -332,7 +332,7 @@ def create_sample(
     """
     Execute a POST request to scicat to create a new sample
     """
-    logger.info("Sending POST request to create new sample")
+    logger.debug("Sending POST request to create new sample")
 
     sample_obj = {
         "sampleId": local_dataset.sampleId,
@@ -356,7 +356,7 @@ def create_sample(
         raise ScicatOrigDatablockAPIError(
             f"Error creating new sample: \n{sample_obj}"
         )
-    logger.info(
+    logger.debug(
         "Sample created successfully. Sample pid: %s",
         result['_id'],
     )
@@ -383,10 +383,10 @@ def get_dataset_by_pid(
     )
     
     if response.ok:
-        logger.info("Dataset with pid %s retrieved successfully", pid)
+        logger.debug("Dataset with pid %s retrieved successfully", pid)
         return response.json()
     elif response.status_code == 403:
-        logger.info("Dataset with pid %s does not exist", pid)
+        logger.debug("Dataset with pid %s does not exist", pid)
         return None
     else:
         logger.warning(
@@ -415,7 +415,7 @@ def check_dataset_by_metadata(
     metadata_dict = {f"scientificMetadata.{metadata_key}.value": metadata_value}
     filter_string = '?filter={"where":' + json.dumps(metadata_dict) + "}"
     url = urljoin(config.host_address, "datasets") + filter_string
-    logger.info("Checking if dataset exists by metadata key: %s", metadata_key)
+    logger.debug("Checking if dataset exists by metadata key: %s", metadata_key)
     response = _get_from_scicat(
         url=url,
         headers=config.headers,
@@ -427,14 +427,14 @@ def check_dataset_by_metadata(
     # Log the response
     dataset_exists = response.ok
     if response.ok:
-        logger.info("Retrieved %s dataset(s) from SciCat", len(response.json()))
-        logger.info("Dataset with metadata %s exists.", metadata_dict)
+        logger.debug("Retrieved %s dataset(s) from SciCat", len(response.json()))
+        logger.debug("Dataset with metadata %s exists.", metadata_dict)
     # Filter 403 error code.
     # Scicat returns 403 error code when the file does not exist.
     # This function is trying to check the existence of the dataset,
     # therefore 403 error code should not be considered as an error.
     elif response.status_code == 403:
-        logger.info("Dataset with metadata %s does not exist.", metadata_dict)
+        logger.debug("Dataset with metadata %s does not exist.", metadata_dict)
     else:
         logger.error(
             "Failed to check dataset existence by metadata key %s \n"
@@ -464,7 +464,7 @@ def check_datafiles(
     fields_string = f'/fullquery?fields={json.dumps(query)}'
     url = urljoin(config.host_address, config.api_endpoints.origdatablocks) + fields_string
     
-    logger.info("Checking if datafiles exist by paths: %s", datafiles)
+    logger.debug("Checking if datafiles exist by paths: %s", datafiles)
     response = _get_from_scicat(
         url=url,
         headers=config.headers,
@@ -486,14 +486,14 @@ def check_datafiles(
         
         all_files_found = set(found_files) == set(datafiles)
         if all_files_found:
-            logger.info("All datafiles found in SciCat")
+            logger.debug("All datafiles found in SciCat")
         else:
             missing = set(datafiles) - set(found_files)
-            logger.info("Missing datafiles: %s", list(missing))
+            logger.debug("Missing datafiles: %s", list(missing))
         return all_files_found
 
     elif response.status_code == 403:
-        logger.info("Datafile(s) with paths %s do not exist.", datafiles)
+        logger.debug("Datafile(s) with paths %s do not exist.", datafiles)
         return False
     else:
         logger.error(
@@ -519,7 +519,7 @@ def get_instrument_by_name(
     metadata_dict = {"name": instrument_name}
     filter_string = '?filter={"where":' + json.dumps(metadata_dict) + "}"
     url = urljoin(config.host_address, config.api_endpoints.instruments) + filter_string
-    logger.info("Checking if instrument exists by name: %s", instrument_name)
+    logger.debug("Checking if instrument exists by name: %s", instrument_name)
     response = _get_from_scicat(
         url=url,
         headers=config.headers,
@@ -530,18 +530,18 @@ def get_instrument_by_name(
 
     # Log the response
     if response.ok:
-        logger.info("Retrieved %s instrument(s) from SciCat", len(response.json()))
+        logger.debug("Retrieved %s instrument(s) from SciCat", len(response.json()))
         if len(response.json()) > 0:
-            logger.info("Instrument with name %s exists.", instrument_name)
+            logger.debug("Instrument with name %s exists.", instrument_name)
         else:
-            logger.info("Instrument with name %s does not exist.", instrument_name)
+            logger.debug("Instrument with name %s does not exist.", instrument_name)
         return response.json()
     # Filter 403 error code.
     # Scicat returns 403 error code when the file does not exist.
     # This function is trying to check the existence of the dataset,
     # therefore 403 error code should not be considered as an error.
     elif response.status_code == 403:
-        logger.info("Instrument with name %s does not exist.", instrument_name)
+        logger.debug("Instrument with name %s does not exist.", instrument_name)
     else:
         logger.error(
             "Failed to check instrument existence by name %s \n"
@@ -558,7 +558,7 @@ def get_proposal_by_id(
     proposal_id: str, config: SciCatOptions, logger: logging.Logger
 ):
     url = urljoin(config.host_address, config.api_endpoints.proposals) + f"/{quote_plus(proposal_id)}"
-    logger.info("Checking if proposal exists by id: %s", proposal_id)
+    logger.debug("Checking if proposal exists by id: %s", proposal_id)
     response = _get_from_scicat(
         url=url,
         headers=config.headers,
@@ -569,15 +569,15 @@ def get_proposal_by_id(
 
     # Log the response
     if response.ok:
-        logger.info("Retrieved %s proposal(s) from SciCat", len(response.json()))
-        logger.info("Proposal with id %s exists.", proposal_id)
+        logger.debug("Retrieved %s proposal(s) from SciCat", len(response.json()))
+        logger.debug("Proposal with id %s exists.", proposal_id)
         return response.json()
     # Filter 403 error code.
     # Scicat returns 403 error code when the file does not exist.
     # This function is trying to check the existence of the dataset,
     # therefore 403 error code should not be considered as an error.
     elif response.status_code == 403:
-        logger.info("Proposal with id %s does not exist.", proposal_id)
+        logger.debug("Proposal with id %s does not exist.", proposal_id)
     else:
         logger.warning(
             "Failed to check proposal existence by id %s \n"
@@ -594,7 +594,7 @@ def get_sample_by_id(
     sample_id: str, config: SciCatOptions, logger: logging.Logger
 ):
     url = urljoin(config.host_address, config.api_endpoints.samples) + f"/{quote_plus(sample_id)}"
-    logger.info("Checking if sample exists by id: %s", sample_id)
+    logger.debug("Checking if sample exists by id: %s", sample_id)
     response = _get_from_scicat(
         url=url,
         headers=config.headers,
@@ -605,15 +605,15 @@ def get_sample_by_id(
 
     # Log the response
     if response.ok:
-        logger.info("Retrieved %s sample(s) from SciCat", len(response.json()))
-        logger.info("Sample with id %s exists.", sample_id)
+        logger.debug("Retrieved %s sample(s) from SciCat", len(response.json()))
+        logger.debug("Sample with id %s exists.", sample_id)
         return response.json()
     # Filter 403 error code.
     # Scicat returns 403 error code when the file does not exist.
     # This function is trying to check the existence of the dataset,
     # therefore 403 error code should not be considered as an error.
     elif response.status_code == 403:
-        logger.info("Sample with id %s does not exist.", sample_id)
+        logger.debug("Sample with id %s does not exist.", sample_id)
     else:
         logger.warning(
             "Failed to check sample existence by id %s \n"
@@ -630,7 +630,7 @@ def get_dataset_by_sample_id(
     sample_id: str, config: SciCatOptions, logger: logging.Logger
 ):
     url = urljoin(config.host_address, config.api_endpoints.samples) + f"/{quote_plus(sample_id)}/datasets"
-    logger.info("Checking if dataset exists by sample id: %s", sample_id)
+    logger.debug("Checking if dataset exists by sample id: %s", sample_id)
     response = _get_from_scicat(
         url=url,
         headers=config.headers,
@@ -640,10 +640,10 @@ def get_dataset_by_sample_id(
     )
 
     if response.ok:
-        logger.info("Retrieved %s dataset(s) from SciCat", len(response.json()))
+        logger.debug("Retrieved %s dataset(s) from SciCat", len(response.json()))
         return response.json()
     elif response.status_code == 403:
-        logger.info("Sample with id %s does not exist.", sample_id)
+        logger.debug("Sample with id %s does not exist.", sample_id)
     else:
         logger.error(
             "Failed to check dataset existence by sample id %s \n"
@@ -664,7 +664,7 @@ def get_origdatablock_by_datasetId(
         return None
     filter_string = '?filter={"where":{"datasetId":"' + datasetId + '"}}'
     url = urljoin(config.host_address, config.api_endpoints.origdatablocks) + filter_string
-    logger.info("Checking if origdatablock exists by datasetId: %s", datasetId)
+    logger.debug("Checking if origdatablock exists by datasetId: %s", datasetId)
     response = _get_from_scicat(
         url=url,
         headers=config.headers,
@@ -674,18 +674,18 @@ def get_origdatablock_by_datasetId(
     )
     dataset = response.json()
     if response.ok:
-        logger.info("Retrieved %s origdatablock(s) from SciCat", len(dataset))
+        logger.debug("Retrieved %s origdatablock(s) from SciCat", len(dataset))
         if len(dataset) > 0:
-            logger.info("Origdatablock with datasetId %s exists.", datasetId)
+            logger.debug("Origdatablock with datasetId %s exists.", datasetId)
         else:
-            logger.info("Origdatablock with datasetId %s does not exist.", datasetId)
+            logger.debug("Origdatablock with datasetId %s does not exist.", datasetId)
         return dataset
     # Filter 403 error code.
     # Scicat returns 403 error code when the file does not exist.
     # This function is trying to check the existence of the dataset,
     # therefore 403 error code should not be considered as an error.
     elif response.status_code == 403:
-        logger.info("Origdatablock with datasetId %s does not exist.", datasetId)
+        logger.debug("Origdatablock with datasetId %s does not exist.", datasetId)
     else:
         logger.error(
             "Failed to check origdatablock existence by datasetId %s \n"

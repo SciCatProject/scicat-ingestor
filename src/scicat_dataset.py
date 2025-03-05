@@ -480,13 +480,13 @@ def create_data_file_list(
     # Create the list of the files
     data_file_list = []
     for minimum_file_path in file_list:
-        logger.info("Adding file %s to the datafiles list", minimum_file_path)
+        logger.debug("Adding file %s to the datafiles list", minimum_file_path)
         new_file_item = single_file_constructor(
             file_path=minimum_file_path,
         )
         data_file_list.append(new_file_item)
         if config.save_file_hash:
-            logger.info(
+            logger.debug(
                 "Computing hash of the file(%s) from disk...", minimum_file_path
             )
             hash_file_path = _build_hash_path(
@@ -494,7 +494,7 @@ def create_data_file_list(
                 dir_path=ingestor_directory,
                 hash_file_extension=config.hash_file_extension,
             )
-            logger.info("Saving hash into a file ... %s", hash_file_path)
+            logger.debug("Saving hash into a file ... %s", hash_file_path)
             _save_hash_file(
                 original_file_instance=new_file_item, hash_path=hash_file_path
             )
@@ -618,37 +618,37 @@ def create_scicat_dataset_instance(
 
     # Auto generate or assign default values if needed
     if not config.allow_dataset_pid and scicat_dataset.pid:
-        logger.info("PID is not allowed in the dataset by configuration.")
+        logger.debug("PID is not allowed in the dataset by configuration.")
         scicat_dataset.pid = None
     elif config.generate_dataset_pid:
-        logger.info("Auto generating PID for the dataset based on the configuration.")
+        logger.debug("Auto generating PID for the dataset based on the configuration.")
         scicat_dataset.pid = uuid.uuid4().hex
     if scicat_dataset.instrumentId is None:
         scicat_dataset.instrumentId = config.default_instrument_id
-        logger.info(
+        logger.debug(
             "Instrument ID is not provided. Setting to default value. %s",
             scicat_dataset.instrumentId,
         )
     if scicat_dataset.proposalId is None:
         scicat_dataset.proposalId = config.default_proposal_id
-        logger.info(
+        logger.debug(
             "Proposal ID is not provided. Setting to default value. %s",
             scicat_dataset.proposalId,
         )
     if scicat_dataset.ownerGroup is None:
         scicat_dataset.ownerGroup = config.default_owner_group
-        logger.info(
+        logger.debug(
             "Owner group is not provided. Setting to default value. %s",
             scicat_dataset.ownerGroup,
         )
     if scicat_dataset.accessGroups is None:
         scicat_dataset.accessGroups = config.default_access_groups
-        logger.info(
+        logger.debug(
             "Access group is not provided. Setting to default value. %s",
             scicat_dataset.accessGroups,
         )
 
-    logger.info("Dataset instance is created successfully. %s", scicat_dataset)
+    logger.debug("Dataset instance is created successfully. %s", scicat_dataset)
     return scicat_dataset
 
 

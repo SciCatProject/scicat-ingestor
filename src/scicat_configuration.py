@@ -443,8 +443,8 @@ def validate_config_file() -> None:
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)  # Always debug level since it is for validation
     logger.addHandler(logging.StreamHandler())
-    logger.info("Scicat file ingestor configuration file validation test.")
-    logger.info("Note that it does not validate type of the field.")
+    logger.debug("Scicat file ingestor configuration file validation test.")
+    logger.debug("Note that it does not validate type of the field.")
     logger.debug("It only validate the file for %s.", OnlineIngestorConfig)
     logger.debug("Configuration file: %s", config_file)
 
@@ -454,7 +454,7 @@ def validate_config_file() -> None:
         "Configuration built successfully. %s",
         _validate_config_file(OnlineIngestorConfig, config_file),
     )
-    logger.info("Configuration file %s is valid.", config_file)
+    logger.debug("Configuration file %s is valid.", config_file)
 
 
 def synchronize_config_file() -> None:
