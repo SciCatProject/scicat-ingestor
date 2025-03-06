@@ -141,6 +141,7 @@ def patch_scicat_dataset(
                 }
     patch_dataset.pop("pid", None)
     patch_dataset.pop("type", None)
+    patch_dataset.pop("numberOfFiles", None)
 
     response = requests.patch(
         urljoin(config.host_address, f"{config.api_endpoints.datasets}/{quote_plus(dataset['pid'])}"),
@@ -162,6 +163,32 @@ def patch_scicat_dataset(
     )
     return result
 
+def patch_scicat_dataset_numfiles(
+    *, datasetId:str, numfiles:int, config: SciCatOptions, logger: logging.Logger
+):
+    patch_dataset = {
+        "numberOfFiles": numfiles,
+    }
+    response = requests.patch(
+        urljoin(config.host_address, f"{config.api_endpoints.datasets}/{quote_plus(datasetId)}"),
+        json=patch_dataset,
+        headers=config.headers,
+        timeout=config.timeout,
+    )
+    result: dict = response.json()
+    if not response.ok:
+        logger.error(
+            "Failed to update dataset. \nError message from scicat backend: \n%s",
+            result.get("error", {}),
+        )
+        raise ScicatDatasetAPIError(f"Error updating dataset numberOfFiles: \n{datasetId}")
+
+    logger.debug(
+        "Dataset numberOfFiles updated successfully. Dataset pid: %s",
+        result.get("pid"),
+    )
+    return result
+
 def patch_scicat_origdatablock(
     *, origdatablock: dict, config: SciCatOptions, logger: logging.Logger
 ) -> dict:
@@ -176,9 +203,10 @@ def patch_scicat_origdatablock(
 
     # Format the origdatablock object to be sent to the backend
     patch_dataFileList = current_origdatablock['dataFileList'][:]
-    for file_info in origdatablock['dataFileList']:
-        if file_info not in patch_dataFileList:
-            patch_dataFileList.append(file_info)
+    to_add_file_infos = [file_info for file_info in origdatablock['dataFileList'] if file_info['path'] not in [f['path'] for f in patch_dataFileList]]
+    if not to_add_file_infos:
+        raise RuntimeError("No new files to add to origdatablock")
+    patch_dataFileList.extend(to_add_file_infos)
     for file_info in patch_dataFileList:
         file_info.pop("_id", None)
         file_info.pop("id", None)
@@ -208,6 +236,7 @@ def patch_scicat_origdatablock(
         "Origdatablock updated successfully. Origdatablock pid: %s",
         result.get("_id"),
     )
+
     return result
 
 class ScicatOrigDatablockAPIError(Exception):

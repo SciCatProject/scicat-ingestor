@@ -20,6 +20,7 @@ from scicat_communication import (
     get_dataset_by_pid,
     create_scicat_dataset,
     patch_scicat_dataset,
+    patch_scicat_dataset_numfiles,
     patch_scicat_origdatablock,
     create_scicat_origdatablock,
     create_instrument,
@@ -379,6 +380,13 @@ def _process_single_file(nexus_file_path: Path, schemas: OrderedDict[str, Metada
                 scicat_origdatablock = create_scicat_origdatablock(
                     origdatablock=local_origdatablock, config=config.scicat, logger=logger
                 )
+
+            patch_scicat_dataset_numfiles(
+                datasetId=scicat_dataset.get("pid", None),
+                numfiles=len(scicat_origdatablock.get("dataFileList", [])),
+                config=config.scicat,
+                logger=logger,
+            )
 
             # check one more time if we successfully created the entries in scicat
             if not ((len(scicat_dataset) > 0) and (len(scicat_origdatablock) > 0)):
