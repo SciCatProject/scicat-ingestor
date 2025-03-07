@@ -274,7 +274,7 @@ def create_scicat_origdatablock(
     return result
 
 def create_instrument(
-    *, instrument_name: str, config: SciCatOptions, logger: logging.Logger
+    *, instrument_name: str, unique_name: str, config: SciCatOptions, logger: logging.Logger
 ) -> dict:
     """
     Execute a POST request to scicat to create a new instrument
@@ -282,7 +282,7 @@ def create_instrument(
     logger.debug("Sending POST request to create new instrument")
     instrument_obj = {
         "name": instrument_name,
-        "uniqueName": instrument_name,
+        "uniqueName": unique_name,
     }
     
     response = _post_to_scicat(
@@ -585,6 +585,30 @@ def get_instrument_by_name(
             response.status_code,
             response.reason,
         )
+    return None
+
+def get_instrument_nomad_id_by_name(
+    instrument_name: str, config:SciCatOptions, logger: logging.Logger
+):
+    url = "https://scidata.ill.fr/api/instruments"
+    logger.debug("Getting instrument nomad id by name: %s", instrument_name)
+    response = requests.get(url, timeout=config.timeout)
+    if response.ok:
+        response_json = response.json()['data']
+        instrument_nomad_id = [str(instrument['id']) for instrument in response_json 
+                               if instrument['name'].lower().strip() == instrument_name.lower().strip()
+                               ]
+        if len(instrument_nomad_id) > 0:
+            return instrument_nomad_id[0]
+    else:
+        logger.error(
+            "Failed to get instrument nomad id by name %s \n"
+            "with status code: %s \n"
+            "Error message from scicat backend: \n%s",
+            instrument_name,
+            response.status_code,
+            response.reason,
+            )
     return None
 
 def get_proposal_by_id(

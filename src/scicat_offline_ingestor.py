@@ -15,6 +15,7 @@ from scicat_communication import (
     check_datafiles,
     check_origdatablock_by_datasetId,
     get_instrument_by_name,
+    get_instrument_nomad_id_by_name,
     get_proposal_by_id,
     get_sample_by_id,
     get_dataset_by_pid,
@@ -205,8 +206,12 @@ def _process_ill_dataset(
             variable_map["instrument_name"], config.scicat, logger
         )
         if not instrument_data_list:
+            unique_name = get_instrument_nomad_id_by_name(
+                variable_map["instrument_name"], config.scicat, logger
+            )
             instrument_data = create_instrument(
                 instrument_name=variable_map["instrument_name"],
+                unique_name=unique_name if unique_name else variable_map["instrument_name"],
                 config=config.scicat,
                 logger=logger,
             )
