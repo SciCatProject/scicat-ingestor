@@ -29,7 +29,7 @@ colorama==0.4.6
     #   tox
 confluent-kafka==2.8.2
     # via -r base.in
-copier==9.5.0
+copier==9.6.0
     # via -r dev.in
 distlib==0.3.9
     # via virtualenv
