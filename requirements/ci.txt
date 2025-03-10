@@ -36,7 +36,7 @@ pyproject-api==1.9.0
     # via tox
 smmap==5.0.2
     # via gitdb
-tox==4.24.1
+tox==4.24.2
     # via -r ci.in
 virtualenv==20.29.1
     # via tox
