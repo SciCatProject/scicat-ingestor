@@ -45,35 +45,35 @@
             "value": {
                 "ei": {
                     "field_type": "scientific_metadata",
-                    "machine_name": "instrumentEi",
+                    "machine_name": "instrument_ei",
                     "human_name": "Ei",
                     "value": "<instrument_ei>",
                     "type": "string"
                 },
                 "wavelength": {
                     "field_type": "scientific_metadata",
-                    "machine_name": "instrumentWavelength",
+                    "machine_name": "instrument_wavelength",
                     "human_name": "Wavelength",
                     "value": "<instrument_wavelength>",
                     "type": "string"
                 },
                 "elastic_peak": {
                     "field_type": "scientific_metadata",
-                    "machine_name": "instrumentElasticPeak",
+                    "machine_name": "instrument_elastic_peak",
                     "human_name": "Elastic Peak",
                     "value": "<instrument_elastic_peak>",
                     "type": "string"
                 },
                 "fermi_speed": {
                     "field_type": "scientific_metadata",
-                    "machine_name": "instrumentFermiSpeed",
+                    "machine_name": "instrument_fermi_speed",
                     "human_name": "Fermi Speed",
                     "value": "<instrument_fermi_speed>",
                     "type": "string"
                 },
                 "mono_name": {
                     "field_type": "scientific_metadata",
-                    "machine_name": "instrumentMonoName",
+                    "machine_name": "instrument_mono_name",
                     "human_name": "Monochromator Name",
                     "value": "<instrument_mono_name>",
                     "type": "string"

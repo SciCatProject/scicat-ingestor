@@ -149,15 +149,30 @@ def render_variable_value(var_value: Any, variable_registry: dict) -> str:
 
     # If it is only one variable, then it is a simple replacement
     if (
-        var_key := output_value.removesuffix(">").removeprefix("<")
+        var_key := output_value.removesuffix(">").removeprefix("<")        
     ) in variable_registry:
-        return variable_registry[var_key]
+        reg_val = variable_registry[var_key]
+        if isinstance(reg_val, dict):
+            if "value" in reg_val:
+                return reg_val["value"]
+            # For complex nested dictionaries, return the string representation
+            return str(reg_val)
+        return reg_val
 
-    # If it is a complex variable, then it is a combination of variables
-    # similar to f-string in python
     for reg_var_name, reg_var_value in variable_registry.items():
+        if isinstance(reg_var_value, dict):
+            # For dictionaries with a "value" key, use that
+            if "value" in reg_var_value:
+                extracted_value = reg_var_value["value"]
+            # For other dictionaries, convert to string representation
+            else:
+                extracted_value = str(reg_var_value)
+        else:
+            extracted_value = reg_var_value
+            
+        # Replace the variable placeholder in the template
         output_value = output_value.replace(
-            "<" + reg_var_name + ">", str(reg_var_value)
+            "<" + reg_var_name + ">", str(extracted_value)
         )
 
     if "<" in output_value and ">" in output_value:

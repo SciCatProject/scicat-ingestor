@@ -159,45 +159,60 @@ def _get_operator(operator: str | None) -> Callable:
     return _OPERATOR_REGISTRY.get(operator or "DO_NOTHING", lambda _: _)
 
 
-def _retrieve_as_string(
+def _retrieve_value_and_unit(
     h5file: h5py.File, path: str, *, encoding: str = "utf-8"
-) -> str:
-    value = h5file[path][...].item()
+) -> tuple[Any, str | None]:
+    """Retrieve both value and unit (if available) from an HDF5 dataset."""
+    dataset = h5file[path]
+    value = dataset[...].item()
     
-    # Handle bytes specifically, otherwise just convert to string
-    return value.decode(encoding) if isinstance(value, bytes) else str(value)
-
+    # Convert value to string if it's bytes
+    value_str = value.decode(encoding) if isinstance(value, bytes) else value
+    
+    # Check for unit attributes (common patterns in scientific HDF5 files)
+    unit = None
+    attr_name = "units"
+    if attr_name in dataset.attrs:
+        unit_val = dataset.attrs[attr_name]
+        # Handle bytes unit values
+        unit = unit_val.decode(encoding) if isinstance(unit_val, bytes) else str(unit_val)
+            
+    return value_str, unit
 
 def _retrieve_values_from_file(
     variable_recipe: NexusFileMetadataVariable, h5file: h5py.File
 ) -> Any:
-    if "*" in variable_recipe.path:  # Selectors are used
+    """Retrieve values from file, now with unit support."""
+    if "*" in variable_recipe.path:
         path = variable_recipe.path.split("/")[1:]
         path[0] += "/"
         paths = extract_paths_from_h5_file(h5file, path[:])
         if variable_recipe.value_type == "dict":
-            # Build a nested dictionary reflecting the HDF5 structure
             result = {}
             for p in paths:
-                # Skip the common base path parts
                 parts = p.split("/")[len(path):]
                 
-                # Navigate to the correct position in the dict
-                current = result
+                current_result = result
                 for i, part in enumerate(parts[:-1]):
-                    if part not in current:
-                        current[part] = {}
-                    current = current[part]
+                    if part not in current_result:
+                        current_result[part] = {}
+                    current_result = current_result[part]
                     
-                # Set the leaf value
                 if parts:
-                    current[parts[-1]] = _retrieve_as_string(h5file, p)                    
+                    value, unit = _retrieve_value_and_unit(h5file, p)
+                    current_result[parts[-1]] = {
+                        "value": value,
+                    }
+                    if unit:
+                        current_result[parts[-1]]["unit"] = unit
             value = result
         else:
-            value = [_retrieve_as_string(h5file, p) for p in paths]
+            values_and_units = [_retrieve_value_and_unit(h5file, p) for p in paths]
+            value = [v for v, _ in values_and_units]
+            unit = [u for _, u in values_and_units if u]
     else:
         try:
-            value = _retrieve_as_string(h5file, variable_recipe.path)
+            value, unit = _retrieve_value_and_unit(h5file, variable_recipe.path)
         except KeyError:
             value = None
             logging.warning(
@@ -205,7 +220,7 @@ def _retrieve_values_from_file(
                 variable_recipe.path,
                 h5file.filename
             )
-    return value.strip() if isinstance(value, str) else value
+    return value.strip() if isinstance(value, str) else value, unit
 
 
 def extract_variables_values(
@@ -225,8 +240,9 @@ def extract_variables_values(
     }
     for variable_name, variable_recipe in variables.items():
         source = variable_recipe.source
+        unit = None
         if isinstance(variable_recipe, NexusFileMetadataVariable):
-            value = _retrieve_values_from_file(variable_recipe, h5file)
+            value, unit = _retrieve_values_from_file(variable_recipe, h5file)
         elif isinstance(variable_recipe, ScicatMetadataVariable):
             full_endpoint_url = render_full_url(
                 render_variable_value(variable_recipe.url, variable_map),
@@ -245,7 +261,16 @@ def extract_variables_values(
 
         else:
             raise Exception("Invalid variable source: ", source)
-        variable_map[variable_name] = convert_to_type(value, variable_recipe.value_type)
+        variable_map[variable_name] = {
+            "value": convert_to_type(value, variable_recipe.value_type)
+        }
+        if unit is not None:
+            variable_map[variable_name] = {
+                "value": convert_to_type(value, variable_recipe.value_type),
+                "unit": unit,
+            }
+        else:
+            variable_map[variable_name] = convert_to_type(value, variable_recipe.value_type)
 
     return variable_map
 
@@ -527,27 +552,38 @@ def _create_scientific_metadata(
     sm_schemas: list[MetadataItem],
     variable_map: dict,
 ) -> dict:
-    """Create scientific metadata from the metadata schema configuration.
-
-    Params
-    ------
-    metadata_schema_id:
-        The ID of the metadata schema configuration.
-    sm_schemas:
-        The scientific metadata schema configuration.
-    variable_map:
-        The variable map to render the scientific metadata values.
-
-    """
-    return {
-        field.machine_name: {
-            "value": _render_variable_as_type(field.value, variable_map, field.type),
-            "unit": getattr(field, "unit", ""),
-            "human_name": getattr(field, "human_name", field.machine_name),
-            "type": field.type,
-        }
-        for field in sm_schemas
-    }
+    """Create scientific metadata from the metadata schema configuration."""
+    result = {}
+    
+    for field in sm_schemas:
+        machine_name = field.machine_name
+        rendered_value = _render_variable_as_type(field.value, variable_map, field.type)
+        
+        # Safe way to get unit that works for both dict and primitive values
+        unit = ""
+        if isinstance(rendered_value, dict) and not machine_name in variable_map:
+            result[machine_name] = {
+                "value": rendered_value,
+                "human_name": getattr(field, "human_name", field.machine_name),
+                "type": field.type,
+            }
+            for subfield in rendered_value.keys():
+                var_value = variable_map.get(rendered_value[subfield]['machine_name'], {})
+                if isinstance(var_value, dict) and "unit" in var_value:
+                    rendered_value[subfield]["unit"] = var_value.get("unit", "")
+        else:
+            var_value = variable_map.get(field.machine_name, {})
+            if isinstance(var_value, dict) and "unit" in var_value:
+                unit = var_value.get("unit", "")
+            
+            result[machine_name] = {
+                "value": rendered_value,
+                "unit": unit,
+                "human_name": getattr(field, "human_name", field.machine_name),
+                "type": field.type,
+            }
+    
+    return result
 
 
 def _validate_metadata_schemas(

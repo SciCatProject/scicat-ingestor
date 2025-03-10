@@ -172,7 +172,7 @@ def _generate_or_get_dataset_pid(
     """Generate a dataset PID or get it from SciCat
     if a dataset for same proposal and sampl already exists.
     """
-    pid = f"{local_dataset.proposalId}_DS0"
+    pid = f"{local_dataset.proposalId}-DS0"
     existing_dataset = get_dataset_by_pid(
         pid=pid, config=scicat_config, logger=logger
     )
@@ -309,7 +309,7 @@ def _process_single_file(nexus_file_path: Path, schemas: OrderedDict[str, Metada
             nexus_file=nexus_file_path,
             ingestor_directory=ingestor_directory,
             config=fh_options,
-            source_folder=variable_map["source_folder"] if "source_folder" in variable_map else None,
+            source_folder=variable_map["source_folder"]["value"] if "source_folder" in variable_map else None,
             logger=logger,
             # TODO: add done_writing_message_file and nexus_structure_file
         )

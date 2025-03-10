@@ -40,28 +40,28 @@
             "value": {
                 "theta": {
                     "field_type": "scientific_metadata",
-                    "machine_name": "instrumentTheta",
+                    "machine_name": "instrument_theta",
                     "human_name": "Theta",
                     "value": "<instrument_theta>",
                     "type": "string"
                 },
                 "incident_angle": {
                     "field_type": "scientific_metadata",
-                    "machine_name": "instrumentIncidentAngle",
+                    "machine_name": "instrument_incident_angle",
                     "human_name": "Incident Angle",
                     "value": "<instrument_incident_angle>",
                     "type": "string"
                 },
                 "frame_overlap": {
                     "field_type": "scientific_metadata",
-                    "machine_name": "instrumentFrameOverlap",
+                    "machine_name": "instrument_frame_overlap",
                     "human_name": "Frame Overlap",
                     "value": "<instrument_frame_overlap>",
                     "type": "string"
                 },
                 "chopper_gap": {
                     "field_type": "scientific_metadata",
-                    "machine_name": "instrumentChopperGap",
+                    "machine_name": "instrument_chopper_gap",
                     "human_name": "Chopper Gap",
                     "value": "<instrument_chopper_gap>",
                     "type": "string"

@@ -35,21 +35,21 @@
             "value": {
                 "det": {
                     "field_type": "scientific_metadata",
-                    "machine_name": "instrumentDet",
+                    "machine_name": "instrument_det",
                     "human_name": "Det",
                     "value": "<instrument_det>",
                     "type": "string"
                 },
                 "incident_angle": {
                     "field_type": "scientific_metadata",
-                    "machine_name": "instrumentIncidentAngle",
+                    "machine_name": "instrument_incident_angle",
                     "human_name": "Incident Angle",
                     "value": "<instrument_incident_angle>",
                     "type": "string"
                 },
                 "opening": {
                     "field_type": "scientific_metadata",
-                    "machine_name": "instrumentOpening",
+                    "machine_name": "instrument_opening",
                     "human_name": "Opening",
                     "value": "<instrument_opening>",
                     "type": "string"
