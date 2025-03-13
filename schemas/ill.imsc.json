@@ -3,7 +3,27 @@
   "id": "ill-schema-001",
   "name": "ILL Metadata Schema",
   "instrument": "",
-  "selector": "filename:starts_with:/users/data",
+  "selector": {
+    "and": [
+      "dirname:starts_with:rawdata",
+      "filename:contains:.nxs",
+      {
+        "or": [
+          "dirname:starts_with:d17",
+          "dirname:starts_with:figaro",
+          "dirname:starts_with:panther"
+        ]
+      },
+      {
+        "or": [
+          "dirname:starts_with:21",
+          "dirname:starts_with:22",
+          "dirname:starts_with:23",
+          "dirname:starts_with:24"
+        ]
+      }
+    ]
+  },
   "variables": {
     "pid": {
       "source": "NXS",
@@ -132,7 +152,7 @@
     },
     "sourceFolder": {
       "source": "VALUE",
-      "value": "/users/data",
+      "value": "/illdata",
       "value_type": "string"
     },
     "sampleProperties": {

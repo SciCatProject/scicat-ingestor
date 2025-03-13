@@ -3,7 +3,21 @@
     "id": "ill-d17-schema",
     "name": "D17 Instrument Metadata Schema",
     "instrument": "D17",
-    "selector": "filename:contains:d17",
+    "selector": {
+        "and": [
+            "dirname:starts_with:rawdata",
+            "filename:contains:.nxs",
+            "dirname:starts_with:d17",
+            {
+            "or": [
+                "dirname:starts_with:21",
+                "dirname:starts_with:22",
+                "dirname:starts_with:23",
+                "dirname:starts_with:24"
+            ]
+            }
+        ]
+    },
     "variables": {
         "instrument_det": {
             "source": "NXS",
@@ -19,11 +33,6 @@
             "source": "NXS",
             "path": "/entry0/instrument/VirtualChopper/actual_opening",
             "value_type": "string"
-        },
-        "sourceFolder": {
-          "source": "VALUE",
-          "value": "/users/data/d17",
-          "value_type": "string"
         }
     },
     "schema": {
@@ -55,13 +64,6 @@
                     "type": "string"
                 }
             }
-        },
-        "sourceFolder": {
-          "field_type": "high_level",
-          "machine_name": "sourceFolder",
-          "human_name": "Source Folder",
-          "value": "<sourceFolder>",
-          "type": "string"
         }
     }
 }

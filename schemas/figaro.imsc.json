@@ -3,7 +3,21 @@
     "id": "ill-figaro-schema",
     "name": "Figaro Instrument Metadata Schema",
     "instrument": "Figaro",
-    "selector": "filename:contains:figaro",
+    "selector": {
+        "and": [
+            "dirname:starts_with:rawdata",
+            "filename:contains:.nxs",
+            "dirname:starts_with:figaro",
+            {
+            "or": [
+                "dirname:starts_with:21",
+                "dirname:starts_with:22",
+                "dirname:starts_with:23",
+                "dirname:starts_with:24"
+            ]
+            }
+        ]
+    },
     "variables": {
         "instrument_theta": {
             "source": "NXS",
@@ -24,11 +38,6 @@
             "source": "NXS",
             "path": "/entry0/instrument/ChopperSetting/ChopperGap",
             "value_type": "string"
-        },
-        "sourceFolder": {
-          "source": "VALUE",
-          "value": "/users/data/figaro",
-          "value_type": "string"
         }
     },
     "schema": {
@@ -67,13 +76,6 @@
                     "type": "string"
                 }
             }
-        },
-        "sourceFolder": {
-          "field_type": "high_level",
-          "machine_name": "sourceFolder",
-          "human_name": "Source Folder",
-          "value": "<sourceFolder>",
-          "type": "string"
         }
     }
   }

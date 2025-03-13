@@ -210,12 +210,10 @@ def _select_applicable_schema(
 ) -> bool:
     """
     Evaluate if a schema applies to a file based on its selector.
-    
-    Iteratively processes the selector to avoid recursion limit issues.
     """
-    # Use a stack to avoid recursion
     stack = [(selector, True)]  # (selector, is_and_context)
     final_result = True
+    or_group_result = False  # Track results within OR groups
     
     while stack:
         current_selector, is_and_context = stack.pop()
@@ -227,11 +225,39 @@ def _select_applicable_schema(
                 
             select_target_name, select_function_name, select_argument = parts
             
-            if select_target_name not in ["filename"]:
-                raise ValueError(f"Invalid target name {select_target_name}")
+            # Get the appropriate target value based on the selector
+            if select_target_name == "filename":
+                # Extract just the filename without path
+                select_target_value = filename.split('/')[-1]
+            elif select_target_name == "fullpath":
+                # Use the complete path
+                select_target_value = filename
+            elif select_target_name == "dirname":
+                # Check against directory components
+                path_parts = filename.split('/')
+                # Default to False; will be updated if a match is found
+                result = False
+                for part in path_parts[:-1]:  # Exclude the filename
+                    if select_function_name == "starts_with" and part.startswith(select_argument):
+                        result = True
+                        break
+                    elif select_function_name == "contains" and select_argument in part:
+                        result = True
+                        break
                 
-            select_target_value = filename
+                # Apply the result directly for dirname
+                if is_and_context:
+                    final_result = final_result and result
+                    if not final_result:  # Short-circuit AND
+                        break
+                else:
+                    or_group_result = or_group_result or result
+                    final_result = or_group_result
+                continue  # Skip the standard processing below
+            else:
+                raise ValueError(f"Invalid target name {select_target_name}")
             
+            # Standard processing for filename and fullpath
             if select_function_name == "starts_with":
                 result = select_target_value.startswith(select_argument)
             elif select_function_name == "contains":
@@ -245,16 +271,15 @@ def _select_applicable_schema(
                 if not final_result:  # Short-circuit AND
                     break
             else:
-                final_result = final_result or result
-                if final_result:  # Short-circuit OR
-                    break
-                    
-        # Dictionary selectors are broken down into their components
+                or_group_result = or_group_result or result
+                final_result = or_group_result
+                
         elif isinstance(current_selector, dict):
             for key, conditions in current_selector.items():
                 if key == "or":
+                    or_group_result = False  # Reset OR group result
                     # Push each condition onto the stack with OR context
-                    for item in reversed(conditions):  # Reverse to maintain order with stack
+                    for item in reversed(conditions):
                         stack.append((item, False))
                 elif key == "and":
                     # Push each condition onto the stack with AND context
