@@ -285,7 +285,6 @@ def _process_ill_dataset(
 def _process_single_file(nexus_file_path: Path, metadata_schema: MetadataSchema, config: OfflineIngestorConfig, logger: logging.Logger) -> bool:
     try:
         fh_options = config.ingestion.file_handling
-        nexus_file_path = Path(config.nexus_file)
         logger.debug("Nexus file to be ingested: %s", nexus_file_path)
 
         # Path to the directory where the ingestor saves the files it creates
@@ -303,7 +302,7 @@ def _process_single_file(nexus_file_path: Path, metadata_schema: MetadataSchema,
 
             # define variables values
             variable_map = extract_variables_values(
-                metadata_schema.variables, h5file, config, metadata_schema.id
+                nexus_file_path, metadata_schema.variables, h5file, config, metadata_schema.id
             )
 
         data_file_list = create_data_file_list(
@@ -490,7 +489,7 @@ def main() -> None:
                 processed = 0
                 
                 for nexus_file in (f for f in files if f.endswith('.nxs')):
-                    nexus_file_path = os.path.join(root, nexus_file)
+                    nexus_file_path = Path(os.path.join(root, nexus_file))
                     file_config = copy.deepcopy(config)
                     file_config.nexus_file = nexus_file_path
                     

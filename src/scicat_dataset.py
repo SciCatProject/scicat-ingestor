@@ -225,12 +225,12 @@ def _retrieve_values_from_file(
 
 
 def extract_variables_values(
+    nexus_file: pathlib.Path,
     variables: dict[str, MetadataSchemaVariable],
     h5file: h5py.File,
     config: OfflineIngestorConfig,
     schema_id: str,
 ) -> dict:
-    nexus_file = pathlib.Path(config.nexus_file)
     variable_map = {
         "ingestor_run_id": str(uuid.uuid4()),
         "data_file_path": str(nexus_file),
