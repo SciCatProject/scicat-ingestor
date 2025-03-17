@@ -280,7 +280,7 @@ def _process_ill_dataset(
     return local_dataset_instance
 
 
-def _process_single_file(nexus_file_path: Path, schemas: OrderedDict[str, MetadataSchema], config: OfflineIngestorConfig, logger: logging.Logger) -> bool:
+def _process_single_file(nexus_file_path: Path, metadata_schema: MetadataSchema, config: OfflineIngestorConfig, logger: logging.Logger) -> bool:
     try:
         fh_options = config.ingestion.file_handling
         nexus_file_path = Path(config.nexus_file)
@@ -293,7 +293,6 @@ def _process_single_file(nexus_file_path: Path, schemas: OrderedDict[str, Metada
         # open nexus file with h5py
         with h5py.File(nexus_file_path) as h5file:
             # load instrument metadata configuration
-            metadata_schema = select_applicable_schema(nexus_file_path, schemas)
             logger.debug(
                 "Metadata Schema selected : %s (Id: %s)",
                 metadata_schema.name,
@@ -420,78 +419,76 @@ def main() -> None:
     logger = build_logger(tmp_config)
     config = build_offline_config(logger=logger)
 
-    # Log the configuration as dictionary so that it is easier to read from the logs
     logger.debug(
         'Starting the Scicat background Ingestor with the following configuration: %s',
         config.to_dict(),
     )
-
-    # Collect all metadata schema configurations
     schemas = collect_schemas(config.ingestion.schemas_directory)
-
-    # Determine files to process
+    
     path = Path(config.nexus_file)
     if not path.exists():
         logger.error("Path %s does not exist.", path)
         exit(logger, unexpected=True)
-        
-    files_to_process = []
     
-    if path.is_dir():
-        # Process directory recursively
-        logger.info("Processing directory: %s", path)
-        # Find all .nxs files recursively
-        for nexus_file in path.glob('**/*.nxs'):
-            files_to_process.append(nexus_file)
-        logger.info("Found %d Nexus files to process", len(files_to_process))
-    else:
-        # Process single file
-        files_to_process.append(path)
-        
-    if not files_to_process:
-        logger.warning("No files found to process")
-        exit(logger, unexpected=False)
-        
-    # Track overall success
+    # Track overall statistics    
+    total_files = 0
+    skipped_files = 0
     success_count = 0
-    total_files = len(files_to_process)
     
-    # Process each file
-    for index, nexus_file_path in enumerate(files_to_process):
-        logger.info(
-            "Processing file %d of %d: %s", 
-            index + 1, 
-            total_files, 
-            nexus_file_path
-        )
+    if path.is_dir():        
+        for nexus_file_path in path.glob('**/*.nxs'):
+            total_files += 1
+            applicable_schema = None
+            try:
+                applicable_schema = select_applicable_schema(nexus_file_path, schemas)
+            except Exception as e:
+                logger.debug(f"Error checking schema applicability for {nexus_file_path}: {str(e)}")
+                
+            if applicable_schema is None:
+                logger.debug(f"No schema applies to file: {nexus_file_path}, skipping")
+                skipped_files += 1
+                continue
+            
+            file_config = config
+            file_config.nexus_file = str(nexus_file_path)
+            
+            try:
+                result = _process_single_file(nexus_file_path, applicable_schema, file_config, logger)
+                if result:
+                    success_count += 1
+            except Exception as e:
+                logger.error(
+                    "Error processing file %s: %s", 
+                    nexus_file_path, 
+                    str(e), 
+                    exc_info=True
+                )
+    else:
+        total_files = 1
+        nexus_file_path = path
         
-        # Create a modified config with the current file path
-        file_config = config
-        file_config.nexus_file = str(nexus_file_path)
-        
+        applicable_schema = None
         try:
-            # Process the file
-            result = _process_single_file(nexus_file_path, schemas, file_config, logger)
-            if result:
-                success_count += 1
-                logger.info("Successfully processed file: %s", nexus_file_path)
+            applicable_schema = select_applicable_schema(nexus_file_path, schemas)
+            if applicable_schema is None:
+                logger.warning(f"No schema applies to file: {nexus_file_path}")
+                skipped_files = 1
+            else:
+                logger.debug(f"Using schema: {applicable_schema.name} (Id: {applicable_schema.id})")
+                file_config = config
+                result = _process_single_file(nexus_file_path, applicable_schema, file_config, logger)
+                if result:
+                    success_count = 1
         except Exception as e:
-            logger.error(
-                "Error processing file %s: %s", 
-                nexus_file_path, 
-                str(e), 
-                exc_info=True
-            )
-    
-    # Report results
+            logger.error(f"Error processing file {nexus_file_path}: {str(e)}", exc_info=True)
     logger.info(
-        "Processing complete. Successfully processed %d of %d files.", 
+        "Processing complete. Processed %d files: %d successful, %d skipped due to no applicable schema.", 
+        total_files, 
         success_count, 
-        total_files
+        skipped_files
     )
     
-    # Exit with status based on overall success
-    exit(logger, unexpected=(success_count == 0 and total_files > 0))
+    exit(logger, unexpected=(success_count == 0 and total_files > skipped_files > 0))
 
 if __name__ == "__main__":
     main()

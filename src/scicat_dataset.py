@@ -183,6 +183,7 @@ def _retrieve_values_from_file(
     variable_recipe: NexusFileMetadataVariable, h5file: h5py.File
 ) -> Any:
     """Retrieve values from file, now with unit support."""
+    unit = None
     if "*" in variable_recipe.path:
         path = variable_recipe.path.split("/")[1:]
         path[0] += "/"
