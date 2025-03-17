@@ -438,7 +438,7 @@ def main() -> None:
     logger.info(f"Processing {len(paths)} specified paths")
 
     for path_str in paths:
-        path = Path(path_str)
+        path = Path(path_str).resolve()
         if not path.exists():
             logger.error(f"Path {path} does not exist, skipping.")
             continue
@@ -446,8 +446,8 @@ def main() -> None:
         logger.info(f"Processing path: {path}")
         
         if path.is_dir():
-            for root, _, files in os.walk(path):
-                root_path = Path(root)
+            for root, _, files in os.walk(path, followlinks=True):
+                root_path = Path(root).resolve()
 
                 if root_path in directories_without_schemas:
                     nxs_count = sum(1 for f in files if f.endswith('.nxs'))
