@@ -98,6 +98,14 @@ def build_arg_parser(
             arg_names = _wrap_arg_names(name, *prefixes)
             required = any(arg_name in mandatory_args for arg_name in arg_names)
             long_name = arg_names[-1].replace("--", "")
+            if long_name == "nexus-file":
+                group.add_argument(
+                    *arg_names,
+                    action="append",
+                    required=required,
+                    help=_HELP_TEXT.get(long_name, "Path to nexus file or directory (can be specified multiple times)"),
+                )
+                continue
             arg_adder = partial(
                 group.add_argument,
                 *arg_names,
@@ -345,7 +353,7 @@ class OnlineIngestorConfig:
 
 @dataclass(kw_only=True)
 class OfflineIngestorConfig:
-    nexus_file: str
+    nexus_file: str | list[str]
     """Full path of the input nexus file to be ingested."""
     done_writing_message_file: str
     """Full path of the done writing message file that match the ``nexus_file``."""

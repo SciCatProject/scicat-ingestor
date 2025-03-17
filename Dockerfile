@@ -22,5 +22,13 @@ ENV SETUPTOOLS_SCM_PRETEND_VERSION=0.1.0
 # Install your package in editable mode
 RUN pip install -e .
 
-# By default, run the ingestor
-CMD ["sh", "-c", "scicat_background_ingestor --logging.verbose -c ${CONFIG_FILE} --nexus-file ${NEXUS_FILE}"]
+# Create entrypoint script to handle space-separated nexus files
+RUN echo '#!/bin/bash\n\
+ARGS="--logging.verbose -c ${CONFIG_FILE}"\n\
+for file in $NEXUS_FILE; do\n\
+  ARGS="$ARGS --nexus-file $file"\n\
+done\n\
+scicat_background_ingestor $ARGS\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+
+# By default, run the ingestor with the entrypoint script
+CMD ["/app/entrypoint.sh"]

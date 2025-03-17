@@ -301,7 +301,7 @@ def _select_applicable_schema(
                 elif key == "and":
                     # Add AND conditions to stack
                     for item in reversed(conditions):
-                        stack.append((item, True, False))
+                        stack.append((item, True))
                 else:
                     raise NotImplementedError(f"Invalid operator: {key}")
         else:
