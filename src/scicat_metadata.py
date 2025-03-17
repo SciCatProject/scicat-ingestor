@@ -273,18 +273,35 @@ def _select_applicable_schema(
             else:
                 or_group_result = or_group_result or result
                 final_result = or_group_result
-                
+            
         elif isinstance(current_selector, dict):
             for key, conditions in current_selector.items():
                 if key == "or":
-                    or_group_result = False  # Reset OR group result
-                    # Push each condition onto the stack with OR context
-                    for item in reversed(conditions):
-                        stack.append((item, False))
+                    # Create a sub-evaluation for the OR group
+                    or_result = False
+                    or_stack = [(item, False, False) for item in reversed(conditions)]
+                    
+                    # Process OR conditions
+                    while or_stack:
+                        or_item, _, _ = or_stack.pop()
+                        # Recursively evaluate this condition
+                        item_result = _select_applicable_schema(or_item, filename)
+                        or_result = or_result or item_result
+                        if or_result:  # Short-circuit OR
+                            break
+                    
+                    # Apply OR result to AND context
+                    if is_and_context:
+                        final_result = final_result and or_result
+                        if not final_result:  # Short-circuit AND
+                            return False
+                    else:
+                        return or_result
+                        
                 elif key == "and":
-                    # Push each condition onto the stack with AND context
+                    # Add AND conditions to stack
                     for item in reversed(conditions):
-                        stack.append((item, True))
+                        stack.append((item, True, False))
                 else:
                     raise NotImplementedError(f"Invalid operator: {key}")
         else:
