@@ -182,7 +182,33 @@ def _retrieve_value_and_unit(
 def _retrieve_values_from_file(
     variable_recipe: NexusFileMetadataVariable, h5file: h5py.File
 ) -> Any:
-    """Retrieve values from file, now with unit support."""
+    """Retrieve values from file, with unit support and multi possible paths support."""
+    if isinstance(variable_recipe.path, list):
+        value = None
+        unit = None
+        for path in variable_recipe.path:
+            try:
+                # Create a temporary variable recipe with a single path
+                temp_recipe = copy.copy(variable_recipe)
+                temp_recipe.path = path
+                
+                # Try to retrieve with this path
+                value, unit = _retrieve_values_from_file(temp_recipe, h5file)
+                
+                # If we got a value, use it and stop trying other paths
+                if value is not None:
+                    return value, unit
+            except (KeyError, Exception) as e:
+                logging.debug("Path %s not found or error: %s", path, str(e))
+                continue
+                
+        # If we get here, none of the paths worked
+        logging.warning(
+            "None of the specified paths found in file: %s",
+            variable_recipe.path
+        )
+        return None, None
+
     unit = None
     if "*" in variable_recipe.path:
         path = variable_recipe.path.split("/")[1:]

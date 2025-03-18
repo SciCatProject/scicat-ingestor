@@ -7,6 +7,7 @@ import re
 from typing import OrderedDict
 import os
 import copy
+import numpy as np
 
 import h5py
 from scicat_communication import (
@@ -187,6 +188,77 @@ def _generate_or_get_dataset_pid(
         )
     return pid
 
+def _extract_instrument_properties(nexus_file_path: Path, h5file, metadata_schema: MetadataSchema, logger: logging.Logger) -> tuple[str, MetadataSchema]:
+    """Extract instrument properties when `/entry0/instrument` is not present.
+        
+    Returns:
+        tuple: (instrument_name, updated_metadata_schema)
+    """
+    instrument_name = None
+    
+    # First try to get instrument name from "/entry0/instrument_name"
+    if "/entry0/instrument_name" in h5file:
+        try:
+            value = h5file["/entry0/instrument_name"][...]
+            if isinstance(value, (list, np.ndarray)):
+                # Use first item if it's an array
+                instrument_name = value[0]
+                if isinstance(instrument_name, bytes):
+                    instrument_name = instrument_name.decode('utf-8')
+            else:
+                instrument_name = value
+                if isinstance(instrument_name, bytes):
+                    instrument_name = instrument_name.decode('utf-8')
+            logger.debug(f"Found instrument name: {instrument_name}")
+        except Exception as e:
+            logger.warning(f"Error reading instrument_name: {str(e)}")
+    
+    # If no instrument name found, try to find it from path components
+    if not instrument_name:
+        try:
+            path_components = [part.lower() for part in str(nexus_file_path).split('/')]
+            
+            if '/entry0' in h5file:
+                entry_group = h5file['/entry0']
+                for group_name in entry_group:
+                    if not isinstance(entry_group[group_name], h5py.Group):
+                        continue
+                        
+                    # Check if this group name matches any path component (case insensitive)
+                    if group_name.lower() in path_components:
+                        # Found a potential instrument group
+                        instrument_group = f"/entry0/{group_name}"
+                        logger.debug(f"Found potential instrument group: {instrument_group}")
+                        
+                        instrument_name = group_name
+                        logger.debug(f"Using group name as instrument name: {instrument_name}")
+                        break
+                
+                if not instrument_name:
+                    raise RuntimeError("No instrument name found in file")
+        except Exception as e:
+            raise RuntimeError(f"Error searching for instrument groups: {str(e)}")
+    
+    # If instrument name found, update schema variables
+    if instrument_name:
+        modified_variables = copy.deepcopy(metadata_schema.variables)
+        
+        # Update paths in all variables
+        for var_name, var_config in modified_variables.items():
+            if hasattr(var_config, 'path'):
+                # Replace XXX with instrument name
+                if "XXX" in var_config.path:
+                    var_config.path = var_config.path.replace("XXX", instrument_name)
+                elif "/entry0/instrument" in var_config.path:
+                    var_config.path = var_config.path.replace("/entry0/instrument", f"/entry0/{instrument_name}")
+        
+        # Use the modified schema for variable extraction
+        metadata_schema_copy = copy.deepcopy(metadata_schema)
+        metadata_schema_copy.variables = modified_variables
+        return instrument_name, metadata_schema_copy
+    else:
+        raise RuntimeError("No instrument name found in file")
+
 def _process_ill_dataset(
     local_dataset_instance: ScicatDataset,
     nexus_file_path: Path,
@@ -281,7 +353,6 @@ def _process_ill_dataset(
     )
     return local_dataset_instance
 
-
 def _process_single_file(nexus_file_path: Path, metadata_schema: MetadataSchema, config: OfflineIngestorConfig, logger: logging.Logger) -> bool:
     try:
         fh_options = config.ingestion.file_handling
@@ -299,6 +370,12 @@ def _process_single_file(nexus_file_path: Path, metadata_schema: MetadataSchema,
                 metadata_schema.name,
                 metadata_schema.id,
             )
+
+            # If at ILL and no standard instrument path, extract instrument properties
+            if metadata_schema.variables["creationLocation"].value == "ILL" and "/entry0/instrument" not in h5file:
+                instrument_name, metadata_schema = _extract_instrument_properties(
+                    nexus_file_path, h5file, metadata_schema, logger
+                )
 
             # define variables values
             variable_map = extract_variables_values(
@@ -448,6 +525,8 @@ def main() -> None:
         if path.is_dir():
             for root, _, files in os.walk(path, followlinks=True):
                 root_path = Path(root).resolve()
+
+                logger.info(f"Processing directory: {root}")
 
                 if root_path in directories_without_schemas:
                     nxs_count = sum(1 for f in files if f.endswith('.nxs'))

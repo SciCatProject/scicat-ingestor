@@ -22,27 +22,27 @@
     "variables": {
         "selector_rotation_speed": {
             "source": "NXS",
-            "path": "/entry0/XXX/selector/rotation_speed",
+            "path": "/entry0/instrument/selector/rotation_speed",
             "value_type": "string"
         },
         "collimation_index": {
             "source": "NXS",
-            "path": "/entry0/XXX/collimation/actual_position",
+            "path": "/entry0/instrument/collimation/actual_position",
             "value_type": "string"
         },
         "diaphragm_mode": {
             "source": "NXS",
-            "path": "/entry0/XXX/collimation/diaphragm_mode",
+            "path": "/entry0/instrument/collimation/diaphragm_mode",
             "value_type": "string"
         },
         "aperture_size": {
             "source": "NXS",
-            "path": "/entry0/XXX/collimation/apt_size",
+            "path": "/entry0/instrument/collimation/apt_size",
             "value_type": "string"
         },
         "wavelength": {
             "source": "NXS",
-            "path": "/entry0/XXX/selector/wavelength",
+            "path": "/entry0/instrument/selector/wavelength",
             "value_type": "string"
         }
     },

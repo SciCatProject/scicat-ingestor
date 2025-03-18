@@ -58,7 +58,7 @@
     },
     "dataset_name": {
       "source": "NXS",
-      "path": "/entry0/title",
+      "path": ["/entry0/title", "/entry0/experiment_title"],
       "value_type": "string"
     },
     "instrument_name": {

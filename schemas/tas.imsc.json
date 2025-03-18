@@ -22,27 +22,27 @@
     "variables": {
         "selector_rotation_speed": {
             "source": "NXS",
-            "path": "/entry0/XXX/Selector/rotation_speed",
+            "path": "/entry0/instrument/Selector/rotation_speed",
             "value_type": "string"
         },
         "monochromator_name": {
             "source": "NXS",
-            "path": "/entry0/XXX/Monochromator/type",
+            "path": "/entry0/instrument/Monochromator/type",
             "value_type": "string"
         },
         "monochromator_dspacing": {
             "source": "NXS",
-            "path": "/entry0/XXX/Analyser/d_spacing",
+            "path": "/entry0/instrument/Analyser/d_spacing",
             "value_type": "string"
         },
         "analyser_name": {
             "source": "NXS",
-            "path": "/entry0/XXX/Monochromator/type",
+            "path": "/entry0/instrument/Monochromator/type",
             "value_type": "string"
         },
         "analyser_dspacing": {
             "source": "NXS",
-            "path": "/entry0/XXX/Analyser/d_spacing",
+            "path": "/entry0/instrument/Analyser/d_spacing",
             "value_type": "string"
         }
     },
