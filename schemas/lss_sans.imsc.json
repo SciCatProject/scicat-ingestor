@@ -1,0 +1,94 @@
+{
+    "order": 1,
+    "id": "ill-lss-sans-schema",
+    "name": "ILL Large Scale Structure SANS Instruments Metadata Schema",
+    "instrument": "Large Scale Structure SANS",
+    "selector": {
+        "and": [
+            "dirname:starts_with:rawdata",
+            "filename:contains:.nxs",
+            {
+                "or": [
+                    "dirname:starts_with:d11",
+                    "dirname:starts_with:d22",
+                    "dirname:starts_with:d33",
+                    "dirname:starts_with:ladi",
+                    "dirname:starts_with:dali",
+                    "dirname:starts_with:sam"
+                ]
+            }
+        ]
+    },
+    "variables": {
+        "selector_rotation_speed": {
+            "source": "NXS",
+            "path": "/entry0/XXX/selector/rotation_speed",
+            "value_type": "string"
+        },
+        "collimation_index": {
+            "source": "NXS",
+            "path": "/entry0/XXX/collimation/actual_position",
+            "value_type": "string"
+        },
+        "diaphragm_mode": {
+            "source": "NXS",
+            "path": "/entry0/XXX/collimation/diaphragm_mode",
+            "value_type": "string"
+        },
+        "aperture_size": {
+            "source": "NXS",
+            "path": "/entry0/XXX/collimation/apt_size",
+            "value_type": "string"
+        },
+        "wavelength": {
+            "source": "NXS",
+            "path": "/entry0/XXX/selector/wavelength",
+            "value_type": "string"
+        }
+    },
+    "schema": {
+        "instrument_properties": {
+            "type": "dict",
+            "field_type": "scientific_metadata",
+            "machine_name": "instrumentProperties",
+            "human_name": "Instrument Properties",
+            "value": {
+                "selector_rotation_speed": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "selector_rotation_speed",
+                    "human_name": "Selector Rotation Speed",
+                    "value": "<selector_rotation_speed>",
+                    "type": "string"
+                },
+                "collimation_index": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "collimation_index",
+                    "human_name": "Collimation Index",
+                    "value": "<collimation_index>",
+                    "type": "string"
+                },
+                "diaphragm_mode": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "diaphragm_mode",
+                    "human_name": "Diaphragm Mode",
+                    "value": "<diaphragm_mode>",
+                    "type": "string"
+                },
+                "aperture_size": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "aperture_size",
+                    "human_name": "Aperture Size",
+                    "value": "<aperture_size>",
+                    "type": "string"
+                },
+                "wavelength": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "wavelength",
+                    "human_name": "Wavelength",
+                    "value": "<wavelength>",
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

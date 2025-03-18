@@ -1,0 +1,70 @@
+{
+    "order": 1,
+    "id": "ill-diff-powder-schema",
+    "name": "ILL Powder Diffraction Instruments Metadata Schema",
+    "instrument": "Powder Diffraction",
+    "selector": {
+        "and": [
+            "dirname:starts_with:rawdata",
+            "filename:contains:.nxs",
+            {
+                "or": [
+                    "dirname:starts_with:d1b",
+                    "dirname:starts_with:d2b",
+                    "dirname:starts_with:d20",
+                    "dirname:starts_with:d4",
+                    "dirname:starts_with:d007",
+                    "dirname:starts_with:salsa"
+                ]
+            }
+        ]
+    },
+    "variables": {
+        "wavelength": {
+            "source": "NXS",
+            "path": "/entry0/wavelength",
+            "value_type": "string"
+        },
+        "monochromator_name": {
+            "source": "NXS",
+            "path": "/entry0/instrument/monochromator/Mono name",
+            "value_type": "string"
+        },
+        "takeoff": {
+            "source": "NXS",
+            "path": "/entry0/instrument/monochromator/Takeoff",
+            "value_type": "string"
+        }
+    },
+    "schema": {
+        "instrument_properties": {
+            "type": "dict",
+            "field_type": "scientific_metadata",
+            "machine_name": "instrumentProperties",
+            "human_name": "Instrument Properties",
+            "value": {
+                "wavelength": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "wavelength",
+                    "human_name": "Wavelength",
+                    "value": "<wavelength>",
+                    "type": "string"
+                },
+                "monochromator_name": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "monochromator_name",
+                    "human_name": "Monochromator Name",
+                    "value": "<monochromator_name>",
+                    "type": "string"
+                },
+                "takeoff": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "takeoff",
+                    "human_name": "Takeoff",
+                    "value": "<takeoff>",
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

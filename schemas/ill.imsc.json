@@ -11,15 +11,36 @@
         "or": [
           "dirname:starts_with:d17",
           "dirname:starts_with:figaro",
-          "dirname:starts_with:panther"
-        ]
-      },
-      {
-        "or": [
-          "dirname:starts_with:21",
-          "dirname:starts_with:22",
-          "dirname:starts_with:23",
-          "dirname:starts_with:24"
+          "dirname:starts_with:panther",
+          "dirname:starts_with:d1b",
+          "dirname:starts_with:d2b",
+          "dirname:starts_with:d20",
+          "dirname:starts_with:d4",
+          "dirname:starts_with:d007",
+          "dirname:starts_with:xtremed",
+          "dirname:starts_with:salsa",
+          "dirname:starts_with:d3",
+          "dirname:starts_with:d9",
+          "dirname:starts_with:d19",
+          "dirname:starts_with:d10",
+          "dirname:starts_with:d23",
+          "dirname:starts_with:orient",
+          "dirname:starts_with:in5",
+          "dirname:starts_with:sharp",
+          "dirname:starts_with:in16b",
+          "dirname:starts_with:in13",
+          "dirname:starts_with:in1",
+          "dirname:starts_with:thales",
+          "dirname:starts_with:in8",
+          "dirname:starts_with:in12",
+          "dirname:starts_with:in20",
+          "dirname:starts_with:in22",
+          "dirname:starts_with:d11",
+          "dirname:starts_with:d22",
+          "dirname:starts_with:d33",
+          "dirname:starts_with:ladi",
+          "dirname:starts_with:dali",
+          "dirname:starts_with:sam"
         ]
       }
     ]

@@ -7,15 +7,7 @@
         "and": [
             "dirname:starts_with:rawdata",
             "filename:contains:.nxs",
-            "dirname:starts_with:figaro",
-            {
-            "or": [
-                "dirname:starts_with:21",
-                "dirname:starts_with:22",
-                "dirname:starts_with:23",
-                "dirname:starts_with:24"
-            ]
-            }
+            "dirname:starts_with:figaro"
         ]
     },
     "variables": {

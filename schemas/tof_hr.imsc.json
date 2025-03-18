@@ -1,20 +1,18 @@
 {
     "order": 1,
     "id": "ill-panther-schema",
-    "name": "Panther Instrument Metadata Schema",
-    "instrument": "Panther",
+    "name": "TOF HR Instrument Metadata Schema",
+    "instrument": "TOF HR",
     "selector": {
         "and": [
             "dirname:starts_with:rawdata",
             "filename:contains:.nxs",
-            "dirname:starts_with:panther",
             {
-            "or": [
-                "dirname:starts_with:21",
-                "dirname:starts_with:22",
-                "dirname:starts_with:23",
-                "dirname:starts_with:24"
-            ]
+                "or": [
+                    "dirname:starts_with:panther",
+                    "dirname:starts_with:in5",
+                    "dirname:starts_with:sharp"
+                ]
             }
         ]
     },
