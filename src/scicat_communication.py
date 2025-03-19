@@ -614,6 +614,8 @@ def get_instrument_nomad_id_by_name(
 def get_proposal_by_id(
     proposal_id: str, config: SciCatOptions, logger: logging.Logger
 ):
+    if not proposal_id:
+        raise ValueError("ProposalId is missing")
     url = urljoin(config.host_address, config.api_endpoints.proposals) + f"/{quote_plus(proposal_id)}"
     logger.debug("Checking if proposal exists by id: %s", proposal_id)
     response = _get_from_scicat(
