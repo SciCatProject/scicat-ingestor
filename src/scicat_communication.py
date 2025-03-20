@@ -141,7 +141,8 @@ def patch_scicat_dataset(
                 }
     patch_dataset.pop("pid", None)
     patch_dataset.pop("type", None)
-    patch_dataset.pop("numberOfFiles", None)
+    patch_dataset['numberOfFiles'] = current_dataset['numberOfFiles']
+    patch_dataset['size'] = current_dataset['size']
 
     response = requests.patch(
         urljoin(config.host_address, f"{config.api_endpoints.datasets}/{quote_plus(dataset['pid'])}"),

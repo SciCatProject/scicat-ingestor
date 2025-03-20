@@ -175,7 +175,7 @@ def _generate_or_get_dataset_pid(
     """Generate a dataset PID or get it from SciCat
     if a dataset for same proposal and sampl already exists.
     """
-    pid = f"{local_dataset.proposalId}-DS0"
+    pid = f"{local_dataset.proposalId}-DS1"
     existing_dataset = get_dataset_by_pid(
         pid=pid, config=scicat_config, logger=logger
     )
@@ -556,7 +556,7 @@ def main() -> None:
                 except Exception as e:
                     logger.debug(f"Error checking schema applicability for {sample_file_path}: {str(e)}")
                 
-                if applicable_schema is None:
+                if applicable_schema is None or "internalUse" in root:
                     logger.debug(f"No schema applies to directory: {root}, skipping all files")
                     directories_without_schemas.add(root_path)
                     skipped_files += nexus_file_count
