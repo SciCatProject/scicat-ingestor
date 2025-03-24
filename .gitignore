@@ -5,6 +5,8 @@
 
 # Environments
 venv
+.venv
+get-pip.py
 
 # Caches
 .clangd/

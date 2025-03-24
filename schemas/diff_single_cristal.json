@@ -1,0 +1,82 @@
+{
+    "order": 1,
+    "id": "ill-diff-single-crystal-schema",
+    "name": "ILL Single Crystal Diffraction Instruments Metadata Schema",
+    "instrument": "Single Crystal Diffraction",
+    "selector": {
+        "and": [
+            "dirname:starts_with:rawdata",
+            "filename:contains:.nxs",
+            {
+                "or": [
+                    "dirname:starts_with:d3",
+                    "dirname:starts_with:d9",
+                    "dirname:starts_with:d19",
+                    "dirname:starts_with:d10",
+                    "dirname:starts_with:d23",
+                    "dirname:starts_with:orient"
+                ]
+            }
+        ]
+    },
+    "variables": {
+        "wavelength": {
+            "source": "NXS",
+            "path": "/entry0/wavelength",
+            "value_type": "string"
+        },
+        "monochromator_name": {
+            "source": "NXS",
+            "path": "/entry0/instrument/Monochromator/mode_label",
+            "value_type": "string"
+        },
+        "monochromator_order": {
+            "source": "NXS",
+            "path": "/entry0/instrument/Monochromator/mode_label",
+            "value_type": "string"
+        },
+        "monochromator_dspacing": {
+            "source": "NXS",
+            "path": "/entry0/instrument/Monochromator/dspacing",
+            "value_type": "string"
+        }
+    },
+    "schema": {
+        "instrument_properties": {
+            "type": "dict",
+            "field_type": "scientific_metadata",
+            "machine_name": "instrumentProperties",
+            "human_name": "Instrument Properties",
+            "value": {
+                "wavelength": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "wavelength",
+                    "human_name": "Wavelength",
+                    "value": "<wavelength>",
+                    "type": "string"
+                },
+                "monochromator_name": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "monochromator_name",
+                    "human_name": "Monochromator Name",
+                    "value": "<monochromator_name>",
+                    "type": "string"
+                },
+                "monochromator_order": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "monochromator_order",
+                    "human_name": "Monochromator Order",
+                    "value": "<monochromator_order>",
+                    "type": "string"
+                },
+                "monochromator_dspacing": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "monochromator_dspacing",
+                    "human_name": "Monochromator D-spacing",
+                    "value": "<monochromator_dspacing>",
+                    "type": "string"
+                }
+            }
+        }
+    }
+}
