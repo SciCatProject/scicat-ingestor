@@ -23,7 +23,7 @@ idna==3.10
     # via requests
 iniconfig==2.0.0
     # via pytest
-kafka-python==2.0.6
+kafka-python==2.1.2
     # via -r base.in
 markdown-it-py==3.0.0
     # via rich
