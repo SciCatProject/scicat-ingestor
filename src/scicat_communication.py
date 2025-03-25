@@ -701,10 +701,13 @@ def get_dataset_by_sample_id(
 def get_origdatablock_by_datasetId(
     datasetId: str, config: SciCatOptions, logger: logging.Logger
 ):
+    """
+    Get origdatablock by datasetId, do not get datafiles for performance reasons
+    """
     if not datasetId:
         logger.error("DatasetId is missing")
         return None
-    filter_string = '?filter={"where":{"datasetId":"' + datasetId + '"}}'
+    filter_string = '?filter={"where":{"datasetId":"' + datasetId + '"},"fields":{"dataFileList":false}}'
     url = urljoin(config.host_address, config.api_endpoints.origdatablocks) + filter_string
     logger.debug("Checking if origdatablock exists by datasetId: %s", datasetId)
     response = _get_from_scicat(

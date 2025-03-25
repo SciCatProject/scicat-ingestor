@@ -88,12 +88,12 @@
     },
     "owner_group": {
       "source": "VALUE",
-      "value": "ingestor",
+      "value": "admin",
       "value_type": "string"
     },
     "access_groups": {
       "source": "VALUE",
-      "value": [],
+      "value": ["ingestor"],
       "value_type": "string[]"
     },
     "sample_id": {
