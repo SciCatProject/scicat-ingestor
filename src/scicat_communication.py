@@ -190,54 +190,36 @@ def patch_scicat_dataset_numfiles(
     )
     return result
 
-def patch_scicat_origdatablock(
-    *, origdatablock: dict, config: SciCatOptions, logger: logging.Logger
-) -> dict:
-    """
-    Execute a PATCH request to scicat to update an origdatablock
-    """
-    logger.debug("Sending PATCH request to update origdatablock")
+def patch_scicat_origdatablock(*, origdatablock: dict, config: SciCatOptions, logger: logging.Logger) -> dict:
     current_origdatablock = get_origdatablock_by_datasetId(origdatablock['datasetId'], config, logger)[0]
     if not current_origdatablock:
         logger.error("Origdatablock with datasetId %s does not exist", origdatablock['datasetId'])
         raise ScicatOrigDatablockAPIError(f"Error updating origdatablock: \n{origdatablock}")
-
-    # Format the origdatablock object to be sent to the backend
-    patch_dataFileList = current_origdatablock['dataFileList'][:]
-    to_add_file_infos = [file_info for file_info in origdatablock['dataFileList'] if file_info['path'] not in [f['path'] for f in patch_dataFileList]]
-    if not to_add_file_infos:
-        raise RuntimeError("No new files to add to origdatablock")
-    patch_dataFileList.extend(to_add_file_infos)
-    for file_info in patch_dataFileList:
-        file_info.pop("_id", None)
-        file_info.pop("id", None)
-
-    patch_origdatablock = {
-        "ownerGroup": origdatablock['ownerGroup'],
-        "accessGroups": list(set(origdatablock['accessGroups'] + current_origdatablock['accessGroups'])),
-        "dataFileList": patch_dataFileList,
-        "size": sum([file_info.get("size", 0) for file_info in patch_dataFileList]),
+    request_body = {
+        "dataFilesToAppend": origdatablock["dataFileList"]
     }
-
     response = requests.patch(
-        urljoin(config.host_address, f"{config.api_endpoints.origdatablocks}/{quote_plus(current_origdatablock['_id'])}"),
-        json=patch_origdatablock,
+        urljoin(
+            config.host_address,
+            f"{config.api_endpoints.origdatablocks}/{quote_plus(current_origdatablock['_id'])}/appendFiles"
+        ),
+        json=request_body,
         headers=config.headers,
         timeout=config.timeout,
     )
-    result: dict = response.json()
+    result = response.json()
     if not response.ok:
         logger.error(
-            "Failed to update origdatablock. \nError message from scicat backend: \n%s",
+            "Failed to append new files to existing dataFileList. \nError from scicat backend: \n%s",
             result.get("error", {}),
         )
-        raise ScicatOrigDatablockAPIError(f"Error updating origdatablock: \n{origdatablock}")
-
+        raise ScicatOrigDatablockAPIError(
+            f"Error appending new files to existing dataFileList: \n{origdatablock}"
+        )
     logger.debug(
-        "Origdatablock updated successfully. Origdatablock pid: %s",
+        "Append request successful. The updated origdatablock pid: %s",
         result.get("_id"),
     )
-
     return result
 
 class ScicatOrigDatablockAPIError(Exception):

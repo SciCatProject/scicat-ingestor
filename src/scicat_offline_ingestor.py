@@ -8,6 +8,8 @@ from typing import OrderedDict
 import os
 import copy
 import numpy as np
+import requests
+import urllib3
 
 import h5py
 from scicat_communication import (
@@ -353,6 +355,49 @@ def _process_ill_dataset(
     )
     return local_dataset_instance
 
+def is_connection_error(exception: Exception) -> bool:
+    """
+    Determine if an exception is related to connection issues.
+    
+    Args:
+        exception: The exception to check
+        
+    Returns:
+        bool: True if it's a connection-related exception
+    """
+    # Check for common connection-related exceptions
+    connection_errors = (
+        requests.exceptions.ConnectionError,
+        requests.exceptions.Timeout,
+        urllib3.exceptions.ProtocolError,
+        ConnectionResetError,
+        ConnectionRefusedError,
+        ConnectionAbortedError,
+    )
+    
+    # Direct type check
+    if isinstance(exception, connection_errors):
+        return True
+    
+    # Check for wrapped exceptions
+    if hasattr(exception, '__context__') and exception.__context__ is not None:
+        if isinstance(exception.__context__, connection_errors):
+            return True
+    
+    # Check for common connection error messages
+    error_str = str(exception).lower()
+    connection_messages = [
+        'connection reset by peer',
+        'connection refused',
+        'connection aborted',
+        'connection timed out',
+        'network is unreachable',
+        'failed to establish a connection',
+        'server disconnected',
+    ]
+    
+    return any(msg in error_str for msg in connection_messages)
+
 def _process_single_file(nexus_file_path: Path, metadata_schema: MetadataSchema, config: OfflineIngestorConfig, logger: logging.Logger) -> bool:
     try:
         fh_options = config.ingestion.file_handling
@@ -401,7 +446,16 @@ def _process_single_file(nexus_file_path: Path, metadata_schema: MetadataSchema,
             logger=logger,
         )
 
-        config.scicat.token = login(config.scicat, logger)
+        try:
+            config.scicat.token = login(config.scicat, logger)
+        except Exception as e:
+            if is_connection_error(e):
+                logger.error("Connection error when contacting SciCat server: %s", str(e))
+                logger.error("Stopping processing as subsequent files will likely fail too")
+                # Propagate a special connection error exception to terminate processing
+                raise ConnectionError("Cannot connect to SciCat server") from e
+            # Re-raise other exceptions
+            raise
 
         if local_dataset_instance.creationLocation == "ILL":
             local_dataset_instance = _process_ill_dataset(
@@ -486,9 +540,24 @@ def _process_single_file(nexus_file_path: Path, metadata_schema: MetadataSchema,
             
         logout(config.scicat, logger)
         return True        
+    except ConnectionError as e:
+        # Don't call logout - connection is already broken
+        # Re-raise to signal caller that we need to stop processing
+        raise
     except Exception as e:
+        # Check if this is a wrapped connection error
+        if is_connection_error(e):
+            logger.error("Connection error detected when processing file %s: %s", nexus_file_path, str(e))
+            # Don't call logout - connection is already broken
+            # Raise a ConnectionError to signal caller to stop processing
+            raise ConnectionError("Connection error detected") from e
+            
         logger.error("Failed to process file %s: %s", nexus_file_path, str(e))
-        logout(config.scicat, logger)
+        try:
+            logout(config.scicat, logger)
+        except Exception:
+            # Ignore logout errors
+            pass
         return False
 
 def main() -> None:
@@ -523,67 +592,76 @@ def main() -> None:
         logger.info(f"Processing path: {path}")
         
         if path.is_dir():
-            for root, _, files in os.walk(path, followlinks=True):
-                root_path = Path(root).resolve()
+            try:
+                for root, _, files in os.walk(path, followlinks=True):
+                    root_path = Path(root).resolve()
 
-                logger.info(f"Processing directory: {root}")
+                    logger.info(f"Processing directory: {root}")
 
-                if root_path in directories_without_schemas:
-                    nxs_count = sum(1 for f in files if f.endswith('.nxs'))
-                    if nxs_count > 0:
-                        total_files += nxs_count
-                        skipped_files += nxs_count
-                        logger.debug(f"Skipping {nxs_count} files in {root} - no applicable schemas")
-                    continue
-                
-                # Find first .nxs file for quick schema applicability check
-                first_nexus = next((f for f in files if f.endswith('.nxs')), None)
-                if not first_nexus:
-                    continue
+                    if root_path in directories_without_schemas:
+                        nxs_count = sum(1 for f in files if f.endswith('.nxs'))
+                        if nxs_count > 0:
+                            total_files += nxs_count
+                            skipped_files += nxs_count
+                            logger.debug(f"Skipping {nxs_count} files in {root} - no applicable schemas")
+                        continue
                     
-                nexus_file_count = sum(1 for f in files if f.endswith('.nxs'))
-                total_files += nexus_file_count
-                
-                if total_files % 1000 == 0:
-                    logger.info(f"Discovered {total_files} files so far...")
+                    # Find first .nxs file for quick schema applicability check
+                    first_nexus = next((f for f in files if f.endswith('.nxs')), None)
+                    if not first_nexus:
+                        continue
+                        
+                    nexus_file_count = sum(1 for f in files if f.endswith('.nxs'))
+                    total_files += nexus_file_count
                     
-                # Check schema applicability using the first file
-                sample_file_path = os.path.join(root, first_nexus)
-                applicable_schema = None
-                
-                try:
-                    applicable_schema = select_applicable_schema(sample_file_path, schemas)
-                except Exception as e:
-                    logger.debug(f"Error checking schema applicability for {sample_file_path}: {str(e)}")
-                
-                if applicable_schema is None or "internalUse" in root:
-                    logger.debug(f"No schema applies to directory: {root}, skipping all files")
-                    directories_without_schemas.add(root_path)
-                    skipped_files += nexus_file_count
-                    continue
-                
-                # Process files in batches to avoid memory issues with large directories
-                # This avoids creating a huge list in memory
-                batch_size = 1000
-                processed = 0
-                
-                for nexus_file in (f for f in files if f.endswith('.nxs')):
-                    nexus_file_path = Path(os.path.join(root, nexus_file))
-                    file_config = copy.deepcopy(config)
-                    file_config.nexus_file = nexus_file_path
+                    if total_files % 1000 == 0:
+                        logger.info(f"Discovered {total_files} files so far...")
+                        
+                    # Check schema applicability using the first file
+                    sample_file_path = os.path.join(root, first_nexus)
+                    applicable_schema = None
                     
                     try:
-                        result = _process_single_file(nexus_file_path, applicable_schema, file_config, logger)
-                        if result:
-                            success_count += 1
-                            if success_count % 100 == 0:
-                                logger.info(f"Successfully processed {success_count} files so far...")
+                        applicable_schema = select_applicable_schema(sample_file_path, schemas)
                     except Exception as e:
-                        logger.error(f"Error processing file {nexus_file_path}: {str(e)}", exc_info=True)
+                        logger.debug(f"Error checking schema applicability for {sample_file_path}: {str(e)}")
+                    
+                    if applicable_schema is None or "internalUse" in root:
+                        logger.debug(f"No schema applies to directory: {root}, skipping all files")
+                        directories_without_schemas.add(root_path)
+                        skipped_files += nexus_file_count
+                        continue
+                    
+                    # Process files in batches to avoid memory issues with large directories
+                    # This avoids creating a huge list in memory
+                    batch_size = 1000
+                    processed = 0
+                    
+                    for nexus_file in (f for f in files if f.endswith('.nxs')):
+                        nexus_file_path = Path(os.path.join(root, nexus_file))
+                        file_config = copy.deepcopy(config)
+                        file_config.nexus_file = nexus_file_path
                         
-                    processed += 1
-                    if processed % batch_size == 0:
-                        logger.debug(f"Processed {processed}/{nexus_file_count} files in directory {root}")
+                        try:
+                            result = _process_single_file(nexus_file_path, applicable_schema, file_config, logger)
+                            if result:
+                                success_count += 1
+                                if success_count % 100 == 0:
+                                    logger.info(f"Successfully processed {success_count} files so far...")
+                        except ConnectionError as e:
+                            # Connection error occurred - exit processing completely
+                            logger.error("Connection to SciCat server failed. Stopping processing.")
+                            logger.error("Please check server status and try again later.")
+                            exit(logger, unexpected=True)
+                            
+                        processed += 1
+                        if processed % batch_size == 0:
+                            logger.debug(f"Processed {processed}/{nexus_file_count} files in directory {root}")
+            except ConnectionError as e:
+                # Catch any connection errors that bubble up
+                logger.error("Connection to SciCat server failed. Stopping processing.")
+                logger.error("Please check server status and try again later.")
+                exit(logger, unexpected=True)
         else:
             total_files = 1
             nexus_file_path = path
@@ -600,6 +678,11 @@ def main() -> None:
                     result = _process_single_file(nexus_file_path, applicable_schema, file_config, logger)
                     if result:
                         success_count = 1
+            except ConnectionError as e:
+                # Connection error occurred - exit processing completely
+                logger.error("Connection to SciCat server failed. Stopping processing.")
+                logger.error("Please check server status and try again later.")
+                exit(logger, unexpected=True)
             except Exception as e:
                 logger.error(f"Error processing file {nexus_file_path}: {str(e)}", exc_info=True)
     logger.info(
