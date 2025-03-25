@@ -37,6 +37,10 @@ dunamai==1.23.0
     # via copier
 ess-streaming-data-types==0.27.0
     # via -r base.in
+eval-type-backport==0.2.2
+    # via copier
+exceptiongroup==1.2.2
+    # via pytest
 filelock==3.17.0
     # via
     #   tox
@@ -57,6 +61,8 @@ identify==2.6.6
     # via pre-commit
 idna==3.10
     # via requests
+importlib-metadata==8.6.1
+    # via build
 iniconfig==2.0.0
     # via pytest
 jinja2==3.1.5
@@ -79,7 +85,7 @@ mypy-extensions==1.0.0
     # via mypy
 nodeenv==1.9.1
     # via pre-commit
-numpy==2.2.2
+numpy==2.0.2
     # via
     #   ess-streaming-data-types
     #   h5py
@@ -109,7 +115,7 @@ pluggy==1.5.0
     #   tox
 plumbum==1.9.0
     # via copier
-pre-commit==4.1.0
+pre-commit==4.2.0
     # via
     #   -r dev.in
     #   -r static.in
@@ -144,6 +150,14 @@ rich==13.9.4
     # via -r base.in
 smmap==5.0.2
     # via gitdb
+tomli==2.2.1
+    # via
+    #   build
+    #   mypy
+    #   pip-tools
+    #   pyproject-api
+    #   pytest
+    #   tox
 toposort==1.10
     # via pip-compile-multi
 tox==4.24.2
@@ -153,6 +167,8 @@ typing-extensions==4.12.2
     #   mypy
     #   pydantic
     #   pydantic-core
+    #   rich
+    #   tox
 urllib3==2.3.0
     # via requests
 virtualenv==20.29.1
@@ -163,6 +179,8 @@ wcwidth==0.2.13
     # via prompt-toolkit
 wheel==0.45.1
     # via pip-tools
+zipp==3.21.0
+    # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # pip
