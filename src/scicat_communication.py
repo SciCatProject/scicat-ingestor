@@ -7,13 +7,21 @@ from typing import Any
 from urllib.parse import quote_plus, urljoin
 import dateutil.parser
 import copy
+import os
+from dotenv import load_dotenv
 
 import requests
 from scicat_configuration import SciCatOptions
 
+load_dotenv()
+
 def login(config: SciCatOptions, logger: logging.Logger) -> str:
+    auth_data = {
+        "username": os.environ.get("SCICAT_USERNAME"),
+        "password": os.environ.get("SCICAT_PASSWORD")
+    }
     response = requests.post(
-        config.urls.login, json=asdict(config.auth), headers=config.headers, timeout=config.timeout
+        config.urls.login, json=auth_data, headers=config.headers, timeout=config.timeout
     )
     if not response.ok:
         logger.error(

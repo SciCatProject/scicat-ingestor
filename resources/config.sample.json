@@ -67,7 +67,7 @@
   "scicat": {
     "host": "http://localhost:3000/api/v3",
     "additional_headers": {},
-    "timeout": 30000,
+    "timeout": 10000,
     "stream": true,
     "verify": false,
     "api_endpoints": {
@@ -78,10 +78,6 @@
       "samples": "samples",
       "login": "auth/login",
       "logout": "auth/logout"
-    },
-    "auth": {
-      "username": "admin",
-      "password": "admin"
     }
   }
 }

@@ -34,7 +34,8 @@ dependencies = [
   "h5py",
   "kafka-python",
   "requests",
-  "rich"
+  "rich",
+  "python-dotenv"
 ]
 
 dynamic = ["version"]

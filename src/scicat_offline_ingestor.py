@@ -585,6 +585,11 @@ def main() -> None:
 
     for path_str in paths:
         path = Path(path_str).resolve()
+        try:
+            path_exists = path.exists()
+        except PermissionError:
+            logger.error(f"Permission denied for path {path_str}, skipping.")
+            continue
         if not path.exists():
             logger.error(f"Path {path} does not exist, skipping.")
             continue
