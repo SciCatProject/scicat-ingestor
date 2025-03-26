@@ -29,7 +29,7 @@
       "compute_file_stats": true,
       "compute_file_hash": true,
       "file_hash_algorithm": "blake2b",
-      "save_file_hash": true,
+      "save_file_hash": false,
       "hash_file_extension": "b2b",
       "ingestor_files_directory": "../ingestor",
       "message_to_file": true,
@@ -65,17 +65,23 @@
     "graylog_facility": "scicat.ingestor"
   },
   "scicat": {
-    "host": "https://scicat.host",
-    "token": "JWT_TOKEN",
+    "host": "http://localhost:3000/api/v3",
     "additional_headers": {},
-    "timeout": 0,
+    "timeout": 30000,
     "stream": true,
     "verify": false,
     "api_endpoints": {
       "datasets": "datasets",
       "proposals": "proposals",
       "origdatablocks": "origdatablocks",
-      "instruments": "instruments"
+      "instruments": "instruments",
+      "samples": "samples",
+      "login": "auth/login",
+      "logout": "auth/logout"
+    },
+    "auth": {
+      "username": "admin",
+      "password": "admin"
     }
   }
 }

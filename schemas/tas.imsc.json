@@ -1,0 +1,94 @@
+{
+    "order": 1,
+    "id": "ill-tas-schema",
+    "name": "Triple Axis Spectrometer Instruments Metadata Schema",
+    "instrument": "Triple Axis Spectrometer",
+    "selector": {
+        "and": [
+            "dirname:starts_with:rawdata",
+            "filename:contains:.nxs",
+            {
+                "or": [
+                    "dirname:starts_with:in1",
+                    "dirname:starts_with:thales",
+                    "dirname:starts_with:in8",
+                    "dirname:starts_with:in12",
+                    "dirname:starts_with:in20",
+                    "dirname:starts_with:in22"
+                ]
+            }
+        ]
+    },
+    "variables": {
+        "selector_rotation_speed": {
+            "source": "NXS",
+            "path": "/entry0/instrument/Selector/rotation_speed",
+            "value_type": "string"
+        },
+        "monochromator_name": {
+            "source": "NXS",
+            "path": "/entry0/instrument/Monochromator/type",
+            "value_type": "string"
+        },
+        "monochromator_dspacing": {
+            "source": "NXS",
+            "path": "/entry0/instrument/Analyser/d_spacing",
+            "value_type": "string"
+        },
+        "analyser_name": {
+            "source": "NXS",
+            "path": "/entry0/instrument/Monochromator/type",
+            "value_type": "string"
+        },
+        "analyser_dspacing": {
+            "source": "NXS",
+            "path": "/entry0/instrument/Analyser/d_spacing",
+            "value_type": "string"
+        }
+    },
+    "schema": {
+        "instrument_properties": {
+            "type": "dict",
+            "field_type": "scientific_metadata",
+            "machine_name": "instrumentProperties",
+            "human_name": "Instrument Properties",
+            "value": {
+                "selector_rotation_speed": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "selector_rotation_speed",
+                    "human_name": "Selector Rotation Speed",
+                    "value": "<selector_rotation_speed>",
+                    "type": "string"
+                },
+                "monochromator_name": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "monochromator_name",
+                    "human_name": "Monochromator Name",
+                    "value": "<monochromator_name>",
+                    "type": "string"
+                },
+                "monochromator_dspacing": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "monochromator_dspacing",
+                    "human_name": "Monochromator D-spacing",
+                    "value": "<monochromator_dspacing>",
+                    "type": "string"
+                },
+                "analyser_name": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "analyser_name",
+                    "human_name": "Analyser Name",
+                    "value": "<analyser_name>",
+                    "type": "string"
+                },
+                "analyser_dspacing": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "analyser_dspacing",
+                    "human_name": "Analyser D-spacing",
+                    "value": "<analyser_dspacing>",
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

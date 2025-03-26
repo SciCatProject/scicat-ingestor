@@ -149,18 +149,33 @@ def render_variable_value(var_value: Any, variable_registry: dict) -> str:
 
     # If it is only one variable, then it is a simple replacement
     if (
-        var_key := output_value.removesuffix(">").removeprefix("<")
+        var_key := output_value.removesuffix(">").removeprefix("<")        
     ) in variable_registry:
-        return variable_registry[var_key]
+        reg_val = variable_registry[var_key]
+        if isinstance(reg_val, dict):
+            if "value" in reg_val:
+                return reg_val["value"]
+            # For complex nested dictionaries, return the string representation
+            return str(reg_val)
+        return reg_val
 
-    # If it is a complex variable, then it is a combination of variables
-    # similar to f-string in python
     for reg_var_name, reg_var_value in variable_registry.items():
+        if isinstance(reg_var_value, dict):
+            # For dictionaries with a "value" key, use that
+            if "value" in reg_var_value:
+                extracted_value = reg_var_value["value"]
+            # For other dictionaries, convert to string representation
+            else:
+                extracted_value = str(reg_var_value)
+        else:
+            extracted_value = reg_var_value
+            
+        # Replace the variable placeholder in the template
         output_value = output_value.replace(
-            "<" + reg_var_name + ">", str(reg_var_value)
+            "<" + reg_var_name + ">", str(extracted_value)
         )
 
-    if "<" in var_value and ">" in var_value:
+    if "<" in output_value and ">" in output_value:
         raise Exception(f"Unresolved variable: {var_value}")
 
     output_value = (
@@ -193,35 +208,106 @@ def collect_schemas(dir_path: pathlib.Path) -> OrderedDict[str, MetadataSchema]:
 def _select_applicable_schema(
     selector: str | dict, filename: str | None = None
 ) -> bool:
-    if isinstance(selector, str):
-        # filename:starts_with:/ess/data/coda
-        select_target_name, select_function_name, select_argument = selector.split(":")
-        if select_target_name in ["filename"]:
-            select_target_value = filename
-        else:
-            raise ValueError(f"Invalid target name {select_target_name}")
-
-        if select_function_name == "starts_with":
-            return select_target_value.startswith(select_argument)
-        else:
-            raise ValueError(f"Invalid function name {select_function_name}")
-
-    elif isinstance(selector, dict):
-        output = True
-        for key, conditions in selector.items():
-            if key == "or":
-                output = output and any(
-                    _select_applicable_schema(item, filename) for item in conditions
-                )
-            elif key == "and":
-                output = output and all(
-                    _select_applicable_schema(item, filename) for item in conditions
-                )
+    """
+    Evaluate if a schema applies to a file based on its selector.
+    """
+    stack = [(selector, True)]  # (selector, is_and_context)
+    final_result = True
+    or_group_result = False  # Track results within OR groups
+    
+    while stack:
+        current_selector, is_and_context = stack.pop()
+        
+        if isinstance(current_selector, str):
+            parts = current_selector.split(":")
+            if len(parts) != 3:
+                raise ValueError(f"Invalid selector format: {current_selector}")
+                
+            select_target_name, select_function_name, select_argument = parts
+            
+            # Get the appropriate target value based on the selector
+            if select_target_name == "filename":
+                # Extract just the filename without path
+                select_target_value = filename.split('/')[-1]
+            elif select_target_name == "fullpath":
+                # Use the complete path
+                select_target_value = filename
+            elif select_target_name == "dirname":
+                # Check against directory components
+                path_parts = filename.split('/')
+                # Default to False; will be updated if a match is found
+                result = False
+                for part in path_parts[:-1]:  # Exclude the filename
+                    if select_function_name == "starts_with" and part.startswith(select_argument):
+                        result = True
+                        break
+                    elif select_function_name == "contains" and select_argument in part:
+                        result = True
+                        break
+                
+                # Apply the result directly for dirname
+                if is_and_context:
+                    final_result = final_result and result
+                    if not final_result:  # Short-circuit AND
+                        break
+                else:
+                    or_group_result = or_group_result or result
+                    final_result = or_group_result
+                continue  # Skip the standard processing below
             else:
-                raise NotImplementedError("Invalid operator")
-        return output
-    else:
-        raise Exception(f"Invalid type for schema selector {type(selector)}")
+                raise ValueError(f"Invalid target name {select_target_name}")
+            
+            # Standard processing for filename and fullpath
+            if select_function_name == "starts_with":
+                result = select_target_value.startswith(select_argument)
+            elif select_function_name == "contains":
+                result = select_argument in select_target_value
+            else:
+                raise ValueError(f"Invalid function name {select_function_name}")
+                
+            # Apply the result based on current context
+            if is_and_context:
+                final_result = final_result and result
+                if not final_result:  # Short-circuit AND
+                    break
+            else:
+                or_group_result = or_group_result or result
+                final_result = or_group_result
+            
+        elif isinstance(current_selector, dict):
+            for key, conditions in current_selector.items():
+                if key == "or":
+                    # Create a sub-evaluation for the OR group
+                    or_result = False
+                    or_stack = [(item, False, False) for item in reversed(conditions)]
+                    
+                    # Process OR conditions
+                    while or_stack:
+                        or_item, _, _ = or_stack.pop()
+                        # Recursively evaluate this condition
+                        item_result = _select_applicable_schema(or_item, filename)
+                        or_result = or_result or item_result
+                        if or_result:  # Short-circuit OR
+                            break
+                    
+                    # Apply OR result to AND context
+                    if is_and_context:
+                        final_result = final_result and or_result
+                        if not final_result:  # Short-circuit AND
+                            return False
+                    else:
+                        return or_result
+                        
+                elif key == "and":
+                    # Add AND conditions to stack
+                    for item in reversed(conditions):
+                        stack.append((item, True))
+                else:
+                    raise NotImplementedError(f"Invalid operator: {key}")
+        else:
+            raise ValueError(f"Invalid selector type: {type(current_selector)}")
+            
+    return final_result
 
 
 def select_applicable_schema(
@@ -231,10 +317,28 @@ def select_applicable_schema(
     """
     Evaluates which metadata schema configuration is applicable to ``nexus_file``.
 
-    Order of the schemas matters and first schema that is suitable is selected.
+    Order of the schemas matters and first schema that is suitable is selected in priority.
+    if other schemas are also suitable, keep only what is not in conflict.
     """
+    result_schema = None
     for schema in schemas.values():
         if _select_applicable_schema(schema.selector, str(nexus_file)):
-            return schema
-
+            if result_schema is None:
+                result_schema = schema
+            else:
+                # Merge the schema
+                result_schema.id += '_' + schema.id
+                result_schema.name += ' & ' + schema.name
+                result_schema.order = min(result_schema.order, schema.order)
+                result_schema.selector = {
+                    "and": [result_schema.selector, schema.selector]
+                }
+                for key, value in schema.variables.items():
+                    if key not in result_schema.variables:
+                        result_schema.variables[key] = value
+                for key, value in schema.schema.items():
+                    if key not in result_schema.schema:
+                        result_schema.schema[key] = value
+    if result_schema:
+        return result_schema
     raise Exception("No applicable metadata schema configuration found!!")

@@ -13,6 +13,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass, field
 from types import MappingProxyType
 from typing import Any
+import logging
 
 import h5py
 from scicat_communication import render_full_url, retrieve_value_from_scicat
@@ -52,9 +53,17 @@ def to_float(value: Any) -> float:
     return float(value)
 
 
-def to_date(value: Any) -> str | None:
+def to_date(value: Any) -> str | None:        
     if isinstance(value, str):
-        return datetime.datetime.fromisoformat(value).isoformat()
+        try:
+            # Try ISO format first
+            return datetime.datetime.fromisoformat(value).isoformat()
+        except ValueError:
+            try:
+                # Try custom format "dd-MMM-yy HH:mm:ss"
+                return datetime.datetime.strptime(value, "%d-%b-%y %H:%M:%S").replace(tzinfo=datetime.UTC).isoformat()
+            except ValueError:
+                return None
     elif isinstance(value, int | float):
         return datetime.datetime.fromtimestamp(value, tz=datetime.UTC).isoformat()
     return None
@@ -150,32 +159,104 @@ def _get_operator(operator: str | None) -> Callable:
     return _OPERATOR_REGISTRY.get(operator or "DO_NOTHING", lambda _: _)
 
 
-def _retrieve_as_string(
+def _retrieve_value_and_unit(
     h5file: h5py.File, path: str, *, encoding: str = "utf-8"
-) -> str:
-    return h5file[path][...].item().decode(encoding)
-
+) -> tuple[Any, str | None]:
+    """Retrieve both value and unit (if available) from an HDF5 dataset."""
+    dataset = h5file[path]
+    value = dataset[...].item()
+    
+    # Convert value to string if it's bytes
+    value_str = value.decode(encoding) if isinstance(value, bytes) else value
+    
+    # Check for unit attributes (common patterns in scientific HDF5 files)
+    unit = None
+    attr_name = "units"
+    if attr_name in dataset.attrs:
+        unit_val = dataset.attrs[attr_name]
+        # Handle bytes unit values
+        unit = unit_val.decode(encoding) if isinstance(unit_val, bytes) else str(unit_val)
+            
+    return value_str, unit
 
 def _retrieve_values_from_file(
     variable_recipe: NexusFileMetadataVariable, h5file: h5py.File
 ) -> Any:
-    if "*" in variable_recipe.path:  # Selectors are used
+    """Retrieve values from file, with unit support and multi possible paths support."""
+    if isinstance(variable_recipe.path, list):
+        value = None
+        unit = None
+        for path in variable_recipe.path:
+            try:
+                # Create a temporary variable recipe with a single path
+                temp_recipe = copy.copy(variable_recipe)
+                temp_recipe.path = path
+                
+                # Try to retrieve with this path
+                value, unit = _retrieve_values_from_file(temp_recipe, h5file)
+                
+                # If we got a value, use it and stop trying other paths
+                if value is not None:
+                    return value, unit
+            except (KeyError, Exception) as e:
+                logging.debug("Path %s not found or error: %s", path, str(e))
+                continue
+                
+        # If we get here, none of the paths worked
+        logging.warning(
+            "None of the specified paths found in file: %s",
+            variable_recipe.path
+        )
+        return None, None
+
+    unit = None
+    if "*" in variable_recipe.path:
         path = variable_recipe.path.split("/")[1:]
         path[0] += "/"
-        paths = extract_paths_from_h5_file(h5file, path)
-        value = [_retrieve_as_string(h5file, p) for p in paths]
+        paths = extract_paths_from_h5_file(h5file, path[:])
+        if variable_recipe.value_type == "dict":
+            result = {}
+            for p in paths:
+                parts = p.split("/")[len(path):]
+                
+                current_result = result
+                for i, part in enumerate(parts[:-1]):
+                    if part not in current_result:
+                        current_result[part] = {}
+                    current_result = current_result[part]
+                    
+                if parts:
+                    value, unit = _retrieve_value_and_unit(h5file, p)
+                    current_result[parts[-1]] = {
+                        "value": value,
+                    }
+                    if unit:
+                        current_result[parts[-1]]["unit"] = unit
+            value = result
+        else:
+            values_and_units = [_retrieve_value_and_unit(h5file, p) for p in paths]
+            value = [v for v, _ in values_and_units]
+            unit = [u for _, u in values_and_units if u]
     else:
-        value = _retrieve_as_string(h5file, variable_recipe.path)
-    return value
+        try:
+            value, unit = _retrieve_value_and_unit(h5file, variable_recipe.path)
+        except KeyError:
+            value = None
+            logging.warning(
+                "Key %s not found in the file: %s",
+                variable_recipe.path,
+                h5file.filename
+            )
+    return value.strip() if isinstance(value, str) else value, unit
 
 
 def extract_variables_values(
+    nexus_file: pathlib.Path,
     variables: dict[str, MetadataSchemaVariable],
     h5file: h5py.File,
     config: OfflineIngestorConfig,
     schema_id: str,
 ) -> dict:
-    nexus_file = pathlib.Path(config.nexus_file)
     variable_map = {
         "ingestor_run_id": str(uuid.uuid4()),
         "data_file_path": str(nexus_file),
@@ -186,8 +267,9 @@ def extract_variables_values(
     }
     for variable_name, variable_recipe in variables.items():
         source = variable_recipe.source
+        unit = None
         if isinstance(variable_recipe, NexusFileMetadataVariable):
-            value = _retrieve_values_from_file(variable_recipe, h5file)
+            value, unit = _retrieve_values_from_file(variable_recipe, h5file)
         elif isinstance(variable_recipe, ScicatMetadataVariable):
             full_endpoint_url = render_full_url(
                 render_variable_value(variable_recipe.url, variable_map),
@@ -206,7 +288,16 @@ def extract_variables_values(
 
         else:
             raise Exception("Invalid variable source: ", source)
-        variable_map[variable_name] = convert_to_type(value, variable_recipe.value_type)
+        variable_map[variable_name] = {
+            "value": convert_to_type(value, variable_recipe.value_type)
+        }
+        if unit is not None:
+            variable_map[variable_name] = {
+                "value": convert_to_type(value, variable_recipe.value_type),
+                "unit": unit,
+            }
+        else:
+            variable_map[variable_name] = convert_to_type(value, variable_recipe.value_type)
 
     return variable_map
 
@@ -217,15 +308,27 @@ def extract_paths_from_h5_file(
 ) -> list[str]:
     master_key = _path.pop(0)
     output_paths = []
+
     if "*" in master_key:
-        temp_keys = [k2 for k2 in _h5_object.keys() if re.search(master_key, k2)]
+        regex_pattern = master_key.replace("*", ".*")
+        temp_keys = [k2 for k2 in _h5_object.keys() if re.search(regex_pattern, k2)]
         for key in temp_keys:
-            output_paths += [
-                key + "/" + subkey
-                for subkey in extract_paths_from_h5_file(
-                    _h5_object[key], copy.deepcopy(_path)
-                )
-            ]
+            if _h5_object[key].__class__ == h5py.Group:
+                output_paths += [
+                    key + "/" + subkey
+                    for subkey in extract_paths_from_h5_file(
+                        _h5_object[key], copy.deepcopy(_path + [master_key])
+                    )
+                ]
+            elif _path:
+                output_paths += [
+                    key + "/" + subkey
+                    for subkey in extract_paths_from_h5_file(
+                        _h5_object[key], copy.deepcopy(_path)
+                    )
+                ]
+            else:
+                output_paths.append(key)
     else:
         if _path:
             output_paths = [
@@ -429,13 +532,13 @@ def create_data_file_list(
     # Create the list of the files
     data_file_list = []
     for minimum_file_path in file_list:
-        logger.info("Adding file %s to the datafiles list", minimum_file_path)
+        logger.debug("Adding file %s to the datafiles list", minimum_file_path)
         new_file_item = single_file_constructor(
             file_path=minimum_file_path,
         )
         data_file_list.append(new_file_item)
         if config.save_file_hash:
-            logger.info(
+            logger.debug(
                 "Computing hash of the file(%s) from disk...", minimum_file_path
             )
             hash_file_path = _build_hash_path(
@@ -443,7 +546,7 @@ def create_data_file_list(
                 dir_path=ingestor_directory,
                 hash_file_extension=config.hash_file_extension,
             )
-            logger.info("Saving hash into a file ... %s", hash_file_path)
+            logger.debug("Saving hash into a file ... %s", hash_file_path)
             _save_hash_file(
                 original_file_instance=new_file_item, hash_path=hash_file_path
             )
@@ -476,27 +579,38 @@ def _create_scientific_metadata(
     sm_schemas: list[MetadataItem],
     variable_map: dict,
 ) -> dict:
-    """Create scientific metadata from the metadata schema configuration.
-
-    Params
-    ------
-    metadata_schema_id:
-        The ID of the metadata schema configuration.
-    sm_schemas:
-        The scientific metadata schema configuration.
-    variable_map:
-        The variable map to render the scientific metadata values.
-
-    """
-    return {
-        field.machine_name: {
-            "value": _render_variable_as_type(field.value, variable_map, field.type),
-            "unit": getattr(field, "unit", ""),
-            "human_name": getattr(field, "human_name", field.machine_name),
-            "type": field.type,
-        }
-        for field in sm_schemas
-    }
+    """Create scientific metadata from the metadata schema configuration."""
+    result = {}
+    
+    for field in sm_schemas:
+        machine_name = field.machine_name
+        rendered_value = _render_variable_as_type(field.value, variable_map, field.type)
+        
+        # Safe way to get unit that works for both dict and primitive values
+        unit = ""
+        if isinstance(rendered_value, dict) and not machine_name in variable_map:
+            result[machine_name] = {
+                "value": rendered_value,
+                "human_name": getattr(field, "human_name", field.machine_name),
+                "type": field.type,
+            }
+            for subfield in rendered_value.keys():
+                var_value = variable_map.get(rendered_value[subfield]['machine_name'], {})
+                if isinstance(var_value, dict) and "unit" in var_value:
+                    rendered_value[subfield]["unit"] = var_value.get("unit", "")
+        else:
+            var_value = variable_map.get(field.machine_name, {})
+            if isinstance(var_value, dict) and "unit" in var_value:
+                unit = var_value.get("unit", "")
+            
+            result[machine_name] = {
+                "value": rendered_value,
+                "unit": unit,
+                "human_name": getattr(field, "human_name", field.machine_name),
+                "type": field.type,
+            }
+    
+    return result
 
 
 def _validate_metadata_schemas(
@@ -567,37 +681,37 @@ def create_scicat_dataset_instance(
 
     # Auto generate or assign default values if needed
     if not config.allow_dataset_pid and scicat_dataset.pid:
-        logger.info("PID is not allowed in the dataset by configuration.")
+        logger.debug("PID is not allowed in the dataset by configuration.")
         scicat_dataset.pid = None
     elif config.generate_dataset_pid:
-        logger.info("Auto generating PID for the dataset based on the configuration.")
+        logger.debug("Auto generating PID for the dataset based on the configuration.")
         scicat_dataset.pid = uuid.uuid4().hex
     if scicat_dataset.instrumentId is None:
         scicat_dataset.instrumentId = config.default_instrument_id
-        logger.info(
+        logger.debug(
             "Instrument ID is not provided. Setting to default value. %s",
             scicat_dataset.instrumentId,
         )
     if scicat_dataset.proposalId is None:
         scicat_dataset.proposalId = config.default_proposal_id
-        logger.info(
+        logger.debug(
             "Proposal ID is not provided. Setting to default value. %s",
             scicat_dataset.proposalId,
         )
     if scicat_dataset.ownerGroup is None:
         scicat_dataset.ownerGroup = config.default_owner_group
-        logger.info(
+        logger.debug(
             "Owner group is not provided. Setting to default value. %s",
             scicat_dataset.ownerGroup,
         )
     if scicat_dataset.accessGroups is None:
         scicat_dataset.accessGroups = config.default_access_groups
-        logger.info(
+        logger.debug(
             "Access group is not provided. Setting to default value. %s",
             scicat_dataset.accessGroups,
         )
 
-    logger.info("Dataset instance is created successfully. %s", scicat_dataset)
+    logger.debug("Dataset instance is created successfully. %s", scicat_dataset)
     return scicat_dataset
 
 

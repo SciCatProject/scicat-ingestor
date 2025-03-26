@@ -1,0 +1,73 @@
+{
+    "order": 1,
+    "id": "ill-figaro-schema",
+    "name": "Figaro Instrument Metadata Schema",
+    "instrument": "Figaro",
+    "selector": {
+        "and": [
+            "dirname:starts_with:rawdata",
+            "filename:contains:.nxs",
+            "dirname:starts_with:figaro"
+        ]
+    },
+    "variables": {
+        "instrument_theta": {
+            "source": "NXS",
+            "path": "/entry0/theta",
+            "value_type": "string"
+        },
+        "instrument_incident_angle": {
+            "source": "NXS",
+            "path": "/entry0/instrument/MainParameters/Incident_angle",
+            "value_type": "string"
+        },
+        "instrument_frame_overlap": {
+            "source": "NXS",
+            "path": "/entry0/instrument/FrameOverlap/actual_fol",
+            "value_type": "string"
+        },
+        "instrument_chopper_gap": {
+            "source": "NXS",
+            "path": "/entry0/instrument/ChopperSetting/ChopperGap",
+            "value_type": "string"
+        }
+    },
+    "schema": {
+        "instrument_properties": {
+            "type": "dict",
+            "field_type": "scientific_metadata",
+            "machine_name": "instrumentProperties",
+            "human_name": "Instrument Properties",
+            "value": {
+                "theta": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "instrument_theta",
+                    "human_name": "Theta",
+                    "value": "<instrument_theta>",
+                    "type": "string"
+                },
+                "incident_angle": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "instrument_incident_angle",
+                    "human_name": "Incident Angle",
+                    "value": "<instrument_incident_angle>",
+                    "type": "string"
+                },
+                "frame_overlap": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "instrument_frame_overlap",
+                    "human_name": "Frame Overlap",
+                    "value": "<instrument_frame_overlap>",
+                    "type": "string"
+                },
+                "chopper_gap": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "instrument_chopper_gap",
+                    "human_name": "Chopper Gap",
+                    "value": "<instrument_chopper_gap>",
+                    "type": "string"
+                }
+            }
+        }
+    }
+  }

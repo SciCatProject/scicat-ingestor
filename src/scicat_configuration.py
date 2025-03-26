@@ -98,6 +98,14 @@ def build_arg_parser(
             arg_names = _wrap_arg_names(name, *prefixes)
             required = any(arg_name in mandatory_args for arg_name in arg_names)
             long_name = arg_names[-1].replace("--", "")
+            if long_name == "nexus-file":
+                group.add_argument(
+                    *arg_names,
+                    action="append",
+                    required=required,
+                    help=_HELP_TEXT.get(long_name, "Path to nexus file or directory (can be specified multiple times)"),
+                )
+                continue
             arg_adder = partial(
                 group.add_argument,
                 *arg_names,
@@ -260,16 +268,28 @@ class DatasetOptions:
 class _ScicatAPIURLs:
     datasets: str
     proposals: str
+    samples: str
     origdatablocks: str
     instruments: str
+    login: str
+    logout: str
 
 
 @dataclass(kw_only=True)
 class ScicatEndpoints:
     datasets: str = "datasets"
     proposals: str = "proposals"
+    samples: str = "samples"
     origdatablocks: str = "origdatablocks"
     instruments: str = "instruments"
+    login: str = "login"
+    logout: str = "logout"
+
+
+@dataclass(kw_only=True)
+class ScicatAuth:
+    username: str = "USERNAME"
+    password: str = "PASSWORD"
 
 
 @dataclass(kw_only=True)
@@ -281,16 +301,20 @@ class SciCatOptions:
     stream: bool = True
     verify: bool = False
     api_endpoints: ScicatEndpoints = field(default_factory=ScicatEndpoints)
+    auth: ScicatAuth = field(default_factory=ScicatAuth)
 
     @property
     def urls(self) -> _ScicatAPIURLs:
         return _ScicatAPIURLs(
             datasets=urljoin(self.host_address, self.api_endpoints.datasets),
             proposals=urljoin(self.host_address, self.api_endpoints.proposals),
+            samples=urljoin(self.host_address, self.api_endpoints.samples),
             origdatablocks=urljoin(
                 self.host_address, self.api_endpoints.origdatablocks
             ),
             instruments=urljoin(self.host_address, self.api_endpoints.instruments),
+            login=urljoin(self.host_address, self.api_endpoints.login),
+            logout=urljoin(self.host_address, self.api_endpoints.logout),
         )
 
     @property
@@ -329,7 +353,7 @@ class OnlineIngestorConfig:
 
 @dataclass(kw_only=True)
 class OfflineIngestorConfig:
-    nexus_file: str
+    nexus_file: str | list[str]
     """Full path of the input nexus file to be ingested."""
     done_writing_message_file: str
     """Full path of the done writing message file that match the ``nexus_file``."""
@@ -427,8 +451,8 @@ def validate_config_file() -> None:
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)  # Always debug level since it is for validation
     logger.addHandler(logging.StreamHandler())
-    logger.info("Scicat file ingestor configuration file validation test.")
-    logger.info("Note that it does not validate type of the field.")
+    logger.debug("Scicat file ingestor configuration file validation test.")
+    logger.debug("Note that it does not validate type of the field.")
     logger.debug("It only validate the file for %s.", OnlineIngestorConfig)
     logger.debug("Configuration file: %s", config_file)
 
@@ -438,7 +462,7 @@ def validate_config_file() -> None:
         "Configuration built successfully. %s",
         _validate_config_file(OnlineIngestorConfig, config_file),
     )
-    logger.info("Configuration file %s is valid.", config_file)
+    logger.debug("Configuration file %s is valid.", config_file)
 
 
 def synchronize_config_file() -> None:

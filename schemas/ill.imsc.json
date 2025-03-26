@@ -1,0 +1,362 @@
+{
+  "order": 2,
+  "id": "ill-schema-001",
+  "name": "ILL Metadata Schema",
+  "instrument": "",
+  "selector": {
+    "and": [
+      "dirname:starts_with:rawdata",
+      "filename:contains:.nxs",
+      {
+        "or": [
+          "dirname:starts_with:d17",
+          "dirname:starts_with:figaro",
+          "dirname:starts_with:panther",
+          "dirname:starts_with:d1b",
+          "dirname:starts_with:d2b",
+          "dirname:starts_with:d20",
+          "dirname:starts_with:d4",
+          "dirname:starts_with:d007",
+          "dirname:starts_with:xtremed",
+          "dirname:starts_with:salsa",
+          "dirname:starts_with:d3",
+          "dirname:starts_with:d9",
+          "dirname:starts_with:d19",
+          "dirname:starts_with:d10",
+          "dirname:starts_with:d23",
+          "dirname:starts_with:orient",
+          "dirname:starts_with:in5",
+          "dirname:starts_with:sharp",
+          "dirname:starts_with:in16b",
+          "dirname:starts_with:in13",
+          "dirname:starts_with:in1",
+          "dirname:starts_with:thales",
+          "dirname:starts_with:in8",
+          "dirname:starts_with:in12",
+          "dirname:starts_with:in20",
+          "dirname:starts_with:in22",
+          "dirname:starts_with:d11",
+          "dirname:starts_with:d22",
+          "dirname:starts_with:d33",
+          "dirname:starts_with:ladi",
+          "dirname:starts_with:dali",
+          "dirname:starts_with:sam"
+        ]
+      }
+    ]
+  },
+  "variables": {
+    "pid": {
+      "source": "NXS",
+      "path": "/entry0/user/proposal",
+      "value_type": "string"
+    },
+    "proposal_id": {
+      "source": "NXS",
+      "path": "/entry0/user/proposal",
+      "value_type": "string"
+    },
+    "dataset_name": {
+      "source": "NXS",
+      "path": ["/entry0/title", "/entry0/experiment_title"],
+      "value_type": "string"
+    },
+    "instrument_name": {
+      "source": "NXS",
+      "path": "/entry0/instrument/name",
+      "value_type": "string"
+    },
+    "instrument_id": {
+      "source": "VALUE",
+      "value": "",
+      "value_type": "string"
+    },
+    "start_time": {
+      "source": "NXS",
+      "path": "/entry0/start_time",
+      "value_type": "date"
+    },
+    "end_time": {
+      "source": "NXS",
+      "path": "/entry0/end_time",
+      "value_type": "date"
+    },
+    "duration": {
+      "source": "NXS",
+      "path": "/entry0/duration",
+      "value_type": "string"
+    },
+    "owner_group": {
+      "source": "VALUE",
+      "value": "ingestor",
+      "value_type": "string"
+    },
+    "access_groups": {
+      "source": "VALUE",
+      "value": [],
+      "value_type": "string[]"
+    },
+    "sample_id": {
+      "source": "NXS",
+      "path": "/entry0/sample/sampleId",
+      "value_type": "string"
+    },
+    "sample_name": {
+      "source": "NXS",
+      "path": "/entry0/instrument/MeasurementType/SampleProposalName",
+      "value_type": "string"
+    },
+    "sample_description": {
+      "source": "NXS",
+      "path": "/entry0/instrument/MeasurementType/SampleProposalComment",
+      "value_type": "string"
+    },
+    "sample_type": {
+      "source": "NXS",
+      "path": "/entry0/instrument/MeasurementType/typeOfSample",
+      "value_type": "string"
+    },
+    "sample_subtype": {
+      "source": "NXS",
+      "path": "/entry0/instrument/MeasurementType/subType",
+      "value_type": "string"
+    },
+    "sample_env_type": {
+      "source": "NXS",
+      "path": "/entry0/instrument/MeasurementType/typeEnvEch",
+      "value_type": "string"
+    },
+    "sample_holder_type": {
+      "source": "NXS",
+      "path": "/entry0/instrument/MeasurementType/typePorteEch",
+      "value_type": "string"
+    },
+    "measurement_type": {
+      "source": "NXS",
+      "path": "/entry0/instrument/MeasurementType/typeOfMeasure",
+      "value_type": "string"
+    },
+    "instrument_group": {
+      "source": "NXS",
+      "path": "/entry0/instrument/MeasurementType/typeGroupInst",
+      "value_type": "string"
+    },
+    "owner": {
+      "source": "NXS",
+      "path": "/entry0/user/name",
+      "value_type": "string"
+    },
+    "ownerEmail": {
+      "source": "VALUE",
+      "value": "nomad@ill.fr",
+      "value_type": "string"
+    },
+    "creationLocation": {
+      "source": "VALUE",
+      "value": "ILL",
+      "value_type": "string"
+    },
+    "creationTime": {
+      "source": "NXS",
+      "path": "/entry0/start_time",
+      "value_type": "date"
+    },
+    "contactEmail": {
+      "source": "NXS",
+      "path": "/entry0/user/namelocalcontact",
+      "value_type": "string"
+    },
+    "principalInvestigator": {
+      "source": "NXS",
+      "path": "/entry0/user/name",
+      "value_type": "string"
+    },
+    "sourceFolder": {
+      "source": "VALUE",
+      "value": "/illdata",
+      "value_type": "string"
+    },
+    "sampleProperties": {
+      "source": "NXS",
+      "path": "/entry0/sample/*",
+      "value_type": "dict"
+    }
+  },
+  "schema": {
+    "pid": {
+      "field_type": "high_level",
+      "machine_name": "pid",
+      "value": "<pid>",
+      "type": "string"
+    },
+    "type": {
+      "field_type": "high_level",
+      "machine_name": "type",
+      "value": "raw",
+      "type": "string"
+    },
+    "proposal_id": {
+      "field_type": "high_level",
+      "machine_name": "proposalId",
+      "value": "<proposal_id>",
+      "type": "string"
+    },
+    "dataset_name": {
+      "field_type": "high_level",
+      "machine_name": "datasetName",
+      "value": "<dataset_name>",
+      "type": "string"
+    },
+    "start_time": {
+      "field_type": "scientific_metadata",
+      "machine_name": "start_time",
+      "human_name": "Start Time",
+      "value": "<start_time>",
+      "type": "date"
+    },
+    "end_time": {
+      "field_type": "scientific_metadata",
+      "machine_name": "end_time",
+      "human_name": "End Time",
+      "value": "<end_time>",
+      "type": "date"
+    },
+    "duration": {
+      "field_type": "scientific_metadata",
+      "machine_name": "duration",
+      "value": "<duration>",
+      "type": "string"
+    },
+    "owner_group": {
+      "field_type": "high_level",
+      "machine_name": "ownerGroup",
+      "value": "<owner_group>",
+      "type": "string"
+    },
+    "access_groups": {
+      "field_type": "high_level",
+      "machine_name": "accessGroups",
+      "value": ["<instrument_group>"],
+      "type": "string[]"
+    },
+    "sample_id": {
+      "field_type": "high_level",
+      "machine_name": "sampleId",
+      "human_name": "Sample ID",
+      "value": "<sample_id>",
+      "type": "string"
+    },
+    "sample_name": {
+      "field_type": "scientific_metadata",
+      "machine_name": "sampleName",
+      "human_name": "Sample Name",
+      "value": "<sample_name>",
+      "type": "string"
+    },
+    "sample_description": {
+      "field_type": "scientific_metadata",
+      "machine_name": "sampleDescription",
+      "human_name": "Sample Description",
+      "value": "<sample_description>",
+      "type": "string"
+    },
+    "sample_type": {
+      "field_type": "scientific_metadata",
+      "machine_name": "sampleType",
+      "human_name": "Sample Type",
+      "value": "<sample_type>",
+      "type": "string"
+    },
+    "sample_subtype": {
+      "field_type": "scientific_metadata",
+      "machine_name": "sampleSubtype",
+      "human_name": "Sample Subtype",
+      "value": "<sample_subtype>",
+      "type": "string"
+    },
+    "sample_env_type": {
+      "field_type": "scientific_metadata",
+      "machine_name": "sampleEnvType",
+      "human_name": "Sample Environment Type",
+      "value": "<sample_env_type>",
+      "type": "string"
+    },
+    "sample_holder_type": {
+      "field_type": "scientific_metadata",
+      "machine_name": "sampleHolderType",
+      "human_name": "Sample Holder Type",
+      "value": "<sample_holder_type>",
+      "type": "string"
+    },
+    "measurement_type": {
+      "field_type": "scientific_metadata",
+      "machine_name": "measurementType",
+      "human_name": "Measurement Type",
+      "value": "<measurement_type>",
+      "type": "string"
+    },
+    "instrument_group": {
+      "field_type": "scientific_metadata",
+      "machine_name": "instrumentGroup",
+      "human_name": "Instrument Group",
+      "value": "<instrument_group>",
+      "type": "string"
+    },
+    "owner": {
+      "field_type": "high_level",
+      "machine_name": "owner",
+      "human_name": "Owner",
+      "value": "<owner>",
+      "type": "string"
+    },
+    "ownerEmail": {
+      "field_type": "high_level",
+      "machine_name": "ownerEmail",
+      "human_name": "Owner Email",
+      "value": "<ownerEmail>",
+      "type": "string"
+    },
+    "creationLocation": {
+      "field_type": "high_level",
+      "machine_name": "creationLocation",
+      "human_name": "Creation Location",
+      "value": "<creationLocation>",
+      "type": "string"
+    },
+    "creationTime": {
+      "field_type": "high_level",
+      "machine_name": "creationTime",
+      "human_name": "Creation Time",
+      "value": "<creationTime>",
+      "type": "date"
+    },
+    "contactEmail": {
+      "field_type": "high_level",
+      "machine_name": "contactEmail",
+      "human_name": "Contact Email",
+      "value": "<contactEmail>",
+      "type": "string"
+    },
+    "principalInvestigator": {
+      "field_type": "high_level",
+      "machine_name": "principalInvestigator",
+      "human_name": "Principal Investigator",
+      "value": "<principalInvestigator>",
+      "type": "string"
+    },
+    "sourceFolder": {
+      "field_type": "high_level",
+      "machine_name": "sourceFolder",
+      "human_name": "Source Folder",
+      "value": "<sourceFolder>",
+      "type": "string"
+    },
+    "sampleProperties": {
+      "field_type": "scientific_metadata",
+      "machine_name": "sampleProperties",
+      "human_name": "Sample Properties",
+      "value": "<sampleProperties>",
+      "type": "dict"
+    }
+  }
+}

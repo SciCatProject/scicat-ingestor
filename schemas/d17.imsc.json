@@ -1,0 +1,61 @@
+{
+    "order": 1,
+    "id": "ill-d17-schema",
+    "name": "D17 Instrument Metadata Schema",
+    "instrument": "D17",
+    "selector": {
+        "and": [
+            "dirname:starts_with:rawdata",
+            "filename:contains:.nxs",
+            "dirname:starts_with:d17"
+        ]
+    },
+    "variables": {
+        "instrument_det": {
+            "source": "NXS",
+            "path": "/entry0/instrument/det/value",
+            "value_type": "string"
+        },
+        "instrument_incident_angle": {
+            "source": "NXS",
+            "path": "/entry0/instrument/MainParameters/Incident_angle",
+            "value_type": "string"
+        },
+        "instrument_opening": {
+            "source": "NXS",
+            "path": "/entry0/instrument/VirtualChopper/actual_opening",
+            "value_type": "string"
+        }
+    },
+    "schema": {
+        "instrument_properties": {
+            "type": "dict",
+            "field_type": "scientific_metadata",
+            "machine_name": "instrumentProperties",
+            "human_name": "Instrument Properties",
+            "value": {
+                "det": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "instrument_det",
+                    "human_name": "Det",
+                    "value": "<instrument_det>",
+                    "type": "string"
+                },
+                "incident_angle": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "instrument_incident_angle",
+                    "human_name": "Incident Angle",
+                    "value": "<instrument_incident_angle>",
+                    "type": "string"
+                },
+                "opening": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "instrument_opening",
+                    "human_name": "Opening",
+                    "value": "<instrument_opening>",
+                    "type": "string"
+                }
+            }
+        }
+    }
+}
