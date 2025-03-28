@@ -160,7 +160,7 @@ tomli==2.2.1
     #   tox
 toposort==1.10
     # via pip-compile-multi
-tox==4.24.2
+tox==4.25.0
     # via -r ci.in
 typing-extensions==4.12.2
     # via
