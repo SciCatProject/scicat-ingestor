@@ -146,7 +146,7 @@ questionary==2.1.0
     # via copier
 requests==2.32.3
     # via -r base.in
-rich==13.9.4
+rich==14.0.0
     # via -r base.in
 smmap==5.0.2
     # via gitdb
