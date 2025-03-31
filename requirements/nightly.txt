@@ -9,7 +9,7 @@ certifi==2024.12.14
     # via requests
 charset-normalizer==3.4.1
     # via requests
-confluent-kafka==2.8.2
+confluent-kafka==2.9.0
     # via -r nightly.in
 ess-streaming-data-types==0.27.0
     # via -r nightly.in
