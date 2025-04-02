@@ -16,6 +16,7 @@ def build_logger(
 
     # Build logger and formatter
     logger = logging.getLogger('esd extract parameters')
+    logger.propagate = False
     formatter = logging.Formatter(
         " - ".join(
             (

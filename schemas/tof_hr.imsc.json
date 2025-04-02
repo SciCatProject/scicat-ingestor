@@ -1,0 +1,91 @@
+{
+    "order": 1,
+    "id": "ill-panther-schema",
+    "name": "TOF HR Instrument Metadata Schema",
+    "instrument": "TOF HR",
+    "selector": {
+        "and": [
+            "dirname:starts_with:rawdata",
+            "filename:contains:.nxs",
+            {
+                "or": [
+                    "dirname:starts_with:panther",
+                    "dirname:starts_with:in5",
+                    "dirname:starts_with:sharp"
+                ]
+            }
+        ]
+    },
+    "variables": {
+        "instrument_ei": {
+            "source": "NXS",
+            "path": "/entry0/Ei",
+            "value_type": "string"
+        },
+        "instrument_wavelength": {
+            "source": "NXS",
+            "path": "/entry0/wavelength",
+            "value_type": "string"
+        },
+        "instrument_elastic_peak": {
+            "source": "NXS",
+            "path": "/entry0/instrument/Detector/elasticpeak",
+            "value_type": "string"
+        },
+        "instrument_fermi_speed": {
+            "source": "NXS",
+            "path": "/entry0/instrument/FC/rotation_speed",
+            "value_type": "string"
+        },
+        "instrument_mono_name": {
+            "source": "NXS",
+            "path": "/entry0/instrument/monochromator/Mono name",
+            "value_type": "string"
+        }
+    },
+    "schema": {
+        "instrument_properties": {
+            "type": "dict",
+            "field_type": "scientific_metadata",
+            "machine_name": "instrumentProperties",
+            "human_name": "Instrument Properties",
+            "value": {
+                "ei": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "instrument_ei",
+                    "human_name": "Ei",
+                    "value": "<instrument_ei>",
+                    "type": "string"
+                },
+                "wavelength": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "instrument_wavelength",
+                    "human_name": "Wavelength",
+                    "value": "<instrument_wavelength>",
+                    "type": "string"
+                },
+                "elastic_peak": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "instrument_elastic_peak",
+                    "human_name": "Elastic Peak",
+                    "value": "<instrument_elastic_peak>",
+                    "type": "string"
+                },
+                "fermi_speed": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "instrument_fermi_speed",
+                    "human_name": "Fermi Speed",
+                    "value": "<instrument_fermi_speed>",
+                    "type": "string"
+                },
+                "mono_name": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "instrument_mono_name",
+                    "human_name": "Monochromator Name",
+                    "value": "<instrument_mono_name>",
+                    "type": "string"
+                }
+            }
+        }
+    }
+}
