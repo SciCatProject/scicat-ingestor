@@ -38,6 +38,7 @@
     }
   },
   "kafka": {
+    "enabled": false,
     "topics": "KAFKA_TOPIC_1,KAFKA_TOPIC_2",
     "group_id": "GROUP_ID",
     "bootstrap_servers": "localhost:9093",
@@ -49,6 +50,19 @@
     "individual_message_commit": true,
     "enable_auto_commit": true,
     "auto_offset_reset": "earliest"
+  },
+  "rabbitmq": {
+    "enabled": true,
+    "host": "localhost",
+    "port": 5672,
+    "virtual_host": "/",
+    "queue_name": "scicat_data",
+    "exchange_name": "",
+    "routing_key": "",
+    "auto_ack": false,
+    "individual_message_acknowledge": true,
+    "prefetch_count": 1,
+    "direct_data_ingestion": true
   },
   "logging": {
     "verbose": false,

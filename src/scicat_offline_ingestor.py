@@ -590,7 +590,7 @@ def main() -> None:
         except PermissionError:
             logger.error(f"Permission denied for path {path_str}, skipping.")
             continue
-        if not path.exists():
+        if not path_exists:
             logger.error(f"Path {path} does not exist, skipping.")
             continue
             
