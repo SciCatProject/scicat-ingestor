@@ -1,4 +1,5 @@
 import pytest
+
 from scicat_metadata import load_metadata_extractors
 
 

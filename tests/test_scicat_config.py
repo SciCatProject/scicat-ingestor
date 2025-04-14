@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
+
 from scicat_configuration import (
     IngestionOptions,
     OfflineIngestorConfig,
@@ -17,7 +18,7 @@ class DummyConfig:
     ingestion: IngestionOptions
 
 
-@pytest.fixture()
+@pytest.fixture
 def template_config_file() -> Path:
     return Path(__file__).parent / "../resources/config.sample.json"
 

@@ -5,6 +5,7 @@ import logging
 import logging.handlers
 
 import graypy
+
 from scicat_configuration import OfflineIngestorConfig, OnlineIngestorConfig
 
 

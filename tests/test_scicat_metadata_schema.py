@@ -5,6 +5,7 @@ from collections import OrderedDict
 from pathlib import Path
 
 import pytest
+
 from scicat_metadata import (
     MetadataSchema,
     build_metadata_variables,
@@ -18,12 +19,12 @@ ALL_SCHEMA_EXAMPLES = list_schema_file_names(
 )
 
 
-@pytest.fixture()
+@pytest.fixture
 def base_metadata_schema_file() -> Path:
     return Path("resources/base.imsc.json.example")
 
 
-@pytest.fixture()
+@pytest.fixture
 def base_metadata_schema_dict(base_metadata_schema_file: Path) -> dict:
     return json.loads(base_metadata_schema_file.read_text())
 

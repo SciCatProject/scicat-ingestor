@@ -15,6 +15,7 @@ from types import MappingProxyType
 from typing import Any
 
 import h5py
+
 from scicat_communication import render_full_url, retrieve_value_from_scicat
 from scicat_configuration import (
     DatasetOptions,

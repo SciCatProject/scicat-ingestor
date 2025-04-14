@@ -5,12 +5,13 @@ import pathlib
 from collections.abc import Generator
 
 from confluent_kafka import Consumer
-from scicat_configuration import KafkaOptions
 from streaming_data_types import deserialise_wrdn
 from streaming_data_types.finished_writing_wrdn import (
     FILE_IDENTIFIER as WRDN_FILE_IDENTIFIER,
 )
 from streaming_data_types.finished_writing_wrdn import WritingFinished
+
+from scicat_configuration import KafkaOptions
 
 
 def collect_consumer_options(options: KafkaOptions) -> dict:

@@ -7,6 +7,7 @@ from typing import Any
 from urllib.parse import quote_plus, urljoin
 
 import requests
+
 from scicat_configuration import SciCatOptions
 
 

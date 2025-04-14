@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 
 import h5py
+
 from scicat_communication import (
     check_dataset_by_metadata,
     check_dataset_by_pid,
