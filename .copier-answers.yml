@@ -1,5 +1,5 @@
 # Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
-_commit: 86a1e5c
+_commit: d3d4dc7
 _src_path: gh:scipp/copier_template
 description: A daemon that creates a raw dataset using scicat interface whenever a
     new file is written by a file-writer.
@@ -8,7 +8,7 @@ min_python: '3.12'
 namespace_package: ''
 nightly_deps: ''
 orgname: ScicatProject
-prettyname: Scicat Filewriter Ingest
-projectname: scicat-filewriter-ingest
+prettyname: Scicat Ingestor
+projectname: scicat-ingestor
 related_projects: streaming-data-types
-year: 2024
+year: 2025
