@@ -21,7 +21,7 @@ jobs:
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
       # Find python version
-      - run: echo "python_version:$(< .github/workflows/python-version-ci)" >> $GITHUB_ENV
+      - run: echo "python_version=$(< .github/workflows/python-version-ci)" >> $GITHUB_ENV
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.python_version }}
