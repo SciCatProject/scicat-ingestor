@@ -62,7 +62,7 @@ Base dependencies are parsed from `pyproject.toml` project dependencies and writ
 
 | Tool/Command | Configuration File | Description |
 | ------------ | ------------------ | ----------- |
-| pre-commit | .pre-commit-config.yaml | Pre-commit hooks including linter checks.<br>Once it's set up, it will be run automatically whenever a new commit is created. It is also run by one of CI actions.<br><details><summary>Bypass Pre Commit Check</summary>You can also skip pre-commit checks by passing ``--no-verify`` flag to ``git commit``. <br>But please keep it passing as much as possible, as it is one of blocking CI tests.</details> |
+| pre-commit | .pre-commit-config.yaml | Pre-commit hooks including linter checks.<br>Once it's set up, it will be run automatically whenever a new commit is created. It is also run by one of CI actions.<br><details><summary>Bypass Pre Commit Check</summary>You can skip pre-commit checks with ``--no-verify`` flag: ``git commit --no-verify``. <br>But please keep it passing as much as possible, as it is one of blocking CI tests.</details> |
 | copier | .copier-answers.yaml | This project copies from [``scipp copier template``](https://github.com/scipp/copier_template/)<br>You have to manually update from copier template once in a while.<br>See [Copier Update](#copier-update) for more explanation. |
 | tox  | tox.ini            | Multiple tox environment/commands for development and CI actions.<br>It creates virtual environments and use it for each commands.<br>The virtual environment files are saved under `.tox` directory. |
 | ``tox -e deps``| tox.ini/[testenv:deps] | Create lock files with dependencies. |
