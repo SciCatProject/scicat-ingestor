@@ -1,0 +1,35 @@
+site_name: Scicat Ingestor
+site_url: 'https://scicatproject.github.io/scicat-ingestor/'
+theme:
+  name: material
+  features:
+    - navigation.top
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - content.tooltips
+  palette:
+    primary: indigo
+    accent: light blue
+extra:
+  generator: false
+  version:
+    provider: mike
+    default: latest
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - abbr
+  - attr_list
+  - md_in_html
+  - pymdownx.snippets
+  - pymdownx.critic
+  - pymdownx.caret
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.tilde
+nav:
+  - Home: index.md
+  - Developer Guide:
+      - Getting Started: developer-guide/getting-started.md
+      - Documentation: developer-guide/documentation.md

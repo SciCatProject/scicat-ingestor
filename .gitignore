@@ -48,3 +48,6 @@ config.*.json
 *.zip
 *.sqw
 *.nxspe
+
+# Documentation
+documentation/site/*
