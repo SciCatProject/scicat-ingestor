@@ -1,12 +1,12 @@
 name: Deploy Documentation for Develop version
 # When a push event occurs on the main branch, and the changes are in the documentation folder, the workflow is triggered
 on:
-  pull_request:  # Remove it once it works
   push:
     branches:
       - main
     paths:
       - 'documentation/**'
+  workflow_dispatch:  # Manually Deploy Documentation from ``main`` branch
 
 permissions:
   contents: write

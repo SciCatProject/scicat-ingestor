@@ -1,6 +1,5 @@
 name: Deploy Documentation for Release version
 on:
-  pull_request:  # Remove it once it works
   # This workflow runs when the "Release" workflow completes successfully
   # It means that the version has been bumped and the release has been created so we can deploy the documentation for the new version
   workflow_run:
@@ -10,10 +9,6 @@ on:
     branches:
       - main
   workflow_dispatch:  # Manually Deploy Documentation
-    inputs:
-      version:
-        required: true
-        type: string
 
 permissions:
   contents: write
@@ -44,18 +39,8 @@ jobs:
       - name: Build and Deploy at Release
         working-directory: ./documentation
         run: |
-          VERSION=$(git describe --tags --abbrev=0)
+          VERSION=$(git describe --tags --abbrev=0)  # It will use the latest tag as the version
           echo "Deploying $VERSION"
           git fetch origin
           mike deploy --update-alias --push $VERSION latest
           mike set-default latest --push
-        if: ${{ github.event_name != 'workflow_dispatch' }}
-      - name: Build and Deploy Manually
-        working-directory: ./documentation
-        run: |
-          VERSION=${{ inputs.version }}
-          echo "Deploying ${{ inputs.version }}"
-          git fetch origin
-          mike deploy --update-alias --push $VERSION latest
-          mike set-default latest --push
-        if: ${{ github.event_name == 'workflow_dispatch' }}
