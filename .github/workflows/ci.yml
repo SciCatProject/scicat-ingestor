@@ -6,6 +6,9 @@ on:
       - main
       - release
   pull_request:
+    paths-ignore:
+      - 'documentation/**'
+      - '.github/workflows/**'  # Remove this line if you want to trigger on changes to workflows
 
 jobs:
   formatting:
