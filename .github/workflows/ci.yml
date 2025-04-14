@@ -12,9 +12,6 @@ on:
       - 'CONTRIBUTING.md'
       - 'LICENSE'
       - '.gitignore'
-      - '.github/workflows/**'  # Remove this line if you want to trigger on changes to workflows
-      - 'requirements/**'  # Remove this line if you want to trigger on changes to workflows
-      - 'tox.ini'  # Remove this line if you want to trigger on changes to workflows
 
 jobs:
   formatting:
@@ -57,9 +54,11 @@ jobs:
       tox-env: ${{ matrix.python.tox-env }}
     secrets: inherit
 
-  intergration-tests:
-    name: Integration Tests
-    needs: [tests, formatting]
-    uses: ./.github/workflows/integration.yml
-    with:
-      python-version: '${{needs.formatting.outputs.min_python}}'
+  # Temporarily disabled this test until we move it to nightly test.
+  # See issue #151
+  # intergration-tests:
+  #   name: Integration Tests
+  #   needs: [tests, formatting]
+  #   uses: ./.github/workflows/integration.yml
+  #   with:
+  #     python-version: '${{needs.formatting.outputs.min_python}}'
