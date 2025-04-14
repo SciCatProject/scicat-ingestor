@@ -6,12 +6,6 @@ on:
       - main
       - release
   pull_request:
-    paths-ignore:
-      - 'documentation/**'
-      - 'README.md'
-      - 'CONTRIBUTING.md'
-      - 'LICENSE'
-      - '.gitignore'
 
 jobs:
   formatting:
