@@ -5,7 +5,7 @@
 #
 #    pip-compile-multi
 #
-iniconfig==2.0.0
+iniconfig==2.1.0
     # via pytest
 packaging==24.2
     # via pytest
