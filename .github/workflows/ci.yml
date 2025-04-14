@@ -8,7 +8,13 @@ on:
   pull_request:
     paths-ignore:
       - 'documentation/**'
+      - 'README.md'
+      - 'CONTRIBUTING.md'
+      - 'LICENSE'
+      - '.gitignore'
       - '.github/workflows/**'  # Remove this line if you want to trigger on changes to workflows
+      - 'requirements/**'  # Remove this line if you want to trigger on changes to workflows
+      - 'tox.ini'  # Remove this line if you want to trigger on changes to workflows
 
 jobs:
   formatting:
