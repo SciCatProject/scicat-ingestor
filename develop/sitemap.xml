@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+         <loc>https://scicatproject.github.io/scicat-ingestor/develop/</loc>
+         <lastmod>2025-04-14</lastmod>
+    </url>
+    <url>
+         <loc>https://scicatproject.github.io/scicat-ingestor/develop/developer-guide/documentation/</loc>
+         <lastmod>2025-04-14</lastmod>
+    </url>
+    <url>
+         <loc>https://scicatproject.github.io/scicat-ingestor/develop/developer-guide/getting-started/</loc>
+         <lastmod>2025-04-14</lastmod>
+    </url>
+</urlset>
