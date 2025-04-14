@@ -33,3 +33,4 @@ nav:
   - Developer Guide:
       - Getting Started: developer-guide/getting-started.md
       - Documentation: developer-guide/documentation.md
+      - ADRs: developer-guide/adrs.md  # There are not many ADRs so they are in one markdown file.

@@ -1,5 +1,25 @@
 # Getting Started - Development
 
+## TL;DR
+
+``` bash
+git clone git@github.com:SciCatProject/scicat-ingestor.git
+conda create -n scicat-ingestor-dev python=3.12
+conda activate scicat-ingestor-dev
+pip install -r requirements/dev.txt
+pre-commit install
+pip install -e .
+```
+
+## Git
+
+If you are not ``scicat-ingestor`` maintainors, <br>
+you need to either fork the repository to your own organization of private account and create a PR from there.
+
+``` bash
+git clone git@github.com:SciCatProject/scicat-ingestor.git
+```
+
 ## Virtual Environment
 ``scicat-ingestor`` is a python project.
 We make multiple lock files for various environments and dev tools.
@@ -23,6 +43,16 @@ pre-commit install
 
 !!! note
     Pre commit hooks are configured in `.pre-commit-config.yaml` file but some of `ruff` configurations are in `pyproject.toml`.
+
+## Testings
+
+We have unit tests using ``pytest`` that can be run fast and often.
+
+``tox -e py312`` command will run pytest with pre-defined configuration in a virtual environment created with `requirements/test.txt`.
+
+There are also integration test in github ci action.
+
+<!--TODO: Fill explanation about integration test.-->
 
 ## Other DevOps Routines
 
