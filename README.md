@@ -1,5 +1,5 @@
-[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
 [![License: BSD 3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](documentation/docs/LICENSE)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](documentatino/docs/CODE_OF_CONDUCT.md)
 
 # Scicat Ingestor
 
@@ -133,8 +133,3 @@ Release versions are [calendar version](https://calver.org/).
 For example, if it is 27.01.2025 and if it is the first version of this month, the version will be ``v25.01.0``.
 If another release or a patch release is made within the same month,
 the minor version can increase, i.e. ``v25.01.1``.
-
-### Tox
-`tox` controls virtual environment and commands for various purposes.
-Developers and CI actions can use the command.
-For example, `tox -e docs` builds documentation under `./html` directory and `tox -e py310` will run unit tests with python version `3.10`.
