@@ -7,6 +7,8 @@ Therefore configuration is divided into several sections.
 !!! note
     Both online and offline ingestor share the same configuration file which can be passed in with `-c` options.
 
+TODO: Turn these sections into a table.
+
 ## General
 
 This section contains few fields that are used to configure the input parameters of the ingestor programs. Most of the time they are left empty as they are specified on the command line.  

@@ -3,11 +3,25 @@
 [![License: BSD 3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](LICENSE)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](documentatino/docs/CODE_OF_CONDUCT.md)
 
-Scicat ingestor is a daemonic program that creates a raw dataset along with metadata
-<br>using scicat API whenever a new file is written.
+SciCat Ingestor is a versatile application with the primary focus to automate the ingestion of new dataset in to SciCat.
 
 Scicat Ingestor aims to accomplish ``FAIR`` data <br>
 by making files visible via `scicat`, associated with their metadata.
+
+The project is composed of two main components:
+
+- online ingestor
+
+    is responsible to connect to a kafka cluster and listen to selected topics for a specific message and trigger the data ingestion by running the offline ingestor as a background process. At the moment, this is specific to ESS IT infrastructure, but it is already planned to generalize it as soon as other facilities express interest in adopting it.
+
+    For details, see [online ingestor](user-guide/online-ingestor.md) page.
+
+- offline ingestor
+
+    can be run from the online ingestor or by an operator. It is responsible to collect all the necessary metadata and create a dataset entry in SciCat.
+
+    For details, see [offline ingestor](user-guide/online-ingestor.md) page.
+
 
 ## Key Features
 
