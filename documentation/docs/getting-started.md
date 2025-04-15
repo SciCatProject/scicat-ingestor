@@ -9,6 +9,31 @@ pip install -e .  # It will allow you to use entry-points of the scripts,
                   # defined in ``pyproject.toml``, under ``[project.scripts]`` section.
 ```
 
+## Configuration
+
+You can use a json file to configure options.<br>
+There is a template, ``resources/config.sample.json`` you can copy/paste to make your own configuration file.
+
+!!! tip
+
+    Once you write your configuration file, you can validate it before using it to start an ingestor.
+    ```bash
+    # It runs `validate_config_file` function in `scicat_configuration` module.
+    scicat_validate_ingestor_config path/to/the/config/file.yml
+    ```
+
+    It tries building nested configuration dataclasses from the configuration file.<br>
+    It will throw errors if configuration is invalid.
+
+    !!! note
+
+        `Ingestor` ignores extra keywords that do not match the configuration dataclass arguments
+        but `validator` throws an error if there are extra keywords that do not match the arguments.
+
+See [configuration](user-guide/configuration.md) page for more detailed explanation what each option does.
+
+See [configuration developer-guide](developer-guide/configuration.md) page if you need to add/update any configurations for ingestor.
+
 ## How to RUN
 
 All commands have prefix of ``scicat`` so that you can use auto-complete in a terminal.
@@ -60,31 +85,3 @@ scicat_background_ingestor \
     --done-writing-message-file PATH_TO_THE_MESSAGE_FILE.json \
     --ingestion.dry-run
 ```
-
-## Configuration
-
-You can use a json file to configure options.
-There is a template, ``resources/config.sample.json`` you can copy/paste to make your own configuration file.
-
-In order to update the configurations, you should update it the ``scicat_configuration`` module.
-
-The template file can be synchronized automatically by ``scicat_synchronize_config`` command.
-
-**There is a unit test that checks if the online ingestor configuration dataclass is in sync with the ``resources/config.sample.json``.**
-
-### Configuration Validator
-
-You can validate a configuration file with ``scicat_validate_ingestor_config`` command.
-
-```bash
-scicat_validate_ingestor_config
-```
-
-It tries building nested configuration dataclasses from the configuration file.
-
-It will throw errors if configuration is invalid.
-
-i.e. In the operation, it'll ignore extra keywords that do not match the configuration dataclass arguments
-but validator throws an error if there are extra keywords that do not match the arguments.
-
-This is part of CI tests.

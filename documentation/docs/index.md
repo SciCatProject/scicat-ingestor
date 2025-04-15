@@ -76,7 +76,7 @@ Here is the typical file writing sequence including when the files are created/o
 
 <details>
     <summary>
-        File Writing Sequence
+        Click to see the File Writing Sequence
     </summary>
         ```mermaid
         sequenceDiagram

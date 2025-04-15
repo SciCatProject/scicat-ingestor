@@ -45,3 +45,13 @@ data_file_item = {
     if (k!='chk' or v is not None)
 }
 ```
+
+!!! warning
+    <h1> No Multi-type Arguments </h1>
+    We decided **NOT** to support **multiple types of arguments/configuration option** due to this ADR.
+    It is not impossible to support it, but the advantange is not worth the effort of handling multiple types.
+    Especially it makes the auto generator of json configuration file much more difficult than how it is now.
+
+    For example, there can be multiple kafka brokers so in principle we could allow a list of string as an argument type or a single string value.
+    However we decided to keep it only as a string, and if multiple brokers are needed, user should write them joined by comma(,).
+    On the other hand, access group option is always `list` even if there may be only one access group.

@@ -40,7 +40,10 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
+  - User Guide:
+      - Configuration: user-guide/configuration.md
   - Developer Guide:
       - Getting Started: developer-guide/getting-started.md
       - Documentation: developer-guide/documentation.md
       - ADRs: developer-guide/adrs.md  # There are not many ADRs so they are in one markdown file.
+      - Configuration: developer-guide/configuration.md
