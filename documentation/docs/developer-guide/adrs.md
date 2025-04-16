@@ -2,6 +2,73 @@
 
 Here we keep records of important software architecture decisions and the reasonabouts.
 
+## ADR-000: Decouple continuous discovery process and individual dataset ingestion process.
+
+`scicat ingestor` has two main responsibilities:
+    - Continuous discovery of a new dataset with related files
+    - Individual dataset ingestion from the discovery
+
+Previously (<25.01.0) ``scicat ingestor`` was single process program that continuously processes messages and files in a loop.
+In other words, both responsibilities were deelpy coupled.
+
+As the ``scicat ingestor`` under went project wide refactoring, <br>
+we decided to decouple those responsibilities(functionalities) and extract individual dataset ingestion as an independent tool.
+
+### Advantages
+
+Here are some of advantages we discovered as we decoupled the discovery process and ingestion process.
+
+#### Smaller Tests
+
+A single program, as it was initially, was hard to test and also to maintain.
+For example, we had to send ``kafka`` message to trigger the ingestion and make the ingestor parse ``metadata`` from files just to test if it can ingest file to ``scicat`` accordingly.
+If they are decoupled we can split this huge test into three smaller tests:
+    - ``kafka`` message processing
+    - ``metadata`` extraction
+    - ``scicat`` ingestion
+This decoupling helps to implement faster unittests/integration tests on a smaller scope.
+
+#### Smaller Usage
+
+As the dataset ingestion is now an completely independently tool from the discovery process, we can easily run ingestion multiple times in case of error.
+
+#### Multi Processes with Central Control
+
+Discovery process(online ingestor) spawns a sub process to start the ingestion process and continue listening to the next dataset.
+In reality, ``online ingestor`` spawns multiple processes to start ``offline ingestor`` as it could take a few seconds or even a few minutes depending on the metadata it needs to compute.
+Even if one of processes fails due to faulty metadata or unexpected structure of dataset, it will not affect the rest of healthy files and ingestions as it is on a separate process.
+
+#### Less Configurations
+
+As the ingestion process(``offline ingestor``) now do not communicate with kafka anymore,
+it can use subset of ``online ingestor`` configurations,
+which makes it easier to go through the list of the configurations dedicated to ``offline ingestor``.
+
+#### Easier Maintenance
+
+Due to all advantages we mentioned above, the maintenance cost considerably reduced.
+It takes less for testing, hence less time to release the software.
+
+### Visualization of Architecture
+
+!!! note
+
+    These diagrams might be updated and be different from the first design.
+
+#### Ingestor Flow Chart - Bird Eye View
+
+<!-- Mermaid chart does not support different shapes for subgraph-->
+<!-- And we wanted make the offline ingestor as `processes` shape -->
+<!-- As there will be multiple processes of them. -->
+<!-- So we made svg image of the diagram instead using mermaid. -->
+<!-- It very likely that they will support different shapes for subgraph in the future though...! -->
+![image](../_mermaid_charts/_ingestor_flow_birdeyeview.svg)
+
+#### Ingestor Flow Chart - Detail
+{%
+    include-markdown "../_mermaid_charts/_ingestor_flow_details.md"
+%}
+
 ## ADR-001: Use ``dataclass`` instead of ``jinja`` or ``dict`` to create dataset/data-block instances.
 We need a dict-like template to create dataset/data-block instances via scicat APIs.
 ### Reason for not using ``dict``

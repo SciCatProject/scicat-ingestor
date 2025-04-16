@@ -1,7 +1,7 @@
 # Welcome to Scicat Ingestor
 
 [![License: BSD 3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](LICENSE)
-[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](documentatino/docs/CODE_OF_CONDUCT.md)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
 
 SciCat Ingestor is a versatile application with the primary focus to automate the ingestion of new dataset in to SciCat.
 
@@ -33,18 +33,9 @@ The project is composed of two main components:
 
 ``scicat-ingestor`` is written for specific infrastructure setup like below:
 
-```mermaid
----
-title: Infrastructure around Scicat Ingestor
----
-graph LR
-    filewriter@{ shape: processes, label: "File Writers" } -.write file.-> storage[(Storage)]
-    filewriter --report (wrdn)--> kafkabroker[Kafka Broker]
-    ingestor[Scicat Ingestor] -.subscribe (wrdn).-> kafkabroker
-    storage -.read file.-> ingestor
-    ingestor --report--> log[Gray Log]
-
-```
+{%
+    include-markdown "./_mermaid_charts/_infra_structure.md"
+%}
 
 | Framework | Required | Description |
 | --------- | -------- | ----------- |
@@ -59,30 +50,9 @@ graph LR
 
 Here is a simple overview of how the ingestion is done.
 
-```mermaid
----
-title: File Ingesting Sequence
----
-
-sequenceDiagram
-  create participant File Writer
-  create actor File
-  File Writer --> File: File Written
-  loop Ingest Files
-    Ingestor -->> Kafka Broker: Subscribe<br>(listening to writing done - wrdn)
-    Kafka Broker ->> Ingestor: Writing Done Message (wrdn)
-    Note over Ingestor: Parse writing done message
-    Ingestor ->> File: Check file
-    opt
-        Ingestor ->> File: Parse Metadata
-    end
-    Note over Ingestor: Wrap files and metadata as<br> Scicat Dataset
-    critical
-        Ingestor ->> Scicat: Ingest File
-    end
-  end
-
-```
+{%
+    include-markdown "./_mermaid_charts/_file_ingestion_sequence.md"
+%}
 
 <br><br>
 
@@ -92,26 +62,9 @@ Here is the typical file writing sequence including when the files are created/o
     <summary>
         Click to see the File Writing Sequence
     </summary>
-        ```mermaid
-        sequenceDiagram
-        loop File Writing
-            File Writer -->> Kafka Broker: Subscribe (run start)
-            Kafka Broker ->> File Writer: Run Start
-            create actor File
-            File Writer ->> File: Create File and Close
-            File Writer --> File: Open File as Append Mode
-            loop File Writing
-                File Writer -->> Kafka Broker: Subscribe Relevant Topics for the run
-                Kafka Broker ->> File Writer: Detector Data/Log/etc ...
-                File Writer ->> File: Write Data in the File.
-            end
-            Kafka Broker ->> File Writer: Run Stop
-            File Writer --> File: Close File.
-            Note over File Writer: Compose wrdn message including id and file path
-        File Writer ->> Kafka Broker: Report (writing done - wrdn)
-        end
-
-        ```
+        {%
+            include-markdown "./_mermaid_charts/_file_writer_sequence.md"
+        %}
 </details>
 
 ## Used At
@@ -143,4 +96,4 @@ pip install -e .  # It will allow you to use entry-points of the scripts,
 ## Contribution
 Anyone is welcome to contribute to our project.
 
-Please check our [``developer guide``](developer-guide/getting-started).
+Please check our [``developer guide``](developer-guide/getting-started.md).

@@ -40,7 +40,7 @@ pip-tools==7.4.1
     # via pip-compile-multi
 plumbum==1.9.0
     # via copier
-prompt-toolkit==3.0.50
+prompt-toolkit==3.0.51
     # via questionary
 pydantic==2.11.3
     # via copier

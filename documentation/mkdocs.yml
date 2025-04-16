@@ -14,6 +14,7 @@ theme:
 plugins:
   - search
   - mermaid2
+  - include-markdown  # for including markdown files. See https://github.com/mondeja/mkdocs-include-markdown-plugin
 extra:
   generator: false
   version:
@@ -41,6 +42,7 @@ nav:
   - Home: index.md
   - Getting Started: getting-started.md
   - User Guide:
+      - Overview: user-guide/overview.md
       - Configuration: user-guide/configuration.md
       - OnlineIngestor: user-guide/online-ingestor.md
       - OfflineIngestor: user-guide/offline-ingestor.md
