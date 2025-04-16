@@ -49,6 +49,20 @@ which makes it easier to go through the list of the configurations dedicated to 
 Due to all advantages we mentioned above, the maintenance cost considerably reduced.
 It takes less for testing, hence less time to release the software.
 
+### Configuration
+
+``online-ingestor`` runs the ``offline-ingestor`` so the configuration of ``offline-ingestor`` can be a subset of the configuration of ``online-ingestor``.
+
+$Configuration(online) \subset Configuration(offline)$
+
+However, instead of passing individual configurations to the offline ingestor via command arguments, we simply pass the whole configuration file that `online-ingestor` was called with, to the `offline-ingestor` as it is much easier.
+
+Because it is not so practical to maintain two different json files when they are almost identica. Therefore we compromised to keep only one json file, which has all configuration options both for ``online-ingestor`` and ``offline-ingestor``.
+
+So the configuration file became union set of two different configurations.
+
+$Configuration = Configuration(online) \cup Configuration(offline)$
+
 ### Visualization of Architecture
 
 !!! note

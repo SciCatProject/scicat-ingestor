@@ -21,6 +21,7 @@ extra:
     provider: mike
     default: latest
 markdown_extensions:
+  - pymdownx.arithmatex
   - admonition
   - pymdownx.details
   - pymdownx.superfences:
