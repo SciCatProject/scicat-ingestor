@@ -93,7 +93,7 @@
     },
     "access_groups": {
       "source": "VALUE",
-      "value": ["ingestor"],
+      "value": ["SCIENTIFIC_SUPPORT"],
       "value_type": "string[]"
     },
     "sample_id": {
@@ -331,7 +331,7 @@
     "access_groups": {
       "field_type": "high_level",
       "machine_name": "accessGroups",
-      "value": ["<instrument_group>"],
+      "value": "<access_groups>",
       "type": "string[]"
     },
     "sample_id": {
@@ -545,7 +545,7 @@
         },
         "sample_creation_temperature": {
           "field_type": "scientific_metadata",
-          "machine_name": "sample_creation_temperature",
+          "machine_name": "sampleCreationTemperature",
           "human_name": "Sample Creation Temperature",
           "value": "<sample_creation_temperature>",
           "type": "string"

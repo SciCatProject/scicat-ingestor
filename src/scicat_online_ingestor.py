@@ -7,6 +7,8 @@ import logging
 import pathlib
 import subprocess
 from time import sleep, time
+from scicat_metadata import collect_schemas, select_applicable_schema
+from scicat_ingestor_utils import process_single_file
 
 
 try:
@@ -126,6 +128,7 @@ def main() -> None:
     # Log the configuration as dictionary so that it is easier to read from the logs
     logger.info('Starting the Scicat online Ingestor with the following configuration:')
     logger.info(config.to_dict())
+    schemas = collect_schemas(config.ingestion.schemas_directory)
 
     with handle_daemon_loop_exceptions(logger=logger):
         use_rabbitmq = config.rabbitmq.enabled
@@ -156,10 +159,33 @@ def main() -> None:
                 # Check if this is a direct data message
                 if message.get("is_direct_data", False):
                     logger.info("Processing direct data message")
+
+                    message_data = message.get("message_data", None)
+                    applicable_schema = None
+                    file_path = Path(
+                            message_data.get('sourceFolder'),
+                            message_data.get('instrument_name').lower(),
+                            'rawdata',
+                            'directdata.nxs'
+                        )
+                    try:
+                        applicable_schema = select_applicable_schema(file_path, schemas)
+                    except Exception as e:
+                        logger.debug(f"Error checking schema applicability for direct data {message_data.get('pid')}: {str(e)}")
+                    
+                    if applicable_schema is None:
+                        logger.debug(f"No schema applies to direct data {message_data.get('pid')}")
+                        continue
                     
                     try:
                         # Pass the message data directly to the processing function
-                        process_ill_data(message.message_data, logger=logger, config=config)
+                        # process_single_file(
+                        #     nexus_file_path=file_path,
+                        #     metadata_schema=applicable_schema,
+                        #     config=config,
+                        #     logger=logger,
+                        #     variable_map=message_data
+                        # )
                         logger.info("Direct data processing completed successfully")
                         
                         # Acknowledge the message immediately if configured to do so

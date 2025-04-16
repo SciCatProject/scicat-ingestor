@@ -56,11 +56,19 @@ def build_rabbitmq_consumer(options: RabbitMQOptions, logger: logging.Logger):
         connection = pika.BlockingConnection(connection_params)
         channel = connection.channel()
         
+        # If exchange name is provided, declare the exchange first
+        if options.exchange_name:
+            logger.info("Declaring exchange: %s", options.exchange_name)
+            # Using topic exchange type by default, can be made configurable if needed
+            channel.exchange_declare(exchange=options.exchange_name, exchange_type='topic', durable=True)
+        
+        queue_exists = False
         try:
             # First try to access the queue in passive mode (don't create if not exists)
             logger.info("Checking if queue '%s' exists...", options.queue_name)
             channel.queue_declare(queue=options.queue_name, passive=True)
             logger.info("Queue '%s' exists, using existing configuration", options.queue_name)
+            queue_exists = True
         except pika.exceptions.ChannelClosedByBroker as e:
             # Reopen channel if it was closed by the broker
             if e.reply_code == 404:  # Queue not found
@@ -74,6 +82,17 @@ def build_rabbitmq_consumer(options: RabbitMQOptions, logger: logging.Logger):
                 # Some other issue with the queue declaration
                 logger.error("Error accessing queue '%s': %s", options.queue_name, e)
                 raise
+        
+        # If both exchange name and routing key are provided, bind the queue to the exchange
+        if options.exchange_name:
+            routing_key = options.routing_key if options.routing_key else "#"
+            logger.info("Binding queue '%s' to exchange '%s' with routing key '%s'", 
+                        options.queue_name, options.exchange_name, routing_key)
+            channel.queue_bind(
+                exchange=options.exchange_name,
+                queue=options.queue_name,
+                routing_key=routing_key
+            )
         
         # Set prefetch count to control parallelism
         channel.basic_qos(prefetch_count=options.prefetch_count)
