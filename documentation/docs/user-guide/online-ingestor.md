@@ -1,6 +1,6 @@
 # Online Ingestor
 
-The ``online-ingestor`` is an **asynchronous daemon program**.
+The ``online-ingestor`` is an **asynchronous active daemon program**.
 It means ``online-ingestor`` pulls notification/information from a message broker and process them as it finds, instead of synchronously triggered by the file being written.
 
 !!! note
