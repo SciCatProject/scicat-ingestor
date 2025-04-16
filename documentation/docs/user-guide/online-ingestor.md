@@ -1,7 +1,28 @@
 # Online Ingestor
 
-The ``online-ingestor`` is an **asynchronous daemonic program**.
-It means that instead of waiting for a signal as a daemon, ``online-ingestor`` pulls notification/information from a message broker.
+The ``online-ingestor`` is an **asynchronous daemon program**.
+It means ``online-ingestor`` pulls notification/information from a message broker and process them as it finds, instead of synchronously triggered by the file being written.
+
+!!! note
+
+    `scicat-ingestor` does not come with daemon installation helper.
+    You will have to set it up by your self.
+
+    <!-- TODO: Add systemd setting tutorial -->
+
+!!! warning
+
+    It is only tested on Ubuntu (>=22.04) as we do not have any plans to support other types of OS.
+
+
+<details>
+<summary>Why is it not done by file-writer instead?</summary>
+
+File-writer should be a very robust program as it is very critical for collecting data so it is better to have a single concern.
+As we keep file writing and file ingestion decoupled, even if either file-writer or scicat-ingestor fails, the other program can continue doing their job.
+Also they are maintained by different teams so for maintenance it is easier to keep the interface asynchronous rather than building a monolithic program.
+
+</details>
 
 Whenever it can pull a notification about a new dataset, it spawns a background process where the ``offline-ingestor`` ingests the file.
 
