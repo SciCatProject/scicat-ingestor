@@ -13,6 +13,8 @@ confluent-kafka==2.9.0
     # via -r nightly.in
 ess-streaming-data-types==0.27.0
     # via -r nightly.in
+exceptiongroup==1.2.2
+    # via pytest
 flatbuffers==25.2.10
     # via ess-streaming-data-types
 graypy==2.1.0
@@ -29,11 +31,11 @@ markdown-it-py==3.0.0
     # via rich
 mdurl==0.1.2
     # via markdown-it-py
-numpy==2.2.4
+numpy==2.0.2
     # via
     #   ess-streaming-data-types
     #   h5py
-packaging==24.2
+packaging==25.0
     # via pytest
 pluggy==1.5.0
     # via pytest
@@ -45,5 +47,9 @@ requests==2.32.3
     # via -r nightly.in
 rich==14.0.0
     # via -r nightly.in
+tomli==2.2.1
+    # via pytest
+typing-extensions==4.13.2
+    # via rich
 urllib3==2.4.0
     # via requests
