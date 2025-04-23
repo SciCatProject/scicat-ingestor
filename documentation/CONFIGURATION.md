@@ -8,7 +8,7 @@ The configuration file is organized in multiple sections. This is an overview of
   It also include the id of the configuration which is an arbitrary string, but for easy tracking and maintenance we suggest to be unique within your system.
   We also suggest to use uuids and change everytime the configuration is updated.
 - dataset
-  This section pertains to the offline ingestor and contains all the options related to creating the dataset in scicat. 
+  This section pertains to the offline ingestor and contains all the options related to creating the dataset in scicat.
   It still contains some legacy options that are not in use anymore. They will be marked as obsolete and remove in the near future.
 - ingestion
   This section is specific for the offline ingestor and contains all the options to configure the ingestion process, such as path to the offline ingestor, where are the schema files, whhich tests to do before creation and which files to create.
@@ -21,8 +21,8 @@ The configuration file is organized in multiple sections. This is an overview of
 
 Following are the options one by one organized by the sections they belong to.
 
-## General 
-- nexus_file 
+## General
+- nexus_file
   This is the data file that the ingestor needs to ingest and should be contained in the dataset to be created.
   At the moment, the ingestor can handle only nexus files. If there is the need, additional formats can be added.
   The file to be ingested can be specified here, but in most cases, this option is left empty and the data file is passed as an argument at the command line.
@@ -35,7 +35,7 @@ Following are the options one by one organized by the sections they belong to.
   It is always empty as such file is provided as an argument with the option `-c`.
 - id
   This is a string which should be set to a unique value for the admin convenience.
-  We suggest to use uuids but there are no restrictions applied to it. We also suggest to change the id everytime the config is changed, so it is easy to debug and troubleshoot where automatic deployement system are in use.    
+  We suggest to use uuids but there are no restrictions applied to it. We also suggest to change the id everytime the config is changed, so it is easy to debug and troubleshoot where automatic deployement system are in use.  
   Example: "c1eef5a0-9b8b-11ef-a991-0bfe16577c30",
 
 ## Dataset
@@ -53,7 +53,7 @@ Following are the options one by one organized by the sections they belong to.
   This option provides the facility specific prefix for the dataset uuids.
   Example: "20.500.12269",
 - default_instrument_id: _string_
-  This option specify which is the default instrument that the dataset will be associated if the instrument is not provided or is invalid. 
+  This option specify which is the default instrument that the dataset will be associated if the instrument is not provided or is invalid.
   Example: "20.500.12269/00fe23a2-f276-4e2e-9005-a89a9c6ae9fe"
 - default_proposal_id: _string_
   This option speficy which is the default proposal id to be used if not provided or the one provided is invalid.  
@@ -68,19 +68,19 @@ Following are the options one by one organized by the sections they belong to.
 
 ## Ingestion
 - dry_run: _boolean_
-  This option instruct the ingestor to run in dry run mode. It performs all the required actions with the associated logs, except the ones that modify the data catalog.   
+  This option instruct the ingestor to run in dry run mode. It performs all the required actions with the associated logs, except the ones that modify the data catalog.  
   Options:
   - false: perform the ingestions
   - true: does all the preparation, but it does not attempt to run offline ingestor (if running th eonline ingestor), or create a dataset entry in SciCat (if running the offline ingestor).
 - offline_ingestor_executable: _string[]_
-  This option provides the online ingestor with the command line needed to run the offline ingestor. It is an array of strings as the ingestor is a python scripts and the admin might want to specify a specific version of python that is not the default one. 
+  This option provides the online ingestor with the command line needed to run the offline ingestor. It is an array of strings as the ingestor is a python scripts and the admin might want to specify a specific version of python that is not the default one.
   Example: [ "/root/micromamba/envs/scicat-ingestor/bin/python", /ess/services/scicat-ingestor/software/src/scicat_offline_ingestor.py" ]
 - schemas_directory: _string_
   This option define the full path of the folder where all the imsc files are located in this installation. It is used in the offline ingestor only. Please visit the section relative tpo the schema for more information about the imsc files.
   Example: "/ess/services/scicat-ingestor/schemas",
 - check_if_dataset_exists_by_pid:_boolean_
   This option instruct the offline ingestor to check if a dataset with the same pid already exists in the scicat instance of reference.
-  Options: 
+  Options:
   - false: do no check and attempt directly creating the dataset
   - true: check if a dataset with the same pid already exists and do not create the dataset if already present
 - check_if_dataset_exists_by_metadata: _boolean_
@@ -123,7 +123,7 @@ Following are the options one by one organized by the sections they belong to.
 - message_to_file: _boolean_
   This option instruct the online ingestor to save the notification message received through the selected medium in a file with name compose by the original file name and the suffix specified in option _message_file_extension_.
   Options:
-  - false: do not save original notification message in a file 
+  - false: do not save original notification message in a file
   - true: save original notification message in a json file
 - message_file_extension: _string_
   Extension used for the message file if saved.
@@ -133,7 +133,7 @@ Following are the options one by one organized by the sections they belong to.
   Available options:
   - absolute: use absolute paths
   - ...
-  
+
 ## Kafka (kafka)
 - topics: _string[]_
   This option provide to the online ingestor the list of the topics to listen on the kafka cluster for the message informing the availability of a new data file.
@@ -152,7 +152,7 @@ Following are the options one by one organized by the sections they belong to.
   Example: "SCRAM-SHA-256",
 - sasl_username: _string_
   This options provides the user name use in the sasl protocol when connecting to the kafka cluster
-  Example: "scicat_ingestor" 
+  Example: "scicat_ingestor"
 - sasl_password: _string_
   This field provides the password associated with the user name for the sasl protocol when connecting to the kafka cluster
 - ssl_ca_location: _string_
@@ -164,10 +164,10 @@ Following are the options one by one organized by the sections they belong to.
 - enable_auto_commit: _boolean_
   This option instruct the online ingestor to auto commit all the messages.
   Options:
-  - false: do not auto commit 
+  - false: do not auto commit
   - true: auto commit all the messages
 - individual_message_commit: _boolean_
-  This option configure the online ingestor to commit each message individually. At the moment this option is unstable and its use is not recommended. 
+  This option configure the online ingestor to commit each message individually. At the moment this option is unstable and its use is not recommended.
   Options:
   - false: do not auto commit each individual message
   - true: commit each individual message searately.
@@ -196,7 +196,7 @@ Following are the options one by one organized by the sections they belong to.
   If running on *nix system, under which log system the messages are logged.
   Example: "mail",
 - graylog: _boolean_
-  Enable logging to a graylog system through the SciCat graylog integration. 
+  Enable logging to a graylog system through the SciCat graylog integration.
 - graylog_host: _string_
   Ip address or valid hostname of the graylog server where the ingestor should send the logs
   Examples: "graylog.ess.eu"
@@ -225,4 +225,4 @@ Following are the options one by one organized by the sections they belong to.
   Usually set to false.
   Please refer to the python requests library documentation for more information.
 
-  
+

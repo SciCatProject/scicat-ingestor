@@ -12,8 +12,8 @@ Currently to run the ingestor, the following command should be run at command li
 
 In the case of the ESS test environment, the command looks like this:
 ```
-> /root/micromamba/envs/scicat-ingestor/bin/python 
-    /ess/services/scicat-ingestor/software/src/scicat_online_ingestor.py 
+> /root/micromamba/envs/scicat-ingestor/bin/python
+    /ess/services/scicat-ingestor/software/src/scicat_online_ingestor.py
         -c /ess/services/scicat-ingestor/config/scicat_ingestor_config.json
 ```
 

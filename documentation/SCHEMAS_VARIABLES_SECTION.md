@@ -52,7 +52,7 @@ Each value definition has the following structure:
     ...additional fields...
 }
 ```
-This definition will define in the ingestor memory a variable of name  *variable_name* of type *type_of_value* and the value of such variable will be retrieved from *source_of_value*. Additional fields might be required and are dependent from which source is specified.   
+This definition will define in the ingestor memory a variable of name  *variable_name* of type *type_of_value* and the value of such variable will be retrieved from *source_of_value*. Additional fields might be required and are dependent from which source is specified.  
 
 ## Sources
 Currently, the source field accepts the following options:
@@ -216,8 +216,8 @@ The basic structure of a value definition is as follow:
     "value_type": "<TYPE_OF_VALUE>",
 }
 ```
-This definition defines a variable of name  *variable_name* of type *type_of_value* with the value 
-retrieved from the SciCat instance endpoint specified by the field _url_. 
+This definition defines a variable of name  *variable_name* of type *type_of_value* with the value
+retrieved from the SciCat instance endpoint specified by the field _url_.
 If _field_ is specified, it will extract just the field from the results, otherwise it will assign the full object returned by scicat.
 The url specified is the relative path of the endpoint and it is relative to the url of the SciCat instance of reference.
 

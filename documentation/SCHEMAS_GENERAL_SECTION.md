@@ -10,7 +10,7 @@ This section contains the group of fields that should help admins and data curat
   Name of this schema. This field is to be used by admin only and be able to assign a meaningful name for the configuration.
 - instrument _string_  
   Comma separate list of instrument names where this schema would be applied to ingest the data from. This field is for admin use only. It provides an additional location to store information for easy identification and troubleshoot.
-- selector _object_ or _string_ 
+- selector _object_ or _string_
   This field contains the condition that needs to be met for the schema to be used when ingesting the input data file.  
   In the example below, the schema will be applied to files whose full path start with `/ess/data/coda` or `/ess/raw/coda`
   ```
@@ -23,7 +23,7 @@ This section contains the group of fields that should help admins and data curat
   ```
   In the next example, the selector indicates that the schema will be applied to files where the full path file name contains the word `coda`.
   ```
-  "selector" : "filename:contains:coda" 
+  "selector" : "filename:contains:coda"
   ```
   The individual selectors can be placed combined with _and_ and _or_ operators.
   Each individual selector can be a single string composed of three parts divided by semicolon, called condensed selector, or an object with the three equivalend fields, called expanded selector. The three components of each selector are:
@@ -51,8 +51,8 @@ This section contains the group of fields that should help admins and data curat
   - starts_with: the value retrieved from the source should start with  *operand_2*
   - contains: the value retrieved from the source should contain *operand_2*
 
-  Operand two is interpreted as string. 
+  Operand two is interpreted as string.
 
-- order _integer_ 
+- order _integer_
   This field is used by the ingestor to order the schemas prior to evaluate the selector to select the correct schema for the file. The lower the order is, the earlier the schema is evaluated for applicability. In case a file matches multiple schema selector, the schema with lower order number will be used.
 

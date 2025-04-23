@@ -6,7 +6,7 @@ These files have extension _imsc.json_ which stands for SciCat *i*ngestor *m*eta
 The schemas files contains the following information:
 - the schema selection, which are the rules that specify when to apply such schemato which file
 - variables definition, meaning which information are gathered and how, and how the are saved in local variables,
-- dataset creation, which instruct how to use the variables to populate the different fields of available in a SciCat dataset 
+- dataset creation, which instruct how to use the variables to populate the different fields of available in a SciCat dataset
 
 ## File Sections
 An imsc file has three main sections:

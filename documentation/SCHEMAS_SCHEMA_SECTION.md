@@ -124,7 +124,7 @@ Two examples of assignments are:
 
 Assuming that variable *start_time* has value _2025-01-20 12:00:00_ and variable *end_time* _2025-01-20 12:30:00_, this assignments will results in the following metadata definition in scicat:
 ```
-"scientific_metadata" { 
+"scientific_metadata" {
   "start_time" : {
     "value" : "2025-01-20 12:00:00"
     "unit" : ""

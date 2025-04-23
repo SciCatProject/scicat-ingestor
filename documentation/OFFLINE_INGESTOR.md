@@ -17,17 +17,17 @@ For more information about the schema files, the variables and schema sections o
 
 In a production deployment, the offline ingestor should be run as a background process by the online ingestor using the following command:
 ```
-> <full_path_to_the_python_executable> 
-  <full_path_to_the_ingestor_executables>/scicat_offline_ingestor.py 
-    -c <full_path_to_the_configuration_file> 
+> <full_path_to_the_python_executable>
+  <full_path_to_the_ingestor_executables>/scicat_offline_ingestor.py
+    -c <full_path_to_the_configuration_file>
     --nexus-file <full_path_to_the_nexus_data_file>
 ```
 Such command can also be run manually in a terminal in case of need (aka automatic ingestion failed) or when troubleshooting.
 
 In the ESS infrastructure, the command to run the offline ingestor on data file with full path `/ess/data/coda/2025/123321/raw/123321_000123456.hdf` is the following:
 ```
-> /root/micromamba/envs/scicat-ingestor/bin/python 
-  /ess/services/scicat-ingestor/software/src/scicat_offline_ingestor.py 
+> /root/micromamba/envs/scicat-ingestor/bin/python
+  /ess/services/scicat-ingestor/software/src/scicat_offline_ingestor.py
     -c /ess/services/scicat-ingestor/config/scicat_ingestor_config.json
     --nexus-file /ess/data/coda/2025/123321/raw/123321_000123456.hdf
 ```
