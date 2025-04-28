@@ -47,6 +47,7 @@ nav:
       - Configuration: user-guide/configuration.md
       - OnlineIngestor: user-guide/online-ingestor.md
       - OfflineIngestor: user-guide/offline-ingestor.md
+      - Metadata Schema: user-guide/metadata-schemas.md
   - Developer Guide:
       - Getting Started: developer-guide/getting-started.md
       - Documentation: developer-guide/documentation.md

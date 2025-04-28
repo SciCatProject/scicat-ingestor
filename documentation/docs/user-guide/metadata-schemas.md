@@ -45,6 +45,13 @@ This is an example of schema file:
 }
 ```
 
+## Metadata Schema Retrieval Flow
+
+{%
+    include-markdown "../_mermaid_charts/_metadata_retrieval_flow.md"
+%}
+
+
 ## Schema Definition (General Information)
 
 The first several fields of `imsc` files, that are not `variables` or `schemas`, contain meta data of the schema file for admins and data-curators to identify the schema. <br>
