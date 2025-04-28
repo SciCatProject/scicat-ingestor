@@ -223,7 +223,7 @@ class FileHandlingOptions:
 
 
 def default_offline_ingestor_executable() -> list[str]:
-    return ["background_ingestor"]
+    return ["scicat_background_ingestor"]
 
 
 @dataclass(kw_only=True)
