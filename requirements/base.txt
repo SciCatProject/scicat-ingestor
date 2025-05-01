@@ -21,13 +21,13 @@ h5py==3.13.0
     # via -r base.in
 idna==3.10
     # via requests
-kafka-python==2.1.5
+kafka-python==2.2.2
     # via -r base.in
 markdown-it-py==3.0.0
     # via rich
 mdurl==0.1.2
     # via markdown-it-py
-numpy==2.2.4
+numpy==2.0.2
     # via
     #   ess-streaming-data-types
     #   h5py
@@ -37,5 +37,7 @@ requests==2.32.3
     # via -r base.in
 rich==14.0.0
     # via -r base.in
+typing-extensions==4.13.2
+    # via rich
 urllib3==2.4.0
     # via requests
