@@ -7,4 +7,4 @@ updates:
   - package-ecosystem: "pip"
     directory: "/requirements"
     schedule:
-      interval: "daily"
+      interval: "quarterly"  # We manually lock dependencies in requirements/*.txt files so we do not need so frequent updates
