@@ -1,92 +1,99 @@
 # Welcome to Scicat Ingestor
 
-Scicat ingestor creates a raw dataset along with metadata using
-``wrdn`` messages and scicat api whenever a new file is written by a file-writer.
+[![License: BSD 3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](LICENSE)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
 
-## How to INSTALL
-```bash
+SciCat Ingestor is a versatile application with the primary focus to automate the ingestion of new dataset in to SciCat.
+
+Scicat Ingestor aims to accomplish ``FAIR`` data <br>
+by making files visible via `scicat`, associated with their metadata.
+
+The project is composed of two main components:
+
+- online ingestor
+
+    is responsible to connect to a kafka cluster and listen to selected topics for a specific message and trigger the data ingestion by running the offline ingestor as a background process. At the moment, this is specific to ESS IT infrastructure, but it is already planned to generalize it as soon as other facilities express interest in adopting it.
+
+    For details, see [online ingestor](user-guide/online-ingestor.md) page.
+
+- offline ingestor
+
+    can be run from the online ingestor or by an operator. It is responsible to collect all the necessary metadata and create a dataset entry in SciCat.
+
+    For details, see [offline ingestor](user-guide/online-ingestor.md) page.
+
+
+## Key Features
+
+- Continuously and asynchronously retrieving information of `files` from kafka.
+- Retrieve metadata from `files`.
+- Ingest `files` along with retrieved metadata to `scicat`.
+
+## Infrastructure around Scicat Ingestor
+
+``scicat-ingestor`` is written for specific infrastructure setup like below:
+
+{%
+    include-markdown "./_mermaid_charts/_infra_structure.md"
+%}
+
+| Framework | Required | Description |
+| --------- | -------- | ----------- |
+| [Scicat](https://www.scicatproject.org/) | O  | Scicat service that `scicat ingestor` can ingest files to. |
+| [Kafka](https://kafka.apache.org/)       | O  | Kafka broker that `scicat ingestor` can receive `write done` messages from.<br>All messages are assumed to be serialized<br>as flatbuffer using these schema: [flatbuffer schemas for filewriter](https://github.com/ess-dmsc/streaming-data-types)<br>`scicat-ingestor` uses [python wrapper of those schemas](https://github.com/ess-dmsc/python-streaming-data-types) to deserialize messages.<br>Currently only [`wrdn`](https://github.com/ess-dmsc/streaming-data-types/blob/master/schemas/wrdn_finished_writing.fbs) schema is used. |
+| [File Writer](https://github.com/ess-dmsc/kafka-to-nexus) | O and X | Any process that can write files and produce `write done` messages can be used. |
+| [GrayLog](https://graylog.org/) | X - optional | `scicat ingestor` has built in `stdout` logging option. |
+
+<br>
+
+## File Ingesting Sequence
+
+Here is a simple overview of how the ingestion is done.
+
+{%
+    include-markdown "./_mermaid_charts/_file_ingestion_sequence.md"
+%}
+
+<br><br>
+
+Here is the typical file writing sequence including when the files are created/open.
+
+<details>
+    <summary>
+        Click to see the File Writing Sequence
+    </summary>
+        {%
+            include-markdown "./_mermaid_charts/_file_writer_sequence.md"
+        %}
+</details>
+
+## Used At
+
+``scicat ingestor`` is mainly maintained by [`ESS DMSC`](https://ess.eu/data-management-software-centre)
+but it can be used in any systems that have same infrastructure set up.
+
+### European Spallation Source
+<div class="logo">
+    <a href="https://ess.eu/">
+        <img src="https://ess.eu/themes/custom/ess/logo.svg" alt="ess logo" width="80%" margin="auto">
+    </a>
+</div>
+
+## Quick Start
+
+We do not release `scicat-ingestor` into any package index services.<br>
+You can directly download it from our github page.
+
+```
 git clone https://github.com/SciCatProject/scicat-ingestor.git
 cd scicat-ingestor
+git fetch origin
+git checkout v25.01.0  # Latest Version
 pip install -e .  # It will allow you to use entry-points of the scripts,
                   # defined in ``pyproject.toml``, under ``[project.scripts]`` section.
 ```
 
-## How to RUN
+## Contribution
+Anyone is welcome to contribute to our project.
 
-All commands have prefix of ``scicat`` so that you can use auto-complete in a terminal.
-
-Each command is connected to a free function in a module. It is defined in ``pyproject.toml``, under ``[project.scripts]`` section.
-
-All scripts parse the system arguments and configuration in the same way.
-
-### Online ingestor (Highest level interface)
-You can start the ingestor daemon with certain configurations.
-
-It will continuously process `wrdn` messages and ingest the corresponding nexus files.
-
-```bash
-scicat_ingestor --logging.verbose -c PATH_TO_CONFIGURATION_FILE.yaml
-```
-
-**A topic can contain non-`wrdn` message so the ingestor filters messages and ignores irrelevant types of messages.**
-
-See [configuration](#configuration) for how to use configuration files.
-
-### Background ingestor  (Lower level interface)
-You can also run the ingestor file by file.
-
-You need to know the path to the nexus file you want to ingest
-and also the path to the ``done_writing_message_file`` as a json file.
-
-```bash
-scicat_background_ingestor \
-    --logging.verbose \
-    -c PATH_TO_CONFIGURATION_FILE.yaml \
-    --nexus-file PATH_TO_THE_NEXUS_FILE.nxs \
-    --done-writing-message-file PATH_TO_THE_MESSAGE_FILE.json
-```
-
-### Dry run
-
-You can add ``--ingestion.dry-run`` flag for dry-run testings.
-
-```bash
-scicat_ingestor --logging.verbose -c PATH_TO_CONFIGURATION_FILE.yaml --ingestion.dry-run
-```
-
-```bash
-scicat_background_ingestor \
-    --logging.verbose \
-    -c PATH_TO_CONFIGURATION_FILE.yaml \
-    --nexus-file PATH_TO_THE_NEXUS_FILE.nxs \
-    --done-writing-message-file PATH_TO_THE_MESSAGE_FILE.json \
-    --ingestion.dry-run
-```
-
-## Configuration
-
-You can use a json file to configure options.
-There is a template, ``resources/config.sample.json`` you can copy/paste to make your own configuration file.
-
-In order to update the configurations, you should update it the ``scicat_configuration`` module.
-
-The template file can be synchronized automatically by ``scicat_synchronize_config`` command.
-
-**There is a unit test that checks if the online ingestor configuration dataclass is in sync with the ``resources/config.sample.json``.**
-
-### Configuration Validator
-
-You can validate a configuration file with ``scicat_validate_ingestor_config`` command.
-
-```bash
-scicat_validate_ingestor_config
-```
-
-It tries building nested configuration dataclasses from the configuration file.
-
-It will throw errors if configuration is invalid.
-
-i.e. In the operation, it'll ignore extra keywords that do not match the configuration dataclass arguments
-but validator throws an error if there are extra keywords that do not match the arguments.
-
-This is part of CI tests.
+Please check our [``developer guide``](developer-guide/getting-started.md).

@@ -10,6 +10,7 @@ repos:
       - id: check-merge-conflict
       - id: check-toml
       - id: check-yaml
+        args: [ --unsafe ]  # For python object in documentation/mkdocs.yml
         exclude: conda/meta.yaml
       - id: detect-private-key
       - id: trailing-whitespace

@@ -7,18 +7,29 @@ theme:
     - navigation.tabs
     - navigation.tabs.sticky
     - content.tooltips
+    - content.code.copy
   palette:
     primary: indigo
     accent: light blue
+plugins:
+  - search
+  - mermaid2
+  - include-markdown  # for including markdown files. See https://github.com/mondeja/mkdocs-include-markdown-plugin
 extra:
   generator: false
   version:
     provider: mike
     default: latest
 markdown_extensions:
+  - pymdownx.arithmatex
   - admonition
   - pymdownx.details
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      # make exceptions to highlighting of code:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:mermaid2.fence_mermaid_custom
   - abbr
   - attr_list
   - md_in_html
@@ -30,6 +41,15 @@ markdown_extensions:
   - pymdownx.tilde
 nav:
   - Home: index.md
+  - Getting Started: getting-started.md
+  - User Guide:
+      - Overview: user-guide/overview.md
+      - Configuration: user-guide/configuration.md
+      - OnlineIngestor: user-guide/online-ingestor.md
+      - OfflineIngestor: user-guide/offline-ingestor.md
+      - Metadata Schema: user-guide/metadata-schemas.md
   - Developer Guide:
       - Getting Started: developer-guide/getting-started.md
       - Documentation: developer-guide/documentation.md
+      - ADRs: developer-guide/adrs.md  # There are not many ADRs so they are in one markdown file.
+      - Configuration: developer-guide/configuration.md

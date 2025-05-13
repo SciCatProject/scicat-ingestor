@@ -1,0 +1,36 @@
+name: Docs
+
+on:
+  pull_request:
+    paths:
+      - "documentation/**"
+      - ".github/workflows/docs*"
+
+permissions:
+  contents: write
+jobs:
+  docs:
+    name: Build Documentation
+    runs-on: 'ubuntu-24.04'
+
+    steps:
+      - run: sudo apt install --yes graphviz pandoc
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # history required so cmake can determine version
+      - name: Configure Git Credentials
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: '.github/workflows/python-version-ci'
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -r requirements/ci.txt
+      - run: tox -e docs
+      - uses: actions/upload-artifact@v4
+        id: artifact-upload-step
+        with:
+          name: docs_html
+          path: documentation/site/
+      - run: echo "::notice::https://remote-unzip.deno.dev/${{ github.repository }}/artifacts/${{ steps.artifact-upload-step.outputs.artifact-id }}"
