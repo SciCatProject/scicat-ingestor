@@ -1,0 +1,97 @@
+{
+  "nexus_file": "",
+  "done_writing_message_file": "",
+  "config_file": "",
+  "id": "",
+  "dataset": {
+    "allow_dataset_pid": true,
+    "generate_dataset_pid": false,
+    "dataset_pid_prefix": "20.500.12269",
+    "default_instrument_id": "ID_OF_FALLBACK_INSTRUMENT",
+    "default_proposal_id": "DEFAULT_PROPOSAL_ID",
+    "default_owner_group": "DEFAULT_OWNER_GROUP",
+    "default_access_groups": [
+      "ACCESS_GROUP_1"
+    ]
+  },
+  "ingestion": {
+    "dry_run": false,
+    "offline_ingestor_executable": [
+      "background_ingestor"
+    ],
+    "max_offline_ingestors": 10,
+    "offline_ingestors_wait_time": 10,
+    "schemas_directory": "schemas",
+    "check_if_dataset_exists_by_pid": true,
+    "check_if_dataset_exists_by_metadata": true,
+    "check_if_dataset_exists_by_metadata_key": "job_id",
+    "file_handling": {
+      "compute_file_stats": true,
+      "compute_file_hash": true,
+      "file_hash_algorithm": "blake2b",
+      "save_file_hash": false,
+      "hash_file_extension": "b2b",
+      "ingestor_files_directory": "../ingestor",
+      "message_to_file": true,
+      "message_file_extension": "message.json",
+      "file_path_type": "relative"
+    }
+  },
+  "kafka": {
+    "enabled": false,
+    "topics": "KAFKA_TOPIC_1,KAFKA_TOPIC_2",
+    "group_id": "GROUP_ID",
+    "bootstrap_servers": "localhost:9093",
+    "security_protocol": "sasl_ssl",
+    "sasl_mechanism": "SCRAM-SHA-256",
+    "sasl_username": "USERNAME",
+    "sasl_password": "PASSWORD",
+    "ssl_ca_location": "FULL_PATH_TO_CERTIFICATE_FILE",
+    "individual_message_commit": true,
+    "enable_auto_commit": true,
+    "auto_offset_reset": "earliest"
+  },
+  "rabbitmq": {
+    "enabled": true,
+    "host": "betalogs.ill.fr",
+    "port": 5672,
+    "virtual_host": "/",
+    "queue_name": "scicat_data",
+    "exchange_name": "scicat",
+    "routing_key": "nomad.scicat.publish",
+    "auto_ack": false,
+    "individual_message_acknowledge": true,
+    "prefetch_count": 1,
+    "direct_data_ingestion": true
+  },
+  "logging": {
+    "verbose": false,
+    "file_log": false,
+    "file_log_base_name": "scicat_ingestor_log",
+    "file_log_timestamp": false,
+    "logging_level": "INFO",
+    "log_message_prefix": "SFI",
+    "system_log": false,
+    "system_log_facility": "mail",
+    "graylog": false,
+    "graylog_host": "",
+    "graylog_port": "",
+    "graylog_facility": "scicat.ingestor"
+  },
+  "scicat": {
+    "host": "http://localhost:3000/api/v3",
+    "additional_headers": {},
+    "timeout": 10000,
+    "stream": true,
+    "verify": false,
+    "api_endpoints": {
+      "datasets": "datasets",
+      "proposals": "proposals",
+      "origdatablocks": "origdatablocks",
+      "instruments": "instruments",
+      "samples": "samples",
+      "login": "auth/login",
+      "logout": "auth/logout"
+    }
+  }
+}

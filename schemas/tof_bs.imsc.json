@@ -1,0 +1,42 @@
+{
+    "order": 1,
+    "id": "ill-diff-powder-schema",
+    "name": "ILL TOF BS Instruments Metadata Schema",
+    "instrument": "TOF BS",
+    "selector": {
+        "and": [
+            "dirname:starts_with:rawdata",
+            "filename:contains:.nxs",
+            {
+                "or": [
+                    "dirname:starts_with:in16b",
+                    "dirname:starts_with:in13"
+                ]
+            }
+        ]
+    },
+    "variables": {
+        "wavelength": {
+            "source": "NXS",
+            "path": "/entry0/wavelength",
+            "value_type": "string"
+        }
+    },
+    "schema": {
+        "instrument_properties": {
+            "type": "dict",
+            "field_type": "scientific_metadata",
+            "machine_name": "instrumentProperties",
+            "human_name": "Instrument Properties",
+            "value": {
+                "wavelength": {
+                    "field_type": "scientific_metadata",
+                    "machine_name": "wavelength",
+                    "human_name": "Wavelength",
+                    "value": "<wavelength>",
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

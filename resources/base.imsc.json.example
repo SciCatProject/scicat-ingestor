@@ -1,0 +1,198 @@
+{
+  "order": 1,
+  "id": "c5bed39a-4379-11ef-ba5a-ffbc783163b6",
+  "name" : "Generic metadata schema",
+  "instrument" : "",
+  "selector" : "filename:starts_with:/ess/data",
+  "variables" : {
+    "pid": {
+      "source": "NXS",
+      "path": "/entry/entry_identifier_uuid",
+      "value_type": "string"
+    },
+    "proposal_id": {
+      "source": "NXS",
+      "path": "/entry/experiment_identifier",
+      "value_type": "string"
+    },
+    "pi_firstname": {
+      "source": "SC",
+      "url": "proposals/<proposal_id>",
+      "field" : "pi_firstname",
+      "value_type": "string"
+    },
+    "pi_lastname": {
+      "source": "SC",
+      "url": "proposals/<proposal_id>",
+      "field": ":pi_lastname",
+      "value_type": "string"
+    },
+    "pi_email": {
+      "source": "SC",
+      "url": "proposals/<proposal_id>",
+      "field": "pi_email",
+      "value_type": "string"
+    },
+    "dataset_name": {
+      "source": "NXS",
+      "path": "/entry/title",
+      "value_type": "string"
+    },
+    "instrument_name": {
+      "source": "NXS",
+      "path": "/entry/instrument/name",
+      "value_type": "string"
+    },
+    "instrument_id": {
+      "source": "SC",
+      "url": "instruments?filter=%7B%22where%22%20%3A%20%7B%20%22name%22%20%3A%20%22coda%22%20%7D%20%7D",
+      "field": "id",
+      "value_type": "string"
+    },
+    "start_time": {
+      "source": "NXS",
+      "path": "/entry/start_time",
+      "value_type": "date"
+    },
+    "end_time": {
+      "source": "NXS",
+      "path": "/entry/end_time",
+      "value_type": "date"
+    },
+    "run_number": {
+      "source": "NXS",
+      "path": "/entry/entry_identifier",
+      "value_type": "integer"
+    },
+    "acquisition_team_members_list": {
+      "source": "NXS",
+      "path" : "/entry/user_*/name",
+      "value_type": "string[]"
+    },
+    "acquisition_team_members": {
+      "source": "VALUE",
+      "operator" : "join_with_space",
+      "value" : "<acquisition_team_members>",
+      "value_type": "string"
+    },
+        "owner_group": {
+      "source": "VALUE",
+      "value": "ess_proposal_<proposal_id>",
+      "value_type": "string"
+    },
+    "access_groups": {
+      "source": "VALUE",
+      "value": ["scientific information management systems group"],
+      "value_type": "string[]"
+    }
+  },
+  "schema": {
+    "pid": {
+      "field_type": "high_level",
+      "machine_name": "pid",
+      "value": "<pid>",
+      "type": "string"
+    },
+    "type" : {
+      "field_type": "high_level",
+      "machine_name": "type",
+      "value": "raw",
+      "type": "string"
+    },
+    "proposal_id": {
+      "field_type": "high_level",
+      "machine_name": "proposalId",
+      "value": "proposal_id",
+      "type": "string"
+    },
+    "dataset_name": {
+      "field_type": "high_level",
+      "machine_name": "datasetName",
+      "value": "<dataset_name>",
+      "type": "string"
+    },
+    "principal_investigator": {
+      "field_type": "high_level",
+      "machine_name": "principalInvestigator",
+      "value": "<pi_firstname> <pi_lastname>",
+      "type": "string"
+    },
+    "owner": {
+      "field_type": "high_level",
+      "machine_name": "owner",
+      "value": "<pi_firstname> <pi_lastname>",
+      "type": "string"
+    },
+    "owner_email": {
+      "field_type": "high_level",
+      "machine_name": "ownerEmail",
+      "value": "<pi_email>",
+      "type": "email"
+    },
+    "contact_email": {
+      "field_type": "high_level",
+      "machine_name": "contactEmail",
+      "value": "<pi_email>",
+      "type": "email"
+    },
+    "instrument_id": {
+      "field_type": "high_level",
+      "machine_name": "instrumentId",
+      "value": "instrument_id",
+      "type": "string"
+    },
+    "location": {
+      "field_type": "high_level",
+      "machine_name": "location",
+      "value": "ESS:CODA:<instrument_name>",
+      "type": "string"
+    },
+    "start_time": {
+      "field_type": "scientific_metadata",
+      "machine_name": "start_time",
+      "human_name": "Start Time",
+      "value": "<start_time>",
+      "type": "date"
+    },
+    "end_time": {
+      "field_type": "scientific_metadata",
+      "machine_name": "end_time",
+      "human_name": "End Time",
+      "value": "<end_time>",
+      "type": "date"
+    },
+    "run_number": {
+      "field_type": "scientific_metadata",
+      "machine_name": "run_number",
+      "human_name": "Run Number",
+      "value": "<run_number>",
+      "type": "integer"
+    },
+    "job_id": {
+      "field_type": "scientific_metadata",
+      "machine_name": "job_id",
+      "human_name": "Job Id",
+      "value": "<pid>",
+      "type": "integer"
+    },
+    "acquisition_team_members": {
+      "field_type": "scientific_metadata",
+      "machine_name": "acquisition_team_members",
+      "human_name": "Acquisition Team Members",
+      "value": "<acquisition_team_members>",
+      "type": "string"
+    },
+    "owner_group": {
+      "field_type": "high_level",
+      "machine_name": "ownerGroup",
+      "value": "<owner_group>",
+      "type": "string"
+    },
+    "access_groups": {
+      "field_type": "high_level",
+      "machine_name": "accessGroups",
+      "value": "<access_groups>",
+      "type": "string[]"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+-r base.in
+-r ci.in
+-r mypy.in
+-r static.in
+-r test.in
+copier
+pip-compile-multi
+pre-commit

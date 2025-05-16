@@ -1,0 +1,605 @@
+{
+  "order": 2,
+  "id": "ill-schema-001",
+  "name": "ILL Metadata Schema",
+  "instrument": "",
+  "selector": {
+    "and": [
+      "dirname:starts_with:rawdata",
+      "filename:contains:.nxs",
+      {
+        "or": [
+          "dirname:starts_with:d17",
+          "dirname:starts_with:figaro",
+          "dirname:starts_with:panther",
+          "dirname:starts_with:d1b",
+          "dirname:starts_with:d2b",
+          "dirname:starts_with:d20",
+          "dirname:starts_with:d4",
+          "dirname:starts_with:d007",
+          "dirname:starts_with:xtremed",
+          "dirname:starts_with:salsa",
+          "dirname:starts_with:d3",
+          "dirname:starts_with:d9",
+          "dirname:starts_with:d19",
+          "dirname:starts_with:d10",
+          "dirname:starts_with:d23",
+          "dirname:starts_with:orient",
+          "dirname:starts_with:in5",
+          "dirname:starts_with:sharp",
+          "dirname:starts_with:in16b",
+          "dirname:starts_with:in13",
+          "dirname:starts_with:in1",
+          "dirname:starts_with:thales",
+          "dirname:starts_with:in8",
+          "dirname:starts_with:in12",
+          "dirname:starts_with:in20",
+          "dirname:starts_with:in22",
+          "dirname:starts_with:d11",
+          "dirname:starts_with:d22",
+          "dirname:starts_with:d33",
+          "dirname:starts_with:ladi",
+          "dirname:starts_with:dali",
+          "dirname:starts_with:sam"
+        ]
+      }
+    ]
+  },
+  "variables": {
+    "pid": {
+      "source": "NXS",
+      "path": "/entry0/user/proposal",
+      "value_type": "string"
+    },
+    "proposal_id": {
+      "source": "NXS",
+      "path": "/entry0/user/proposal",
+      "value_type": "string"
+    },
+    "dataset_name": {
+      "source": "NXS",
+      "path": ["/entry0/title", "/entry0/experiment_title"],
+      "value_type": "string"
+    },
+    "instrument_name": {
+      "source": "NXS",
+      "path": "/entry0/instrument/name",
+      "value_type": "string"
+    },
+    "instrument_id": {
+      "source": "VALUE",
+      "value": "",
+      "value_type": "string"
+    },
+    "start_time": {
+      "source": "NXS",
+      "path": "/entry0/start_time",
+      "value_type": "date"
+    },
+    "end_time": {
+      "source": "NXS",
+      "path": "/entry0/end_time",
+      "value_type": "date"
+    },
+    "duration": {
+      "source": "NXS",
+      "path": "/entry0/duration",
+      "value_type": "string"
+    },
+    "owner_group": {
+      "source": "VALUE",
+      "value": "admin",
+      "value_type": "string"
+    },
+    "access_groups": {
+      "source": "VALUE",
+      "value": ["SCIENTIFIC_SUPPORT"],
+      "value_type": "string[]"
+    },
+    "sample_id": {
+      "source": "NXS",
+      "path": "/entry0/sample/sampleId",
+      "value_type": "string"
+    },
+    "sample_name": {
+      "source": "NXS",
+      "path": "/entry0/instrument/MeasurementType/SampleProposalName",
+      "value_type": "string"
+    },
+    "sample_description": {
+      "source": "NXS",
+      "path": "/entry0/instrument/MeasurementType/SampleProposalComment",
+      "value_type": "string"
+    },
+    "sample_type": {
+      "source": "NXS",
+      "path": "/entry0/instrument/MeasurementType/typeOfSample",
+      "value_type": "string"
+    },
+    "sample_subtype": {
+      "source": "NXS",
+      "path": "/entry0/instrument/MeasurementType/subType",
+      "value_type": "string"
+    },
+    "sample_env_type": {
+      "source": "NXS",
+      "path": "/entry0/instrument/MeasurementType/typeEnvEch",
+      "value_type": "string"
+    },
+    "sample_holder_type": {
+      "source": "NXS",
+      "path": "/entry0/instrument/MeasurementType/typePorteEch",
+      "value_type": "string"
+    },
+    "measurement_type": {
+      "source": "NXS",
+      "path": "/entry0/instrument/MeasurementType/typeOfMeasure",
+      "value_type": "string"
+    },
+    "instrument_group": {
+      "source": "NXS",
+      "path": "/entry0/instrument/MeasurementType/typeGroupInst",
+      "value_type": "string"
+    },
+    "owner": {
+      "source": "NXS",
+      "path": "/entry0/user/name",
+      "value_type": "string"
+    },
+    "ownerEmail": {
+      "source": "VALUE",
+      "value": "nomad@ill.fr",
+      "value_type": "string"
+    },
+    "creationLocation": {
+      "source": "VALUE",
+      "value": "ILL",
+      "value_type": "string"
+    },
+    "creationTime": {
+      "source": "NXS",
+      "path": "/entry0/start_time",
+      "value_type": "date"
+    },
+    "contactEmail": {
+      "source": "NXS",
+      "path": "/entry0/user/namelocalcontact",
+      "value_type": "string"
+    },
+    "principalInvestigator": {
+      "source": "NXS",
+      "path": "/entry0/user/name",
+      "value_type": "string"
+    },
+    "sourceFolder": {
+      "source": "VALUE",
+      "value": "/illdata",
+      "value_type": "string"
+    },
+    "sample_chemical_formula": {
+      "source": "NXS",
+      "path": "/entry0/sample/chemicalFormula",
+      "value_type": "string"
+    },
+    "sample_volume_unit_cell": {
+      "source": "NXS",
+      "path": "/entry0/sample/volumeUnitCell",
+      "value_type": "string"
+    },
+    "sample_mass": {
+      "source": "NXS",
+      "path": "/entry0/sample/mass",
+      "value_type": "string"
+    },
+    "sample_density": {
+      "source": "NXS",
+      "path": "/entry0/sample/density",
+      "value_type": "string"
+    },
+    "sample_type_install": {
+      "source": "NXS",
+      "path": "/entry0/sample/typeInstall",
+      "value_type": "string"
+    },
+    "sample_date_of_preparation": {
+      "source": "NXS",
+      "path": "/entry0/sample/dateOfPreparation",
+      "value_type": "string"
+    },
+    "sample_scattering_length_density": {
+      "source": "NXS",
+      "path": "/entry0/sample/scatteringLengthDensity",
+      "value_type": "string"
+    },
+    "sample_unit_cell_class": {
+      "source": "NXS",
+      "path": "/entry0/sample/unitCellClass",
+      "value_type": "string"
+    },
+    "sample_path_length_windows": {
+      "source": "NXS",
+      "path": "/entry0/sample/pathLengthWindows",
+      "value_type": "string"
+    },
+    "sample_surface_area": {
+      "source": "NXS",
+      "path": "/entry0/sample/surfaceArea",
+      "value_type": "string"
+    },
+    "sample_consistance": {
+      "source": "NXS",
+      "path": "/entry0/sample/consistance",
+      "value_type": "string"
+    },
+    "sample_size": {
+      "source": "NXS",
+      "path": "/entry0/sample/size",
+      "value_type": "string"
+    },
+    "sample_creation_temperature": {
+      "source": "NXS",
+      "path": "/entry0/sample/temperature",
+      "value_type": "string"
+    },
+    "sample_a": {
+      "source": "NXS",
+      "path": "/entry0/sample/a",
+      "value_type": "string"
+    },
+    "sample_b": {
+      "source": "NXS",
+      "path": "/entry0/sample/b",
+      "value_type": "string"
+    },
+    "sample_c": {
+      "source": "NXS",
+      "path": "/entry0/sample/c",
+      "value_type": "string"
+    },
+    "sample_alpha": {
+      "source": "NXS",
+      "path": "/entry0/sample/alpha",
+      "value_type": "string"
+    },
+    "sample_beta": {
+      "source": "NXS",
+      "path": "/entry0/sample/beta",
+      "value_type": "string"
+    },
+    "sample_gamma": {
+      "source": "NXS",
+      "path": "/entry0/sample/gamma",
+      "value_type": "string"
+    },
+    "sample_space": {
+      "source": "NXS",
+      "path": "/entry0/sample/space",
+      "value_type": "string"
+    }
+  },
+  "schema": {
+    "pid": {
+      "field_type": "high_level",
+      "machine_name": "pid",
+      "value": "<pid>",
+      "type": "string"
+    },
+    "type": {
+      "field_type": "high_level",
+      "machine_name": "type",
+      "value": "raw",
+      "type": "string"
+    },
+    "proposal_id": {
+      "field_type": "high_level",
+      "machine_name": "proposalId",
+      "value": "<proposal_id>",
+      "type": "string"
+    },
+    "dataset_name": {
+      "field_type": "high_level",
+      "machine_name": "datasetName",
+      "value": "<dataset_name>",
+      "type": "string"
+    },
+    "start_time": {
+      "field_type": "scientific_metadata",
+      "machine_name": "start_time",
+      "human_name": "Start Time",
+      "value": "<start_time>",
+      "type": "date"
+    },
+    "end_time": {
+      "field_type": "scientific_metadata",
+      "machine_name": "end_time",
+      "human_name": "End Time",
+      "value": "<end_time>",
+      "type": "date"
+    },
+    "duration": {
+      "field_type": "scientific_metadata",
+      "machine_name": "duration",
+      "value": "<duration>",
+      "type": "string"
+    },
+    "owner_group": {
+      "field_type": "high_level",
+      "machine_name": "ownerGroup",
+      "value": "<owner_group>",
+      "type": "string"
+    },
+    "access_groups": {
+      "field_type": "high_level",
+      "machine_name": "accessGroups",
+      "value": "<access_groups>",
+      "type": "string[]"
+    },
+    "sample_id": {
+      "field_type": "high_level",
+      "machine_name": "sampleId",
+      "human_name": "Sample ID",
+      "value": "<sample_id>",
+      "type": "string"
+    },
+    "sample_name": {
+      "field_type": "scientific_metadata",
+      "machine_name": "sampleName",
+      "human_name": "Sample Name",
+      "value": "<sample_name>",
+      "type": "string"
+    },
+    "sample_description": {
+      "field_type": "scientific_metadata",
+      "machine_name": "sampleDescription",
+      "human_name": "Sample Description",
+      "value": "<sample_description>",
+      "type": "string"
+    },
+    "sample_type": {
+      "field_type": "scientific_metadata",
+      "machine_name": "sampleType",
+      "human_name": "Sample Type",
+      "value": "<sample_type>",
+      "type": "string"
+    },
+    "sample_subtype": {
+      "field_type": "scientific_metadata",
+      "machine_name": "sampleSubtype",
+      "human_name": "Sample Subtype",
+      "value": "<sample_subtype>",
+      "type": "string"
+    },
+    "sample_env_type": {
+      "field_type": "scientific_metadata",
+      "machine_name": "sampleEnvType",
+      "human_name": "Sample Environment Type",
+      "value": "<sample_env_type>",
+      "type": "string"
+    },
+    "sample_holder_type": {
+      "field_type": "scientific_metadata",
+      "machine_name": "sampleHolderType",
+      "human_name": "Sample Holder Type",
+      "value": "<sample_holder_type>",
+      "type": "string"
+    },
+    "measurement_type": {
+      "field_type": "scientific_metadata",
+      "machine_name": "measurementType",
+      "human_name": "Measurement Type",
+      "value": "<measurement_type>",
+      "type": "string"
+    },
+    "instrument_group": {
+      "field_type": "scientific_metadata",
+      "machine_name": "instrumentGroup",
+      "human_name": "Instrument Group",
+      "value": "<instrument_group>",
+      "type": "string"
+    },
+    "owner": {
+      "field_type": "high_level",
+      "machine_name": "owner",
+      "human_name": "Owner",
+      "value": "<owner>",
+      "type": "string"
+    },
+    "ownerEmail": {
+      "field_type": "high_level",
+      "machine_name": "ownerEmail",
+      "human_name": "Owner Email",
+      "value": "<ownerEmail>",
+      "type": "string"
+    },
+    "creationLocation": {
+      "field_type": "high_level",
+      "machine_name": "creationLocation",
+      "human_name": "Creation Location",
+      "value": "<creationLocation>",
+      "type": "string"
+    },
+    "creationTime": {
+      "field_type": "high_level",
+      "machine_name": "creationTime",
+      "human_name": "Creation Time",
+      "value": "<creationTime>",
+      "type": "date"
+    },
+    "contactEmail": {
+      "field_type": "high_level",
+      "machine_name": "contactEmail",
+      "human_name": "Contact Email",
+      "value": "<contactEmail>",
+      "type": "string"
+    },
+    "principalInvestigator": {
+      "field_type": "high_level",
+      "machine_name": "principalInvestigator",
+      "human_name": "Principal Investigator",
+      "value": "<principalInvestigator>",
+      "type": "string"
+    },
+    "sourceFolder": {
+      "field_type": "high_level",
+      "machine_name": "sourceFolder",
+      "human_name": "Source Folder",
+      "value": "<sourceFolder>",
+      "type": "string"
+    },
+    "sampleProperties": {
+      "field_type": "scientific_metadata",
+      "machine_name": "sampleProperties",
+      "human_name": "Sample Properties",
+      "type": "dict",
+      "value": {
+        "chemicalFormula": {
+          "field_type": "scientific_metadata",
+          "machine_name": "chemicalFormula",
+          "human_name": "Chemical Formula",
+          "value": "<sample_chemical_formula>",
+          "type": "string"
+        },
+        "volumeUnitCell": {
+          "field_type": "scientific_metadata",
+          "machine_name": "volumeUnitCell",
+          "human_name": "Volume Unit Cell",
+          "value": "<sample_volume_unit_cell>",
+          "type": "string"
+        },
+        "mass": {
+          "field_type": "scientific_metadata",
+          "machine_name": "mass",
+          "human_name": "Mass",
+          "value": "<sample_mass>",
+          "type": "string"
+        },
+        "density": {
+          "field_type": "scientific_metadata",
+          "machine_name": "density",
+          "human_name": "Density",
+          "value": "<sample_density>",
+          "type": "string"
+        },
+        "typeInstall": {
+          "field_type": "scientific_metadata",
+          "machine_name": "typeInstall",
+          "human_name": "Type Install",
+          "value": "<sample_type_install>",
+          "type": "string"
+        },
+        "description": {
+          "field_type": "scientific_metadata",
+          "machine_name": "description",
+          "human_name": "Description",
+          "value": "<sample_description>",
+          "type": "string"
+        },
+        "dateOfPreparation": {
+          "field_type": "scientific_metadata",
+          "machine_name": "dateOfPreparation",
+          "human_name": "Date of Preparation",
+          "value": "<sample_date_of_preparation>",
+          "type": "string"
+        },
+        "scatteringLengthDensity": {
+          "field_type": "scientific_metadata",
+          "machine_name": "scatteringLengthDensity",
+          "human_name": "Scattering Length Density",
+          "value": "<sample_scattering_length_density>",
+          "type": "string"
+        },
+        "unitCellClass": {
+          "field_type": "scientific_metadata",
+          "machine_name": "unitCellClass",
+          "human_name": "Unit Cell Class",
+          "value": "<sample_unit_cell_class>",
+          "type": "string"
+        },
+        "pathLengthWindows": {
+          "field_type": "scientific_metadata",
+          "machine_name": "pathLengthWindows",
+          "human_name": "Path Length Windows",
+          "value": "<sample_path_length_windows>",
+          "type": "string"
+        },
+        "surfaceArea": {
+          "field_type": "scientific_metadata",
+          "machine_name": "surfaceArea",
+          "human_name": "Surface Area",
+          "value": "<sample_surface_area>",
+          "type": "string"
+        },
+        "consistance": {
+          "field_type": "scientific_metadata",
+          "machine_name": "consistance",
+          "human_name": "Consistance",
+          "value": "<sample_consistance>",
+          "type": "string"
+        },
+        "size": {
+          "field_type": "scientific_metadata",
+          "machine_name": "size",
+          "human_name": "Size",
+          "value": "<sample_size>",
+          "type": "string"
+        },
+        "sample_creation_temperature": {
+          "field_type": "scientific_metadata",
+          "machine_name": "sampleCreationTemperature",
+          "human_name": "Sample Creation Temperature",
+          "value": "<sample_creation_temperature>",
+          "type": "string"
+        },
+        "a": {
+          "field_type": "scientific_metadata",
+          "machine_name": "a",
+          "human_name": "a",
+          "value": "<sample_a>",
+          "type": "string"
+        },
+        "b": {
+          "field_type": "scientific_metadata",
+          "machine_name": "b",
+          "human_name": "b",
+          "value": "<sample_b>",
+          "type": "string"
+        },
+        "c": {
+          "field_type": "scientific_metadata",
+          "machine_name": "c",
+          "human_name": "c",
+          "value": "<sample_c>",
+          "type": "string"
+        },
+        "alpha": {
+          "field_type": "scientific_metadata",
+          "machine_name": "alpha",
+          "human_name": "alpha",
+          "value": "<sample_alpha>",
+          "type": "string"
+        },
+        "beta": {
+          "field_type": "scientific_metadata",
+          "machine_name": "beta",
+          "human_name": "beta",
+          "value": "<sample_beta>",
+          "type": "string"
+        },
+        "gamma": {
+          "field_type": "scientific_metadata",
+          "machine_name": "gamma",
+          "human_name": "gamma",
+          "value": "<sample_gamma>",
+          "type": "string"
+        },
+        "space": {
+          "field_type": "scientific_metadata",
+          "machine_name": "space",
+          "human_name": "Space",
+          "value": "<sample_space>",
+          "type": "string"
+        }
+      }
+    }
+  }
+}

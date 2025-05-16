@@ -1,27 +1,34 @@
-# For more information, please refer to https://aka.ms/vscode-docker-python
-FROM python:3.8-slim-buster
+FROM python:3.12-slim
 
-# Keeps Python from generating .pyc files in the container
-ENV PYTHONDONTWRITEBYTECODE=1
-
-# Turns off buffering for easier container logging
-ENV PYTHONUNBUFFERED=1
-
-# Install pip requirements
-COPY requirements_SFI.txt .
-RUN python -m pip install -r requirements_SFI.txt
+# Install system packages necessary for HDF5, building dependencies, and git
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libhdf5-dev build-essential git \
+ && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY online_ingestor.py /app
-COPY ingestor_lib.py /app
-COPY user_office_lib.py /app
-COPY config_sample.json /app/config.json
 
-# Creates a non-root user with an explicit UID and adds permission to access the /app folder
-# For more info, please refer to https://aka.ms/vscode-docker-python-configure-containers
-RUN adduser -u 5678 --disabled-password --gecos "" appuser && chown -R appuser /app
-USER appuser
+# Copy the requirements directory into the container
+COPY requirements/ ./requirements/
 
-# During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
-CMD ["python", "online_ingestor.py", "--config-file","config.json","-v","--debug","DEBUG"]
+# Install dependencies from the base requirements file
+RUN pip install --upgrade pip && pip install -r requirements/base.in && pip install python-dateutil
 
+# Copy the full application code
+COPY . .
+
+# Set a pretend version for setuptools-scm to use
+ENV SETUPTOOLS_SCM_PRETEND_VERSION=0.1.0
+
+# Install your package in editable mode
+RUN pip install -e .
+
+# Create entrypoint script to handle space-separated nexus files
+RUN echo '#!/bin/bash\n\
+ARGS="--logging.verbose -c ${CONFIG_FILE}"\n\
+for file in $NEXUS_FILE; do\n\
+  ARGS="$ARGS --nexus-file $file"\n\
+done\n\
+scicat_background_ingestor $ARGS\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+
+# By default, run the ingestor with the entrypoint script
+CMD ["/app/entrypoint.sh"]

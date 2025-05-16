@@ -1,5 +1,0 @@
-FROM centos:7
-
-RUN cd / && \
-    curl -LO https://jenkins.esss.dk/dm/job/ess-dmsc/job/event-formation-unit/job/master/lastSuccessfulBuild/artifact/event-formation-unit-centos7.tar.gz && \
-    tar xzvf event-formation-unit-centos7.tar.gz

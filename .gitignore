@@ -1,6 +1,46 @@
-.vscode
-config.[0-9]*.json
-config.json
-test-data/*
-scicat_ingestor.pl
-pyscicat
+# Build artifacts
+.tox
+*.egg-info
+*.sw?
+
+# Environments
+venv
+.venv
+get-pip.py
+
+# Caches
+.clangd/
+*.ipynb_checkpoints
+__pycache__/
+.vs/
+.virtual_documents
+.hypothesis
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# Editor settings
+.idea/
+.vscode/
+
+# Data files
+*.data
+*.dat
+*.csv
+*.xye
+*.h5
+*.hdf5
+*.hdf
+*.nxs
+*.raw
+*.cif
+*.rcif
+*.ort
+
+# User configuration
+config.*.json
+
+# Log files
+*.log
+
+.env
