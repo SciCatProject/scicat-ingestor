@@ -16,12 +16,14 @@ from scicat_configuration import SciCatOptions
 load_dotenv()
 
 def login(config: SciCatOptions, logger: logging.Logger) -> str:
+    if os.environ.get("SCICAT_USERNAME") is None or os.environ.get("SCICAT_PASSWORD") is None:
+        raise ValueError("SCICAT_USERNAME and SCICAT_PASSWORD environment variables are required")
     auth_data = {
         "username": os.environ.get("SCICAT_USERNAME"),
         "password": os.environ.get("SCICAT_PASSWORD")
     }
     response = requests.post(
-        config.urls.login, json=auth_data, headers=config.headers, timeout=config.timeout
+        config.urls.login, json=auth_data, headers=config.headers, timeout=config.timeout, verify=config.verify
     )
     if not response.ok:
         logger.error(
@@ -147,10 +149,18 @@ def patch_scicat_dataset(
                     **current_value,
                     **patch_dataset['scientificMetadata']['sampleProperties']['value']
                 }
-    patch_dataset.pop("pid", None)
-    patch_dataset.pop("type", None)
     patch_dataset['numberOfFiles'] = current_dataset['numberOfFiles']
     patch_dataset['size'] = current_dataset['size']
+    
+    immutable_fields = [
+        "pid", "type", "_id", "createdBy", "updatedBy", "version",
+        "principalInvestigators", "proposalIds", "sampleIds", "instrumentIds",
+        "history", "createdAt", "updatedAt", "__v"
+    ]
+    for field in immutable_fields:
+        if field in patch_dataset:
+            logger.debug(f"Removing immutable field '{field}' before update")
+            patch_dataset.pop(field, None)
 
     response = requests.patch(
         urljoin(config.host_address, f"{config.api_endpoints.datasets}/{quote_plus(dataset['pid'])}"),
@@ -422,6 +432,40 @@ def get_dataset_by_pid(
             response.reason,
         )
         return None
+    
+def get_dataset_by_proposalId(
+    proposal_id: str, config: SciCatOptions, logger: logging.Logger
+) -> dict | None:
+    if not proposal_id:
+        logger.error("ProposalId is missing")
+        return None
+    filter_string = f'?filter={{"where":{{"proposalIds":{{"$in":["{proposal_id}"]}}}}}}' 
+    url = urljoin(config.host_address, config.api_endpoints.datasets) + filter_string
+    logger.debug("Checking if dataset exists by proposalId: %s", proposal_id)
+    response = _get_from_scicat(
+        url=url,
+        headers=config.headers,
+        timeout=config.timeout,
+        stream=config.stream,
+        verify=config.verify,
+    )
+
+    if response.ok:
+        logger.debug("Retrieved %s dataset(s) from SciCat", len(response.json()))
+        return response.json()
+    elif response.status_code == 403:
+        logger.debug("Dataset with proposalId %s does not exist", proposal_id)
+    else:
+        logger.error(
+            "Failed to check dataset existence by proposalId %s \n"
+            "with status code: %s \n"
+            "Error message from scicat backend: \n%s",
+            "Assuming the dataset does not exist.",
+            proposal_id,
+            response.status_code,
+            response.reason,
+        )
+    return None
 
 def check_dataset_by_pid(
     pid: str, config: SciCatOptions, logger: logging.Logger
@@ -602,6 +646,32 @@ def get_instrument_nomad_id_by_name(
             )
     return None
 
+def get_proposals(
+        config: SciCatOptions, logger: logging.Logger
+):
+    url = urljoin(config.host_address, config.api_endpoints.proposals)
+    logger.debug("Getting proposals from %s", url)
+    response = _get_from_scicat(
+        url=url,
+        headers=config.headers,
+        timeout=config.timeout,
+        stream=config.stream,
+        verify=config.verify,
+    )
+
+    if response.ok:
+        logger.debug("Retrieved %s proposal(s) from SciCat", len(response.json()))
+        return response.json()
+    else:
+        logger.error(
+            "Failed to get proposals from SciCat. \n"
+            "with status code: %s \n"
+            "Error message from scicat backend: \n%s",
+            response.status_code,
+            response.reason,
+        )
+    return None
+
 def get_proposal_by_id(
     proposal_id: str, config: SciCatOptions, logger: logging.Logger
 ):
@@ -750,3 +820,26 @@ def get_origdatablock_by_datasetId(
             response.reason,
         )
     return None
+
+def update_published_status(
+    proposal_ids: list[str], isPublished: bool, config: SciCatOptions, logger: logging.Logger
+) -> None:
+    """
+    Update the published status of proposals in SciCat.
+    """
+    for proposal_id in proposal_ids:
+        datasets = get_dataset_by_proposalId(
+            proposal_id=proposal_id,
+            config=config,
+            logger=logger
+        )
+        if datasets:
+            for dataset in datasets:
+                if dataset.get("isPublished") == isPublished:
+                    continue
+                dataset["isPublished"] = isPublished
+                patch_scicat_dataset(
+                    dataset=dataset,
+                    config=config,
+                    logger=logger
+                )                
