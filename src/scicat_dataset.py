@@ -9,6 +9,7 @@ import pathlib
 import re
 import uuid
 import json
+import urllib
 from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass, field
 from types import MappingProxyType
@@ -100,6 +101,7 @@ _DtypeConvertingMap = MappingProxyType(
         "dict": to_dict,
         "list": to_list,
         "email": to_string,
+        "link": to_string,
         # TODO: Add email converter
     }
 )
@@ -136,6 +138,9 @@ _OPERATOR_REGISTRY = MappingProxyType(
             recipe.field
         ],  # The only operator that takes an argument
         "str-replace": lambda value, recipe: str(value).replace(recipe.pattern,recipe.replacement),
+        "urlsafe": lambda value, recipe: urllib.parse.quote_plus(value),
+        "to-lower": lambda value, recipe: str(value).lower(),
+        "to-upper": lambda value, recipe: str(value).upper(),
     }
 )
 
@@ -167,12 +172,16 @@ def extract_variables_values(
     variables: dict[str, MetadataSchemaVariable],
     h5file: h5py.File,
     config: OfflineIngestorConfig,
+    schema_id: str,
 ) -> dict:
+    nexus_file = pathlib.Path(config.nexus_file)
     variable_map = {
         "ingestor_run_id": str(uuid.uuid4()),
-        "data_file_path": str(pathlib.Path(config.nexus_file)),
+        "data_file_path": str(nexus_file),
+        "data_file_name": str(nexus_file.name),
         "now": datetime.datetime.now(tz=datetime.UTC).isoformat(),
         "ingestor_files_directory": config.ingestion.file_handling.ingestor_files_directory,
+        "ingestor_metadata_schema_id": schema_id,
     }
     for variable_name, variable_recipe in variables.items():
         source = variable_recipe.source
@@ -462,7 +471,6 @@ def _render_variable_as_type(value: Any, variable_map: dict, dtype: str) -> Any:
 
 def _create_scientific_metadata(
     *,
-    metadata_schema_id: str,
     sm_schemas: list[MetadataItem],
     variable_map: dict,
 ) -> dict:
@@ -470,8 +478,6 @@ def _create_scientific_metadata(
 
     Params
     ------
-    metadata_schema_id:
-        The ID of the metadata schema configuration.
     sm_schemas:
         The scientific metadata schema configuration.
     variable_map:
@@ -479,24 +485,15 @@ def _create_scientific_metadata(
 
     """
     return {
-        # Default field
-        "ingestor_metadata_schema_id": {
-            "value": metadata_schema_id,
-            "unit": "",
-            "human_name": "Ingestor metadata schema ID",
-            "type": "string",
-        },
-        **{
-            field.machine_name: {
-                "value": _render_variable_as_type(
-                    field.value, variable_map, field.type
-                ),
-                "unit": getattr(field, "unit", ""),
-                "human_name": getattr(field, "human_name", field.machine_name),
-                "type": field.type,
-            }
-            for field in sm_schemas
-        },
+        field.machine_name: {
+            "value": _render_variable_as_type(
+                field.value, variable_map, field.type
+            ),
+            "unit": getattr(field, "unit", ""),
+            "human_name": getattr(field, "human_name", field.machine_name),
+            "type": field.type,
+        }
+        for field in sm_schemas
     }
 
 
@@ -520,7 +517,6 @@ def _validate_metadata_schemas(
 
 def create_scicat_dataset_instance(
     *,
-    metadata_schema_id: str,  # metadata-schema["id"]
     metadata_schema: dict[str, MetadataItem],  # metadata-schema["schema"]
     variable_map: dict,
     data_file_list: list[DataFileListItem],
@@ -551,7 +547,6 @@ def create_scicat_dataset_instance(
         numberOfFiles=len(data_file_list),
         isPublished=False,
         scientificMetadata=_create_scientific_metadata(
-            metadata_schema_id=metadata_schema_id,
             sm_schemas=_filter_by_field_type(
                 metadata_schema.values(), SCIENTIFIC_METADATA_TYPE
             ),  # Scientific metadata schemas
