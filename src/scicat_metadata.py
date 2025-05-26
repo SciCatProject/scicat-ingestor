@@ -160,7 +160,7 @@ def render_variable_value(var_value: Any, variable_registry: dict) -> str:
             "<" + reg_var_name + ">", str(reg_var_value)
         )
 
-    if "<" in var_value and ">" in var_value:
+    if "<" in output_value and ">" in output_value:
         raise Exception(f"Unresolved variable: {var_value}")
 
     output_value = (
