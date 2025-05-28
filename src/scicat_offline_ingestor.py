@@ -131,6 +131,7 @@ def main() -> None:
 
     # Collect all metadata schema configurations
     schemas = collect_schemas(config.ingestion.schemas_directory)
+    logger.info("Found %s schemas", len(schemas))
 
     with handle_exceptions(logger):
         nexus_file_path = Path(config.nexus_file)
