@@ -3,9 +3,10 @@
 Currently the `scicat-ingestor` is not deployed to any package indexing services, like `pypi` or `anaconda`.<br>
 It is expected to be installed from the source code, which is available from the [github repository](https://github.com/SciCatProject/scicat-ingestor/).<br>
 
-Releasing `scicat-ingestor`:
-    - Publish and tag the main branch with the version number.
-    - Deploy new documentation from the release.
+## TL;DR - Releasing `scicat-ingestor`
+
+- Publish and tag the main branch with the version number.
+- Deploy new documentation from the release.
 
 ## Release Steps
 
