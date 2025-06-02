@@ -11,15 +11,15 @@ Releasing `scicat-ingestor`:
 
 Here is instruction of release steps in detail.
 
-1. Go to github repository releases page
+### 1. Go to github repository releases page
 
     [Scicat Intestor Releases Page](https://github.com/SciCatProject/scicat-ingestor/releases)
 
-2. Click `Draft a new release` button
+### 2. Click `Draft a new release` button
 
     ![image](./_screen_shots/draft_release_button.png)
 
-3. Create a new tag (version number)
+### 3. Create a new tag (version number)
 
     This will be the title of the release as well.
 
@@ -31,7 +31,7 @@ Here is instruction of release steps in detail.
              and if it is the second version of the month, it should be `1` and so on...
     ![image](./_screen_shots/create_new_tag.png)
 
-4. Select previous tag
+### 4. Select previous tag
 
     Select the previous tag to compare the current version.
 
@@ -41,7 +41,7 @@ Here is instruction of release steps in detail.
 
     ![image](./_screen_shots/select_previous_tag.png)
 
-5. Generate release notes
+### 5. Generate release notes
 
     Click the `Generate release notes` button to generate release notes.
 
@@ -49,40 +49,43 @@ Here is instruction of release steps in detail.
 
     ![image](./_screen_shots/generate_release_note.png)
 
-6. Edit release notes
+### 6. Edit release notes
 
     `Generate release notes` button will create the release title and the notes based on the
     PRs that have been merged since the `previous tag` you selected.
 
     Under ``What's Changed`` notes, we can typically remove `Bump` PRs by `dependabot` or `copier update`.
 
-    Or add more notes if necessary.
-
-    As we keep all versions of documentation as well, more details can be added to the documentation instead of the release notes.
+    You can add more notes if needed.
 
     ![image](./_screen_shots/edit_release_note.png)
 
-7. Publish release
+### 7. Publish release
 
     Click the `Publish release` button to publish the release.
 
     ![image](./_screen_shots/publish_release.png)
 
-8. Check the documentation
+### 8. Check the documentation
 
-    Publishing release should trigger the [documentation build action](https://github.com/SciCatProject/scicat-ingestor/actions/workflows/docs-release.yml).
+    Publishing the release should trigger the [documentation build/deploy action](https://github.com/SciCatProject/scicat-ingestor/actions/workflows/docs-release.yml).
 
     !!! note
 
-        This action sometimes fails due to various reason so please check if the documentation is
-        deployed correctly by checking the action status and the documentation url.
+        This action might fail due to various reasons so please check if it is
+        deployed correctly by checking the action status or the documentation url.
 
 
-Now you have the released version of the `scicat-ingestor`.
+    !!! warning
 
-!!! warning
+        This release action is not directly connected to the `scicat-ingestor` deployment
+        at the ESS infrastructure.
 
-    This release action is not directly connected to the `scicat-ingestor` deployment
-    at the ESS infrastructure.
+        There is a separate CI/CD pipeline that pulls the latest release of `scicat-ingestor`.
 
-    There is a separate CI/CD pipeline that pulls the latest release of `scicat-ingestor`.
+
+### 9. 🎉 New release of the `scicat-ingestor` 🎉
+
+    The new release will look similar to this:
+
+    ![image](./_screen_shots/latest_release.png)
