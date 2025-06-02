@@ -13,79 +13,81 @@ Here is instruction of release steps in detail.
 
 ### 1. Go to github repository releases page
 
-    [Scicat Intestor Releases Page](https://github.com/SciCatProject/scicat-ingestor/releases)
+[Scicat Intestor Releases Page](https://github.com/SciCatProject/scicat-ingestor/releases)
 
 ### 2. Click `Draft a new release` button
 
-    ![image](./_screen_shots/draft_release_button.png)
+![image](./_screen_shots/draft_release_button.png)
 
 ### 3. Create a new tag (version number)
 
-    This will be the title of the release as well.
+This will be the title of the release as well.
 
-    Version Format: `YY.MM.x`
-      - `YY`: Last two digits of the current year
-      - `MM`: Current month in two digits
-      - `x`: Patch version number of the current month.
-             If it is the first version of this month, it should be `0`
-             and if it is the second version of the month, it should be `1` and so on...
-    ![image](./_screen_shots/create_new_tag.png)
+Version Format: `YY.MM.x`
+
+- `YY`: Last two digits of the current year
+- `MM`: Current month in two digits
+- `x`: Patch version number of the current month.
+        If it is the first version of this month, it should be `0`
+        and if it is the second version of the month, it should be `1` and so on...
+
+![image](./_screen_shots/create_new_tag.png)
 
 ### 4. Select previous tag
 
-    Select the previous tag to compare the current version.
+Select the previous tag to compare the current version.
 
-    !!! note
+!!! note
 
-        Finding previous tag automatically by setting it to `auto` does not work currently.
+    Finding previous tag automatically by setting it to `auto` does not work currently.
 
-    ![image](./_screen_shots/select_previous_tag.png)
+![image](./_screen_shots/select_previous_tag.png)
 
 ### 5. Generate release notes
 
-    Click the `Generate release notes` button to generate release notes.
+Click the `Generate release notes` button to generate release notes.
 
-    Then it creates release notes based on the PR merges.
+Then it creates release notes based on the PR merges.
 
-    ![image](./_screen_shots/generate_release_note.png)
+![image](./_screen_shots/generate_release_note.png)
 
 ### 6. Edit release notes
 
-    `Generate release notes` button will create the release title and the notes based on the
-    PRs that have been merged since the `previous tag` you selected.
+`Generate release notes` button will create the release title and the notes based on the
+PRs that have been merged since the `previous tag` you selected.
 
-    Under ``What's Changed`` notes, we can typically remove `Bump` PRs by `dependabot` or `copier update`.
+Under ``What's Changed`` notes, we can typically remove `Bump` PRs by `dependabot` or `copier update`.
 
-    You can add more notes if needed.
+You can add more notes if needed.
 
-    ![image](./_screen_shots/edit_release_note.png)
+![image](./_screen_shots/edit_release_note.png)
 
 ### 7. Publish release
 
-    Click the `Publish release` button to publish the release.
+Click the `Publish release` button to publish the release.
 
-    ![image](./_screen_shots/publish_release.png)
+![image](./_screen_shots/publish_release.png)
 
 ### 8. Check the documentation
 
-    Publishing the release should trigger the [documentation build/deploy action](https://github.com/SciCatProject/scicat-ingestor/actions/workflows/docs-release.yml).
+Publishing the release should trigger the [documentation build/deploy action](https://github.com/SciCatProject/scicat-ingestor/actions/workflows/docs-release.yml).
 
-    !!! note
+!!! note
 
-        This action might fail due to various reasons so please check if it is
-        deployed correctly by checking the action status or the documentation url.
+    This action might fail due to various reasons so please check if it is
+    deployed correctly by checking the action status or the documentation url.
 
 
-    !!! warning
+!!! warning
 
-        This release action is not directly connected to the `scicat-ingestor` deployment
-        at the ESS infrastructure.
+    This release action is not directly connected to the `scicat-ingestor` deployment
+    at the ESS infrastructure.
 
-        There is a separate CI/CD pipeline that pulls the latest release of `scicat-ingestor`.
+    There is a separate CI/CD pipeline that pulls the latest release of `scicat-ingestor`.
 
 
 ### 9. 🎉 New release of the `scicat-ingestor` 🎉
 
-    The new release will look similar to this:
+The new release will look similar to this:
 
-    ![image](./_screen_shots/latest_release.png)
+![image](./_screen_shots/latest_release.png)
