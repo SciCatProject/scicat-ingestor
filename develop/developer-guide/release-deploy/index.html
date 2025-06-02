@@ -979,74 +979,56 @@ It is expected to be installed from the source code, which is available from the
 <h2 id="release-steps">Release Steps</h2>
 <p>Here is instruction of release steps in detail.</p>
 <h3 id="1-go-to-github-repository-releases-page">1. Go to github repository releases page</h3>
-<pre><code>[Scicat Intestor Releases Page](https://github.com/SciCatProject/scicat-ingestor/releases)
-</code></pre>
+<p><a href="https://github.com/SciCatProject/scicat-ingestor/releases">Scicat Intestor Releases Page</a></p>
 <h3 id="2-click-draft-a-new-release-button">2. Click <code>Draft a new release</code> button</h3>
-<pre><code>![image](./_screen_shots/draft_release_button.png)
-</code></pre>
+<p><img alt="image" src="../_screen_shots/draft_release_button.png" /></p>
 <h3 id="3-create-a-new-tag-version-number">3. Create a new tag (version number)</h3>
-<pre><code>This will be the title of the release as well.
-
-Version Format: `YY.MM.x`
-  - `YY`: Last two digits of the current year
-  - `MM`: Current month in two digits
-  - `x`: Patch version number of the current month.
-         If it is the first version of this month, it should be `0`
-         and if it is the second version of the month, it should be `1` and so on...
-![image](./_screen_shots/create_new_tag.png)
-</code></pre>
+<p>This will be the title of the release as well.</p>
+<p>Version Format: <code>YY.MM.x</code></p>
+<ul>
+<li><code>YY</code>: Last two digits of the current year</li>
+<li><code>MM</code>: Current month in two digits</li>
+<li><code>x</code>: Patch version number of the current month.
+        If it is the first version of this month, it should be <code>0</code>
+        and if it is the second version of the month, it should be <code>1</code> and so on...</li>
+</ul>
+<p><img alt="image" src="../_screen_shots/create_new_tag.png" /></p>
 <h3 id="4-select-previous-tag">4. Select previous tag</h3>
-<pre><code>Select the previous tag to compare the current version.
-
-!!! note
-
-    Finding previous tag automatically by setting it to `auto` does not work currently.
-
-![image](./_screen_shots/select_previous_tag.png)
-</code></pre>
+<p>Select the previous tag to compare the current version.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Finding previous tag automatically by setting it to <code>auto</code> does not work currently.</p>
+</div>
+<p><img alt="image" src="../_screen_shots/select_previous_tag.png" /></p>
 <h3 id="5-generate-release-notes">5. Generate release notes</h3>
-<pre><code>Click the `Generate release notes` button to generate release notes.
-
-Then it creates release notes based on the PR merges.
-
-![image](./_screen_shots/generate_release_note.png)
-</code></pre>
+<p>Click the <code>Generate release notes</code> button to generate release notes.</p>
+<p>Then it creates release notes based on the PR merges.</p>
+<p><img alt="image" src="../_screen_shots/generate_release_note.png" /></p>
 <h3 id="6-edit-release-notes">6. Edit release notes</h3>
-<pre><code>`Generate release notes` button will create the release title and the notes based on the
-PRs that have been merged since the `previous tag` you selected.
-
-Under ``What's Changed`` notes, we can typically remove `Bump` PRs by `dependabot` or `copier update`.
-
-You can add more notes if needed.
-
-![image](./_screen_shots/edit_release_note.png)
-</code></pre>
+<p><code>Generate release notes</code> button will create the release title and the notes based on the
+PRs that have been merged since the <code>previous tag</code> you selected.</p>
+<p>Under <code>What's Changed</code> notes, we can typically remove <code>Bump</code> PRs by <code>dependabot</code> or <code>copier update</code>.</p>
+<p>You can add more notes if needed.</p>
+<p><img alt="image" src="../_screen_shots/edit_release_note.png" /></p>
 <h3 id="7-publish-release">7. Publish release</h3>
-<pre><code>Click the `Publish release` button to publish the release.
-
-![image](./_screen_shots/publish_release.png)
-</code></pre>
+<p>Click the <code>Publish release</code> button to publish the release.</p>
+<p><img alt="image" src="../_screen_shots/publish_release.png" /></p>
 <h3 id="8-check-the-documentation">8. Check the documentation</h3>
-<pre><code>Publishing the release should trigger the [documentation build/deploy action](https://github.com/SciCatProject/scicat-ingestor/actions/workflows/docs-release.yml).
-
-!!! note
-
-    This action might fail due to various reasons so please check if it is
-    deployed correctly by checking the action status or the documentation url.
-
-
-!!! warning
-
-    This release action is not directly connected to the `scicat-ingestor` deployment
-    at the ESS infrastructure.
-
-    There is a separate CI/CD pipeline that pulls the latest release of `scicat-ingestor`.
-</code></pre>
+<p>Publishing the release should trigger the <a href="https://github.com/SciCatProject/scicat-ingestor/actions/workflows/docs-release.yml">documentation build/deploy action</a>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This action might fail due to various reasons so please check if it is
+deployed correctly by checking the action status or the documentation url.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This release action is not directly connected to the <code>scicat-ingestor</code> deployment
+at the ESS infrastructure.</p>
+<p>There is a separate CI/CD pipeline that pulls the latest release of <code>scicat-ingestor</code>.</p>
+</div>
 <h3 id="9-new-release-of-the-scicat-ingestor">9. 🎉 New release of the <code>scicat-ingestor</code> 🎉</h3>
-<pre><code>The new release will look similar to this:
-
-![image](./_screen_shots/latest_release.png)
-</code></pre>
+<p>The new release will look similar to this:</p>
+<p><img alt="image" src="../_screen_shots/latest_release.png" /></p>
 
 
 
