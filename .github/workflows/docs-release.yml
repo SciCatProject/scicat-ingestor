@@ -1,13 +1,7 @@
 name: Deploy Documentation for Release version
 on:
-  # This workflow runs when the "Release" workflow completes successfully
-  # It means that the version has been bumped and the release has been created so we can deploy the documentation for the new version
-  workflow_run:
-    workflows: ["Release"]
-    types:
-      - completed
-    branches:
-      - main
+  release:
+    types: [published]
   workflow_dispatch:  # Manually Deploy Documentation
 
 permissions:

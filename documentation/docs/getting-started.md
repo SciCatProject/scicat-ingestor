@@ -2,6 +2,18 @@
 # Getting Started
 
 ## How to INSTALL
+
+### Released Version
+```bash
+git clone https://github.com/SciCatProject/scicat-ingestor.git
+cd scicat-ingestor
+git fetch --tags
+git checkout $VERSION
+pip install -e .  # It will allow you to use entry-points of the scripts,
+                  # defined in ``pyproject.toml``, under ``[project.scripts]`` section.
+```
+
+### Latest(Development) Version
 ```bash
 git clone https://github.com/SciCatProject/scicat-ingestor.git
 cd scicat-ingestor

@@ -1,5 +1,6 @@
 site_name: Scicat Ingestor
 site_url: 'https://scicatproject.github.io/scicat-ingestor/'
+repo_url: 'https://github.com/SciCatProject/scicat-ingestor/'
 theme:
   name: material
   features:
@@ -50,6 +51,7 @@ nav:
       - Metadata Schema: user-guide/metadata-schemas.md
   - Developer Guide:
       - Getting Started: developer-guide/getting-started.md
+      - Release and Deployment: developer-guide/release-deploy.md
       - Documentation: developer-guide/documentation.md
       - ADRs: developer-guide/adrs.md  # There are not many ADRs so they are in one markdown file.
       - Configuration: developer-guide/configuration.md
