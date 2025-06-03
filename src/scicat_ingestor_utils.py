@@ -24,7 +24,7 @@ from scicat_communication import (
     create_scicat_dataset,
     patch_scicat_dataset,
     patch_scicat_dataset_numfiles,
-    patch_scicat_origdatablock,
+    update_scicat_origdatablock_filesList,
     create_scicat_origdatablock,
     create_instrument,
     create_proposal,
@@ -497,6 +497,14 @@ def process_single_file(nexus_file_path: Path, metadata_schema: MetadataSchema, 
         )
         logger.debug("Scicat origdatablock: %s", local_origdatablock)
 
+        # Clean dataset sampleProperties
+        if "sampleProperties" in local_dataset:
+            local_dataset["sampleProperties"] = {
+                k: v for k, v in local_dataset["sampleProperties"].items() if v is not None and v != "" and v != "None"
+            }
+            if not local_dataset["sampleProperties"]:
+                del local_dataset["sampleProperties"]
+
         # Create dataset in scicat
         if config.ingestion.dry_run:
             logger.info(
@@ -518,7 +526,7 @@ def process_single_file(nexus_file_path: Path, metadata_schema: MetadataSchema, 
             if check_origdatablock_by_datasetId(
                 datasetId=local_origdatablock.get("datasetId", None), config=config.scicat, logger=logger
             ):
-                scicat_origdatablock = patch_scicat_origdatablock(
+                scicat_origdatablock = update_scicat_origdatablock_filesList(
                     origdatablock=local_origdatablock, config=config.scicat, logger=logger
                 )
             else:

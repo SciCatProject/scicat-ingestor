@@ -208,7 +208,50 @@ def patch_scicat_dataset_numfiles(
     )
     return result
 
-def patch_scicat_origdatablock(*, origdatablock: dict, config: SciCatOptions, logger: logging.Logger) -> dict:
+def patch_scicat_origdatablock(
+    *, origdatablock: dict, config: SciCatOptions, logger: logging.Logger
+) -> dict:
+    """
+    Execute a PATCH request to scicat to update an origdatablock
+    """
+    logger.debug("Sending PATCH request to update origdatablock")
+    
+    if '_id' not in origdatablock:
+        logger.error("Origdatablock _id is required for patching")
+        raise ScicatOrigDatablockAPIError("Error updating origdatablock: _id is required")
+
+    # Remove immutable fields before patching
+    patch_origdatablock = copy.deepcopy(origdatablock)
+    immutable_fields = [
+        "_id", "createdBy", "updatedBy", "createdAt", "updatedAt", "__v", "datasetId", "id"
+    ]
+    for field in immutable_fields:
+        if field in patch_origdatablock:
+            logger.debug(f"Removing immutable field '{field}' before update")
+            patch_origdatablock.pop(field, None)
+
+    response = requests.patch(
+        urljoin(config.host_address, f"{config.api_endpoints.origdatablocks}/{quote_plus(origdatablock['_id'])}"),
+        json=patch_origdatablock,
+        headers=config.headers,
+        timeout=config.timeout,
+    )
+    
+    result: dict = response.json()
+    if not response.ok:
+        logger.error(
+            "Failed to update origdatablock. \nError message from scicat backend: \n%s",
+            result.get("error", {}),
+        )
+        raise ScicatOrigDatablockAPIError(f"Error updating origdatablock: \n{origdatablock}")
+
+    logger.debug(
+        "Origdatablock updated successfully. Origdatablock _id: %s",
+        result.get("_id"),
+    )
+    return result
+
+def update_scicat_origdatablock_filesList(*, origdatablock: dict, config: SciCatOptions, logger: logging.Logger) -> dict:
     current_origdatablock = get_origdatablock_by_datasetId(origdatablock['datasetId'], config, logger)[0]
     if not current_origdatablock:
         logger.error("Origdatablock with datasetId %s does not exist", origdatablock['datasetId'])
@@ -649,28 +692,79 @@ def get_instrument_nomad_id_by_name(
 def get_proposals(
         config: SciCatOptions, logger: logging.Logger
 ):
-    url = urljoin(config.host_address, config.api_endpoints.proposals)
-    logger.debug("Getting proposals from %s", url)
-    response = _get_from_scicat(
-        url=url,
+    # First get the total count of proposals
+    count_url = urljoin(config.host_address, f"{config.api_endpoints.proposals}/count")
+    logger.debug("Getting total proposal count from %s", count_url)
+    
+    count_response = _get_from_scicat(
+        url=count_url,
         headers=config.headers,
         timeout=config.timeout,
         stream=config.stream,
         verify=config.verify,
     )
-
-    if response.ok:
-        logger.debug("Retrieved %s proposal(s) from SciCat", len(response.json()))
-        return response.json()
-    else:
+    
+    if not count_response.ok:
         logger.error(
-            "Failed to get proposals from SciCat. \n"
+            "Failed to get proposal count from SciCat. \n"
             "with status code: %s \n"
             "Error message from scicat backend: \n%s",
-            response.status_code,
-            response.reason,
+            count_response.status_code,
+            count_response.reason,
         )
-    return None
+        return None
+    
+    total_count = count_response.json().get('count', 0)
+    logger.debug("Total proposals count: %s", total_count)
+    
+    if total_count == 0:
+        return []
+    
+    # Fetch all proposals using pagination
+    all_proposals = []
+    limit = 100
+    skip = 0
+    
+    while skip < total_count:
+        filter_params = {
+            "limits": {
+                "limit": limit,
+                "skip": skip
+            }
+        }
+        filter_string = f"?filters={json.dumps(filter_params)}"
+        url = urljoin(config.host_address, config.api_endpoints.proposals) + filter_string
+        
+        logger.debug("Getting proposals batch: skip=%s, limit=%s", skip, limit)
+        response = _get_from_scicat(
+            url=url,
+            headers=config.headers,
+            timeout=config.timeout,
+            stream=config.stream,
+            verify=config.verify,
+        )
+        
+        if not response.ok:
+            logger.error(
+                "Failed to get proposals batch from SciCat. \n"
+                "with status code: %s \n"
+                "Error message from scicat backend: \n%s",
+                response.status_code,
+                response.reason,
+            )
+            return None
+        
+        batch_data = response.json()
+        all_proposals.extend(batch_data)
+        
+        # Break if we got fewer results than expected (end of data)
+        if len(batch_data) < limit:
+            break
+            
+        skip += limit
+    
+    logger.debug("Retrieved %s proposal(s) from SciCat in total", len(all_proposals))
+    return all_proposals
 
 def get_proposal_by_id(
     proposal_id: str, config: SciCatOptions, logger: logging.Logger
@@ -833,13 +927,34 @@ def update_published_status(
             config=config,
             logger=logger
         )
-        if datasets:
-            for dataset in datasets:
-                if dataset.get("isPublished") == isPublished:
-                    continue
+        if not datasets:
+            continue
+        for dataset in datasets:
+            if dataset.get("isPublished") != isPublished:
                 dataset["isPublished"] = isPublished
                 patch_scicat_dataset(
                     dataset=dataset,
                     config=config,
                     logger=logger
-                )                
+                )
+            
+            origdatablocks = get_origdatablock_by_datasetId(
+                datasetId=dataset['pid'],
+                config=config,
+                logger=logger
+            )
+            if not origdatablocks:
+                logger.warning(
+                    "Origdatablock for dataset %s not found, skipping update",
+                    dataset['pid']
+                )
+                continue
+            for origdatablock in origdatablocks:
+                if origdatablock.get('isPublished') == isPublished:
+                    continue
+                origdatablock['isPublished'] = isPublished
+                patch_scicat_origdatablock(
+                    origdatablock=origdatablock,
+                    config=config,
+                    logger=logger
+                )

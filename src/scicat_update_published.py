@@ -91,7 +91,9 @@ def main() -> List[int]:
             logger.info(f"Found {len(scicat_proposal_ids)} proposals in SciCat")
 
             update_published_status(set(scicat_proposal_ids) - set(public_proposal_ids), False, config.scicat, logger)
-            update_published_status(public_proposal_ids, True, config.scicat, logger)
+            update_published_status(set(scicat_proposal_ids) & set(public_proposal_ids), True, config.scicat, logger)
+
+            logger.info(f"Updated published status for {len(public_proposal_ids)} proposals")
         except Exception as e:
             if is_connection_error(e):
                 logger.error("Connection error when contacting SciCat server: %s", str(e))
