@@ -938,7 +938,7 @@ def update_published_status(
                     logger=logger
                 )
             
-            origdatablocks = get_origdatablock_by_datasetId(
+            """origdatablocks = get_origdatablock_by_datasetId(
                 datasetId=dataset['pid'],
                 config=config,
                 logger=logger
@@ -950,11 +950,11 @@ def update_published_status(
                 )
                 continue
             for origdatablock in origdatablocks:
-                if origdatablock.get('isPublished') == isPublished:
+                if origdatablock.get('isPublished') == False:
                     continue
-                origdatablock['isPublished'] = isPublished
+                origdatablock['isPublished'] = False
                 patch_scicat_origdatablock(
                     origdatablock=origdatablock,
                     config=config,
                     logger=logger
-                )
+                )"""
