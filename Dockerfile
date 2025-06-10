@@ -30,5 +30,9 @@ for file in $NEXUS_FILE; do\n\
 done\n\
 scicat_background_ingestor $ARGS\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
+# Create entrypoint script for update-published service
+RUN echo '#!/bin/bash\n\
+scicat_update_published --logging.verbose -c ${CONFIG_FILE}\n' > /app/update-published.sh && chmod +x /app/update-published.sh
+
 # By default, run the ingestor with the entrypoint script
 CMD ["/app/entrypoint.sh"]

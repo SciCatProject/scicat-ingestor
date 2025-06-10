@@ -10,3 +10,4 @@ tests/
 docker-compose.yml
 .dockerignore
 .vscode
+.env

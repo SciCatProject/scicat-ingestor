@@ -215,7 +215,23 @@ class KafkaOptions:
     """Enable Kafka auto commit."""
     auto_offset_reset: str = "earliest"
     """Kafka auto offset reset."""
-
+    
+@dataclass
+class RabbitMQOptions:
+    """Configuration options for RabbitMQ."""
+    enabled: bool = False
+    host: str = "localhost"
+    port: int = 5672
+    virtual_host: str = "/"
+    username: str = "guest"
+    password: str = "guest"
+    queue_name: str = "filewriter"
+    exchange_name: str = ""
+    routing_key: str = ""
+    auto_ack: bool = False
+    individual_message_acknowledge: bool = True
+    prefetch_count: int = 1
+    direct_data_ingestion: bool = False
 
 @dataclass(kw_only=True)
 class FileHandlingOptions:
@@ -342,6 +358,7 @@ class OnlineIngestorConfig:
     dataset: DatasetOptions = field(default_factory=DatasetOptions)
     ingestion: IngestionOptions = field(default_factory=IngestionOptions)
     kafka: KafkaOptions = field(default_factory=KafkaOptions)
+    rabbitmq: RabbitMQOptions = field(default_factory=RabbitMQOptions)
     logging: LoggingOptions = field(default_factory=LoggingOptions)
     scicat: SciCatOptions = field(default_factory=SciCatOptions)
 

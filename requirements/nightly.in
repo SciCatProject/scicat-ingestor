@@ -8,3 +8,4 @@ h5py
 kafka-python
 requests
 rich
+python-dotenv

@@ -7,13 +7,23 @@ from typing import Any
 from urllib.parse import quote_plus, urljoin
 import dateutil.parser
 import copy
+import os
+from dotenv import load_dotenv
 
 import requests
 from scicat_configuration import SciCatOptions
 
+load_dotenv()
+
 def login(config: SciCatOptions, logger: logging.Logger) -> str:
+    if os.environ.get("SCICAT_USERNAME") is None or os.environ.get("SCICAT_PASSWORD") is None:
+        raise ValueError("SCICAT_USERNAME and SCICAT_PASSWORD environment variables are required")
+    auth_data = {
+        "username": os.environ.get("SCICAT_USERNAME"),
+        "password": os.environ.get("SCICAT_PASSWORD")
+    }
     response = requests.post(
-        config.urls.login, json=asdict(config.auth), headers=config.headers, timeout=config.timeout
+        config.urls.login, json=auth_data, headers=config.headers, timeout=config.timeout, verify=config.verify
     )
     if not response.ok:
         logger.error(
@@ -139,10 +149,18 @@ def patch_scicat_dataset(
                     **current_value,
                     **patch_dataset['scientificMetadata']['sampleProperties']['value']
                 }
-    patch_dataset.pop("pid", None)
-    patch_dataset.pop("type", None)
     patch_dataset['numberOfFiles'] = current_dataset['numberOfFiles']
     patch_dataset['size'] = current_dataset['size']
+    
+    immutable_fields = [
+        "pid", "type", "_id", "createdBy", "updatedBy", "version",
+        "principalInvestigators", "proposalIds", "sampleIds", "instrumentIds",
+        "history", "createdAt", "updatedAt", "__v"
+    ]
+    for field in immutable_fields:
+        if field in patch_dataset:
+            logger.debug(f"Removing immutable field '{field}' before update")
+            patch_dataset.pop(field, None)
 
     response = requests.patch(
         urljoin(config.host_address, f"{config.api_endpoints.datasets}/{quote_plus(dataset['pid'])}"),
@@ -197,34 +215,28 @@ def patch_scicat_origdatablock(
     Execute a PATCH request to scicat to update an origdatablock
     """
     logger.debug("Sending PATCH request to update origdatablock")
-    current_origdatablock = get_origdatablock_by_datasetId(origdatablock['datasetId'], config, logger)[0]
-    if not current_origdatablock:
-        logger.error("Origdatablock with datasetId %s does not exist", origdatablock['datasetId'])
-        raise ScicatOrigDatablockAPIError(f"Error updating origdatablock: \n{origdatablock}")
+    
+    if '_id' not in origdatablock:
+        logger.error("Origdatablock _id is required for patching")
+        raise ScicatOrigDatablockAPIError("Error updating origdatablock: _id is required")
 
-    # Format the origdatablock object to be sent to the backend
-    patch_dataFileList = current_origdatablock['dataFileList'][:]
-    to_add_file_infos = [file_info for file_info in origdatablock['dataFileList'] if file_info['path'] not in [f['path'] for f in patch_dataFileList]]
-    if not to_add_file_infos:
-        raise RuntimeError("No new files to add to origdatablock")
-    patch_dataFileList.extend(to_add_file_infos)
-    for file_info in patch_dataFileList:
-        file_info.pop("_id", None)
-        file_info.pop("id", None)
-
-    patch_origdatablock = {
-        "ownerGroup": origdatablock['ownerGroup'],
-        "accessGroups": list(set(origdatablock['accessGroups'] + current_origdatablock['accessGroups'])),
-        "dataFileList": patch_dataFileList,
-        "size": sum([file_info.get("size", 0) for file_info in patch_dataFileList]),
-    }
+    # Remove immutable fields before patching
+    patch_origdatablock = copy.deepcopy(origdatablock)
+    immutable_fields = [
+        "_id", "createdBy", "updatedBy", "createdAt", "updatedAt", "__v", "datasetId", "id"
+    ]
+    for field in immutable_fields:
+        if field in patch_origdatablock:
+            logger.debug(f"Removing immutable field '{field}' before update")
+            patch_origdatablock.pop(field, None)
 
     response = requests.patch(
-        urljoin(config.host_address, f"{config.api_endpoints.origdatablocks}/{quote_plus(current_origdatablock['_id'])}"),
+        urljoin(config.host_address, f"{config.api_endpoints.origdatablocks}/{quote_plus(origdatablock['_id'])}"),
         json=patch_origdatablock,
         headers=config.headers,
         timeout=config.timeout,
     )
+    
     result: dict = response.json()
     if not response.ok:
         logger.error(
@@ -234,10 +246,41 @@ def patch_scicat_origdatablock(
         raise ScicatOrigDatablockAPIError(f"Error updating origdatablock: \n{origdatablock}")
 
     logger.debug(
-        "Origdatablock updated successfully. Origdatablock pid: %s",
+        "Origdatablock updated successfully. Origdatablock _id: %s",
         result.get("_id"),
     )
+    return result
 
+def update_scicat_origdatablock_filesList(*, origdatablock: dict, config: SciCatOptions, logger: logging.Logger) -> dict:
+    current_origdatablock = get_origdatablock_by_datasetId(origdatablock['datasetId'], config, logger)[0]
+    if not current_origdatablock:
+        logger.error("Origdatablock with datasetId %s does not exist", origdatablock['datasetId'])
+        raise ScicatOrigDatablockAPIError(f"Error updating origdatablock: \n{origdatablock}")
+    request_body = {
+        "dataFilesToAppend": origdatablock["dataFileList"]
+    }
+    response = requests.patch(
+        urljoin(
+            config.host_address,
+            f"{config.api_endpoints.origdatablocks}/{quote_plus(current_origdatablock['_id'])}/appendFiles"
+        ),
+        json=request_body,
+        headers=config.headers,
+        timeout=config.timeout,
+    )
+    result = response.json()
+    if not response.ok:
+        logger.error(
+            "Failed to append new files to existing dataFileList. \nError from scicat backend: \n%s",
+            result.get("error", {}),
+        )
+        raise ScicatOrigDatablockAPIError(
+            f"Error appending new files to existing dataFileList: \n{origdatablock}"
+        )
+    logger.debug(
+        "Append request successful. The updated origdatablock pid: %s",
+        result.get("_id"),
+    )
     return result
 
 class ScicatOrigDatablockAPIError(Exception):
@@ -432,6 +475,40 @@ def get_dataset_by_pid(
             response.reason,
         )
         return None
+    
+def get_dataset_by_proposalId(
+    proposal_id: str, config: SciCatOptions, logger: logging.Logger
+) -> dict | None:
+    if not proposal_id:
+        logger.error("ProposalId is missing")
+        return None
+    filter_string = f'?filter={{"where":{{"proposalIds":{{"$in":["{proposal_id}"]}}}}}}' 
+    url = urljoin(config.host_address, config.api_endpoints.datasets) + filter_string
+    logger.debug("Checking if dataset exists by proposalId: %s", proposal_id)
+    response = _get_from_scicat(
+        url=url,
+        headers=config.headers,
+        timeout=config.timeout,
+        stream=config.stream,
+        verify=config.verify,
+    )
+
+    if response.ok:
+        logger.debug("Retrieved %s dataset(s) from SciCat", len(response.json()))
+        return response.json()
+    elif response.status_code == 403:
+        logger.debug("Dataset with proposalId %s does not exist", proposal_id)
+    else:
+        logger.error(
+            "Failed to check dataset existence by proposalId %s \n"
+            "with status code: %s \n"
+            "Error message from scicat backend: \n%s",
+            "Assuming the dataset does not exist.",
+            proposal_id,
+            response.status_code,
+            response.reason,
+        )
+    return None
 
 def check_dataset_by_pid(
     pid: str, config: SciCatOptions, logger: logging.Logger
@@ -612,6 +689,83 @@ def get_instrument_nomad_id_by_name(
             )
     return None
 
+def get_proposals(
+        config: SciCatOptions, logger: logging.Logger
+):
+    # First get the total count of proposals
+    count_url = urljoin(config.host_address, f"{config.api_endpoints.proposals}/count")
+    logger.debug("Getting total proposal count from %s", count_url)
+    
+    count_response = _get_from_scicat(
+        url=count_url,
+        headers=config.headers,
+        timeout=config.timeout,
+        stream=config.stream,
+        verify=config.verify,
+    )
+    
+    if not count_response.ok:
+        logger.error(
+            "Failed to get proposal count from SciCat. \n"
+            "with status code: %s \n"
+            "Error message from scicat backend: \n%s",
+            count_response.status_code,
+            count_response.reason,
+        )
+        return None
+    
+    total_count = count_response.json().get('count', 0)
+    logger.debug("Total proposals count: %s", total_count)
+    
+    if total_count == 0:
+        return []
+    
+    # Fetch all proposals using pagination
+    all_proposals = []
+    limit = 100
+    skip = 0
+    
+    while skip < total_count:
+        filter_params = {
+            "limits": {
+                "limit": limit,
+                "skip": skip
+            }
+        }
+        filter_string = f"?filters={json.dumps(filter_params)}"
+        url = urljoin(config.host_address, config.api_endpoints.proposals) + filter_string
+        
+        logger.debug("Getting proposals batch: skip=%s, limit=%s", skip, limit)
+        response = _get_from_scicat(
+            url=url,
+            headers=config.headers,
+            timeout=config.timeout,
+            stream=config.stream,
+            verify=config.verify,
+        )
+        
+        if not response.ok:
+            logger.error(
+                "Failed to get proposals batch from SciCat. \n"
+                "with status code: %s \n"
+                "Error message from scicat backend: \n%s",
+                response.status_code,
+                response.reason,
+            )
+            return None
+        
+        batch_data = response.json()
+        all_proposals.extend(batch_data)
+        
+        # Break if we got fewer results than expected (end of data)
+        if len(batch_data) < limit:
+            break
+            
+        skip += limit
+    
+    logger.debug("Retrieved %s proposal(s) from SciCat in total", len(all_proposals))
+    return all_proposals
+
 def get_proposal_by_id(
     proposal_id: str, config: SciCatOptions, logger: logging.Logger
 ):
@@ -719,10 +873,13 @@ def get_dataset_by_sample_id(
 def get_origdatablock_by_datasetId(
     datasetId: str, config: SciCatOptions, logger: logging.Logger
 ):
+    """
+    Get origdatablock by datasetId, do not get datafiles for performance reasons
+    """
     if not datasetId:
         logger.error("DatasetId is missing")
         return None
-    filter_string = '?filter={"where":{"datasetId":"' + datasetId + '"}}'
+    filter_string = '?filter={"where":{"datasetId":"' + datasetId + '"},"fields":{"dataFileList":false}}'
     url = urljoin(config.host_address, config.api_endpoints.origdatablocks) + filter_string
     logger.debug("Checking if origdatablock exists by datasetId: %s", datasetId)
     response = _get_from_scicat(
@@ -757,3 +914,47 @@ def get_origdatablock_by_datasetId(
             response.reason,
         )
     return None
+
+def update_published_status(
+    proposal_ids: list[str], isPublished: bool, config: SciCatOptions, logger: logging.Logger
+) -> None:
+    """
+    Update the published status of proposals in SciCat.
+    """
+    for proposal_id in proposal_ids:
+        datasets = get_dataset_by_proposalId(
+            proposal_id=proposal_id,
+            config=config,
+            logger=logger
+        )
+        if not datasets:
+            continue
+        for dataset in datasets:
+            if dataset.get("isPublished") != isPublished:
+                dataset["isPublished"] = isPublished
+                patch_scicat_dataset(
+                    dataset=dataset,
+                    config=config,
+                    logger=logger
+                )
+            
+            """origdatablocks = get_origdatablock_by_datasetId(
+                datasetId=dataset['pid'],
+                config=config,
+                logger=logger
+            )
+            if not origdatablocks:
+                logger.warning(
+                    "Origdatablock for dataset %s not found, skipping update",
+                    dataset['pid']
+                )
+                continue
+            for origdatablock in origdatablocks:
+                if origdatablock.get('isPublished') == False:
+                    continue
+                origdatablock['isPublished'] = False
+                patch_scicat_origdatablock(
+                    origdatablock=origdatablock,
+                    config=config,
+                    logger=logger
+                )"""

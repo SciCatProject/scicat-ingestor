@@ -42,3 +42,5 @@ config.*.json
 
 # Log files
 *.log
+
+.env
