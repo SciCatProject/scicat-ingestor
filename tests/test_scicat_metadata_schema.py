@@ -156,8 +156,16 @@ def test_metadata_schema_multiple_matches_merge_by_order() -> None:
                 instrument="",
                 selector="filename:starts_with:test",
                 variables={
-                    "common_var": {"source": "VALUE", "value": "schema1_value", "value_type": "string"},
-                    "schema1_only": {"source": "VALUE", "value": "unique1", "value_type": "string"},
+                    "common_var": {
+                        "source": "VALUE",
+                        "value": "schema1_value",
+                        "value_type": "string",
+                    },
+                    "schema1_only": {
+                        "source": "VALUE",
+                        "value": "unique1",
+                        "value_type": "string",
+                    },
                 },
                 schema={
                     "common_field": {"value": "<common_var>", "type": "string"},
@@ -171,8 +179,16 @@ def test_metadata_schema_multiple_matches_merge_by_order() -> None:
                 instrument="",
                 selector="filename:starts_with:test",
                 variables={
-                    "common_var": {"source": "VALUE", "value": "schema2_value", "value_type": "string"},
-                    "schema2_only": {"source": "VALUE", "value": "unique2", "value_type": "string"},
+                    "common_var": {
+                        "source": "VALUE",
+                        "value": "schema2_value",
+                        "value_type": "string",
+                    },
+                    "schema2_only": {
+                        "source": "VALUE",
+                        "value": "unique2",
+                        "value_type": "string",
+                    },
                 },
                 schema={
                     "common_field": {"value": "<common_var>", "type": "string"},
@@ -181,17 +197,17 @@ def test_metadata_schema_multiple_matches_merge_by_order() -> None:
             ),
         }
     )
-    
+
     merged_schema = select_applicable_schema(Path("test_file.nxs"), schemas)
-    
+
     # Should return merged schema with schema2 having priority for conflicts
     assert merged_schema.id == "schema2_schema1"
     assert "common_var" in merged_schema.variables
     assert "schema1_only" in merged_schema.variables
     assert "schema2_only" in merged_schema.variables
-    
+
     assert merged_schema.variables["common_var"]["value"] == "schema2_value"
-    
+
     assert "common_field" in merged_schema.schema
     assert "schema1_field" in merged_schema.schema
     assert "schema2_field" in merged_schema.schema
@@ -208,8 +224,16 @@ def test_metadata_schema_merge_variables_from_multiple_schemas() -> None:
                 instrument="",
                 selector="filename:starts_with:test_data",
                 variables={
-                    "pid": {"source": "NXS", "path": "/entry0/user/proposal", "value_type": "string"},
-                    "dataset_name": {"source": "NXS", "path": "/entry0/title", "value_type": "string"},
+                    "pid": {
+                        "source": "NXS",
+                        "path": "/entry0/user/proposal",
+                        "value_type": "string",
+                    },
+                    "dataset_name": {
+                        "source": "NXS",
+                        "path": "/entry0/title",
+                        "value_type": "string",
+                    },
                 },
                 schema={
                     "pid": {"value": "<pid>", "type": "string"},
@@ -218,13 +242,21 @@ def test_metadata_schema_merge_variables_from_multiple_schemas() -> None:
             ),
             "powder_schema": MetadataSchema(
                 order=1,
-                id="powder_schema", 
+                id="powder_schema",
                 name="Powder Diffraction Schema",
                 instrument="Powder Diffraction",
                 selector="filename:starts_with:test_data",
                 variables={
-                    "wavelength": {"source": "NXS", "path": "/entry0/wavelength", "value_type": "string"},
-                    "dataset_name": {"source": "NXS", "path": "/entry0/experiment_title", "value_type": "string"},  # Conflict
+                    "wavelength": {
+                        "source": "NXS",
+                        "path": "/entry0/wavelength",
+                        "value_type": "string",
+                    },
+                    "dataset_name": {
+                        "source": "NXS",
+                        "path": "/entry0/experiment_title",
+                        "value_type": "string",
+                    },  # Conflict
                 },
                 schema={
                     "wavelength": {"value": "<wavelength>", "type": "string"},
@@ -233,14 +265,14 @@ def test_metadata_schema_merge_variables_from_multiple_schemas() -> None:
             ),
         }
     )
-    
+
     merged_schema = select_applicable_schema(Path("test_data.nxs"), schemas)
-    
+
     # Should have variables from both schemas
     assert "pid" in merged_schema.variables
-    assert "dataset_name" in merged_schema.variables  
+    assert "dataset_name" in merged_schema.variables
     assert "wavelength" in merged_schema.variables
-    
+
     # Powder schema should win for dataset_name conflict (order=1 vs order=2)
     assert merged_schema.variables["dataset_name"]["path"] == "/entry0/experiment_title"
 
@@ -252,7 +284,7 @@ def test_metadata_schema_no_matching_schemas_returns_none() -> None:
             "schema1": MetadataSchema(
                 order=1,
                 id="schema1",
-                name="Schema 1", 
+                name="Schema 1",
                 instrument="",
                 selector="filename:starts_with:nomatch",
                 variables={},
@@ -260,7 +292,7 @@ def test_metadata_schema_no_matching_schemas_returns_none() -> None:
             ),
         }
     )
-    
+
     result = select_applicable_schema(Path("different_file.nxs"), schemas)
     assert result is None
 
@@ -276,8 +308,16 @@ def test_metadata_schema_three_schemas_priority_resolution() -> None:
                 instrument="",
                 selector="filename:starts_with:test",
                 variables={
-                    "common_field": {"source": "VALUE", "value": "low_priority_value", "value_type": "string"},
-                    "low_only": {"source": "VALUE", "value": "low_unique", "value_type": "string"},
+                    "common_field": {
+                        "source": "VALUE",
+                        "value": "low_priority_value",
+                        "value_type": "string",
+                    },
+                    "low_only": {
+                        "source": "VALUE",
+                        "value": "low_unique",
+                        "value_type": "string",
+                    },
                 },
                 schema={
                     "common_field": {"value": "<common_field>", "type": "string"},
@@ -291,7 +331,11 @@ def test_metadata_schema_three_schemas_priority_resolution() -> None:
                 instrument="",
                 selector="filename:starts_with:test",
                 variables={
-                    "high_only": {"source": "VALUE", "value": "high_unique", "value_type": "string"},
+                    "high_only": {
+                        "source": "VALUE",
+                        "value": "high_unique",
+                        "value_type": "string",
+                    },
                 },
                 schema={
                     "high_field": {"value": "<high_only>", "type": "string"},
@@ -304,8 +348,16 @@ def test_metadata_schema_three_schemas_priority_resolution() -> None:
                 instrument="",
                 selector="filename:starts_with:test",
                 variables={
-                    "common_field": {"source": "VALUE", "value": "middle_priority_value", "value_type": "string"},
-                    "middle_only": {"source": "VALUE", "value": "middle_unique", "value_type": "string"},
+                    "common_field": {
+                        "source": "VALUE",
+                        "value": "middle_priority_value",
+                        "value_type": "string",
+                    },
+                    "middle_only": {
+                        "source": "VALUE",
+                        "value": "middle_unique",
+                        "value_type": "string",
+                    },
                 },
                 schema={
                     "common_field": {"value": "<common_field>", "type": "string"},
@@ -314,18 +366,18 @@ def test_metadata_schema_three_schemas_priority_resolution() -> None:
             ),
         }
     )
-    
+
     merged_schema = select_applicable_schema(Path("test_data.nxs"), schemas)
-    
+
     assert "common_field" in merged_schema.variables
     assert "low_only" in merged_schema.variables
     assert "high_only" in merged_schema.variables
     assert "middle_only" in merged_schema.variables
-    
+
     # High priority schema should win for common_field conflicts (order=1 beats order=2 and order=3)
     # Since high_priority doesn't have common_field, middle_priority (order=2) should beat low_priority (order=3)
     assert merged_schema.variables["common_field"]["value"] == "middle_priority_value"
-    
+
     assert "common_field" in merged_schema.schema
     assert "low_field" in merged_schema.schema
     assert "high_field" in merged_schema.schema
@@ -343,8 +395,16 @@ def test_metadata_schema_same_order_conflict_raises_error() -> None:
                 instrument="",
                 selector="filename:starts_with:test",
                 variables={
-                    "common_var": {"source": "VALUE", "value": "schema1_value", "value_type": "string"},
-                    "schema1_only": {"source": "VALUE", "value": "unique1", "value_type": "string"},
+                    "common_var": {
+                        "source": "VALUE",
+                        "value": "schema1_value",
+                        "value_type": "string",
+                    },
+                    "schema1_only": {
+                        "source": "VALUE",
+                        "value": "unique1",
+                        "value_type": "string",
+                    },
                 },
                 schema={
                     "common_field": {"value": "<common_var>", "type": "string"},
@@ -358,19 +418,33 @@ def test_metadata_schema_same_order_conflict_raises_error() -> None:
                 instrument="",
                 selector="filename:starts_with:test",
                 variables={
-                    "common_var": {"source": "VALUE", "value": "schema2_value", "value_type": "string"},  # Conflict
-                    "schema2_only": {"source": "VALUE", "value": "unique2", "value_type": "string"},
+                    "common_var": {
+                        "source": "VALUE",
+                        "value": "schema2_value",
+                        "value_type": "string",
+                    },  # Conflict
+                    "schema2_only": {
+                        "source": "VALUE",
+                        "value": "unique2",
+                        "value_type": "string",
+                    },
                 },
                 schema={
-                    "common_field": {"value": "<common_var>", "type": "string"},  # Conflict
+                    "common_field": {
+                        "value": "<common_var>",
+                        "type": "string",
+                    },  # Conflict
                     "schema2_field": {"value": "<schema2_only>", "type": "string"},
                 },
             ),
         }
     )
-    
+
     # Should raise an error due to same order conflict
-    with pytest.raises(ValueError, match="Schema conflict detected: schemas 'schema1' and 'schema2' have the same order \\(1\\) and conflicting variable 'common_var'"):
+    with pytest.raises(
+        ValueError,
+        match="Schema conflict detected: schemas 'schema1' and 'schema2' have the same order \\(1\\) and conflicting variable 'common_var'",
+    ):
         select_applicable_schema(Path("test_file.nxs"), schemas)
 
 
@@ -384,15 +458,23 @@ def test_metadata_schema_no_order_field_treated_as_lowest_priority() -> None:
         instrument="",
         selector="filename:starts_with:test",
         variables={
-            "common_var": {"source": "VALUE", "value": "high_priority_value", "value_type": "string"},
-            "ordered_only": {"source": "VALUE", "value": "ordered_unique", "value_type": "string"},
+            "common_var": {
+                "source": "VALUE",
+                "value": "high_priority_value",
+                "value_type": "string",
+            },
+            "ordered_only": {
+                "source": "VALUE",
+                "value": "ordered_unique",
+                "value_type": "string",
+            },
         },
         schema={
             "common_field": {"value": "<common_var>", "type": "string"},
             "ordered_field": {"value": "<ordered_only>", "type": "string"},
         },
     )
-    
+
     schema_no_order = MetadataSchema(
         order=sys.maxsize,  # Simulate no order by using maximum integer value
         id="schema_no_order",
@@ -400,33 +482,43 @@ def test_metadata_schema_no_order_field_treated_as_lowest_priority() -> None:
         instrument="",
         selector="filename:starts_with:test",
         variables={
-            "common_var": {"source": "VALUE", "value": "low_priority_value", "value_type": "string"},
-            "unordered_only": {"source": "VALUE", "value": "unordered_unique", "value_type": "string"},
+            "common_var": {
+                "source": "VALUE",
+                "value": "low_priority_value",
+                "value_type": "string",
+            },
+            "unordered_only": {
+                "source": "VALUE",
+                "value": "unordered_unique",
+                "value_type": "string",
+            },
         },
         schema={
             "common_field": {"value": "<common_var>", "type": "string"},
             "unordered_field": {"value": "<unordered_only>", "type": "string"},
         },
     )
-    
+
     # Remove order attribute to simulate missing order field
     delattr(schema_no_order, 'order')
-    
-    schemas = OrderedDict({
-        "schema_no_order": schema_no_order,
-        "schema_with_order": schema_with_order,
-    })
-    
+
+    schemas = OrderedDict(
+        {
+            "schema_no_order": schema_no_order,
+            "schema_with_order": schema_with_order,
+        }
+    )
+
     merged_schema = select_applicable_schema(Path("test_file.nxs"), schemas)
-    
+
     # Schema with order should have priority over schema without order
     assert "common_var" in merged_schema.variables
     assert "ordered_only" in merged_schema.variables
     assert "unordered_only" in merged_schema.variables
-    
+
     # Schema with order should win the conflict
     assert merged_schema.variables["common_var"]["value"] == "high_priority_value"
-    
+
     assert "common_field" in merged_schema.schema
     assert "ordered_field" in merged_schema.schema
     assert "unordered_field" in merged_schema.schema
@@ -441,36 +533,49 @@ def test_metadata_schema_no_order_fields_conflict_raises_error() -> None:
         instrument="",
         selector="filename:starts_with:test",
         variables={
-            "common_var": {"source": "VALUE", "value": "schema1_value", "value_type": "string"},
+            "common_var": {
+                "source": "VALUE",
+                "value": "schema1_value",
+                "value_type": "string",
+            },
         },
         schema={
             "common_field": {"value": "<common_var>", "type": "string"},
         },
     )
-    
+
     schema2 = MetadataSchema(
-        order=sys.maxsize,  # Will be removed  
+        order=sys.maxsize,  # Will be removed
         id="schema2",
         name="Schema 2",
         instrument="",
         selector="filename:starts_with:test",
         variables={
-            "common_var": {"source": "VALUE", "value": "schema2_value", "value_type": "string"},
+            "common_var": {
+                "source": "VALUE",
+                "value": "schema2_value",
+                "value_type": "string",
+            },
         },
         schema={
             "common_field": {"value": "<common_var>", "type": "string"},
         },
     )
-    
+
     # Remove order attributes to simulate missing order fields
     delattr(schema1, 'order')
     delattr(schema2, 'order')
-    
-    schemas = OrderedDict({
-        "schema1": schema1,
-        "schema2": schema2,
-    })
-    
+
+    schemas = OrderedDict(
+        {
+            "schema1": schema1,
+            "schema2": schema2,
+        }
+    )
+
     # Should raise an error due to no order field conflict
-    with pytest.raises(ValueError, match="Schema conflict detected: schemas 'schema1' and 'schema2' both have no order field and conflicting variable 'common_var'"):
+    with pytest.raises(
+        ValueError,
+        match="Schema conflict detected: schemas 'schema1' and 'schema2' both have no order field and conflicting variable 'common_var'",
+    ):
         select_applicable_schema(Path("test_file.nxs"), schemas)

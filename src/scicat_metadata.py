@@ -240,36 +240,37 @@ def select_applicable_schema(
     for schema in schemas.values():
         if _select_applicable_schema(schema.selector, str(nexus_file)):
             matching_schemas.append(schema)
-    
+
     if not matching_schemas:
         return None
-    
+
     if len(matching_schemas) == 1:
         return matching_schemas[0]
-    
+
     # Sort by order (lower order = higher priority)
     # Schemas without order field get the maximum integer value (lowest priority)
     DEFAULT_ORDER = sys.maxsize
     matching_schemas.sort(key=lambda s: getattr(s, 'order', DEFAULT_ORDER))
-    
+
     result_schema = matching_schemas[0]
-    
+
     from copy import deepcopy
+
     result_schema = deepcopy(result_schema)
-    
+
     merged_ids = [result_schema.id]
     merged_names = [result_schema.name]
     merged_selectors = [result_schema.selector]
-    
+
     result_order = getattr(result_schema, 'order', DEFAULT_ORDER)
-    
+
     for schema in matching_schemas[1:]:
         merged_ids.append(schema.id)
         merged_names.append(schema.name)
         merged_selectors.append(schema.selector)
-        
+
         schema_order = getattr(schema, 'order', DEFAULT_ORDER)
-        
+
         # Merge variables - handle conflicts based on order
         for key, value in schema.variables.items():
             if key not in result_schema.variables:
@@ -289,7 +290,7 @@ def select_applicable_schema(
                         f"Schema conflict detected: schemas '{result_schema.id.split('_')[0]}' and '{schema.id}' "
                         f"have the same order ({schema_order}) and conflicting variable '{key}'"
                     )
-                
+
         # Merge schema fields - handle conflicts based on order
         for key, value in schema.schema.items():
             if key not in result_schema.schema:
@@ -309,9 +310,9 @@ def select_applicable_schema(
                         f"Schema conflict detected: schemas '{result_schema.id.split('_')[0]}' and '{schema.id}' "
                         f"have the same order ({schema_order}) and conflicting schema field '{key}'"
                     )
-    
+
     result_schema.id = "_".join(merged_ids)
     result_schema.name = " & ".join(merged_names)
     result_schema.selector = {"and": merged_selectors}
-    
+
     return result_schema
