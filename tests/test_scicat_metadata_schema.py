@@ -142,3 +142,232 @@ def test_metadata_schema_selection_wrong_selector_function_name_raises() -> None
                 }
             ),
         )
+
+
+def test_metadata_schema_multiple_matches_merge_by_order() -> None:
+    """Test that multiple matching schemas are merged based on order priority."""
+    schemas = OrderedDict(
+        {
+            "schema1": MetadataSchema(
+                order=2,
+                id="schema1",
+                name="Schema 1",
+                instrument="",
+                selector="filename:starts_with:test",
+                variables={
+                    "common_var": {"source": "VALUE", "value": "schema1_value", "value_type": "string"},
+                    "schema1_only": {"source": "VALUE", "value": "unique1", "value_type": "string"},
+                },
+                schema={
+                    "common_field": {"value": "<common_var>", "type": "string"},
+                    "schema1_field": {"value": "<schema1_only>", "type": "string"},
+                },
+            ),
+            "schema2": MetadataSchema(
+                order=1,
+                id="schema2",
+                name="Schema 2",
+                instrument="",
+                selector="filename:starts_with:test",
+                variables={
+                    "common_var": {"source": "VALUE", "value": "schema2_value", "value_type": "string"},
+                    "schema2_only": {"source": "VALUE", "value": "unique2", "value_type": "string"},
+                },
+                schema={
+                    "common_field": {"value": "<common_var>", "type": "string"},
+                    "schema2_field": {"value": "<schema2_only>", "type": "string"},
+                },
+            ),
+        }
+    )
+    
+    merged_schema = select_applicable_schema(Path("test_file.nxs"), schemas)
+    
+    # Should return merged schema with schema2 having priority for conflicts
+    assert merged_schema.id == "schema2_schema1"
+    assert "common_var" in merged_schema.variables
+    assert "schema1_only" in merged_schema.variables
+    assert "schema2_only" in merged_schema.variables
+    
+    assert merged_schema.variables["common_var"]["value"] == "schema2_value"
+    
+    assert "common_field" in merged_schema.schema
+    assert "schema1_field" in merged_schema.schema
+    assert "schema2_field" in merged_schema.schema
+
+
+def test_metadata_schema_merge_variables_from_multiple_schemas() -> None:
+    """Test that variables from multiple matching schemas are properly combined."""
+    schemas = OrderedDict(
+        {
+            "base_schema": MetadataSchema(
+                order=2,
+                id="base_schema",
+                name="Base Schema",
+                instrument="",
+                selector="filename:starts_with:test_data",
+                variables={
+                    "pid": {"source": "NXS", "path": "/entry0/user/proposal", "value_type": "string"},
+                    "dataset_name": {"source": "NXS", "path": "/entry0/title", "value_type": "string"},
+                },
+                schema={
+                    "pid": {"value": "<pid>", "type": "string"},
+                    "dataset_name": {"value": "<dataset_name>", "type": "string"},
+                },
+            ),
+            "powder_schema": MetadataSchema(
+                order=1,
+                id="powder_schema", 
+                name="Powder Diffraction Schema",
+                instrument="Powder Diffraction",
+                selector="filename:starts_with:test_data",
+                variables={
+                    "wavelength": {"source": "NXS", "path": "/entry0/wavelength", "value_type": "string"},
+                    "dataset_name": {"source": "NXS", "path": "/entry0/experiment_title", "value_type": "string"},  # Conflict
+                },
+                schema={
+                    "wavelength": {"value": "<wavelength>", "type": "string"},
+                    "dataset_name": {"value": "<dataset_name>", "type": "string"},
+                },
+            ),
+        }
+    )
+    
+    merged_schema = select_applicable_schema(Path("test_data.nxs"), schemas)
+    
+    # Should have variables from both schemas
+    assert "pid" in merged_schema.variables
+    assert "dataset_name" in merged_schema.variables  
+    assert "wavelength" in merged_schema.variables
+    
+    # Powder schema should win for dataset_name conflict (order=1 vs order=2)
+    assert merged_schema.variables["dataset_name"]["path"] == "/entry0/experiment_title"
+
+
+def test_metadata_schema_no_matching_schemas_returns_none() -> None:
+    """Test that when no schemas match, None is returned."""
+    schemas = OrderedDict(
+        {
+            "schema1": MetadataSchema(
+                order=1,
+                id="schema1",
+                name="Schema 1", 
+                instrument="",
+                selector="filename:starts_with:nomatch",
+                variables={},
+                schema={},
+            ),
+        }
+    )
+    
+    result = select_applicable_schema(Path("different_file.nxs"), schemas)
+    assert result is None
+
+
+def test_metadata_schema_three_schemas_priority_resolution() -> None:
+    """Test that with 3 schemas, higher priority (lower order) overrides lower priority for conflicting fields."""
+    schemas = OrderedDict(
+        {
+            "low_priority": MetadataSchema(
+                order=3,  # Lowest priority (highest order number)
+                id="low_priority",
+                name="Low Priority Schema",
+                instrument="",
+                selector="filename:starts_with:test",
+                variables={
+                    "common_field": {"source": "VALUE", "value": "low_priority_value", "value_type": "string"},
+                    "low_only": {"source": "VALUE", "value": "low_unique", "value_type": "string"},
+                },
+                schema={
+                    "common_field": {"value": "<common_field>", "type": "string"},
+                    "low_field": {"value": "<low_only>", "type": "string"},
+                },
+            ),
+            "high_priority": MetadataSchema(
+                order=1,  # Highest priority (lowest order number)
+                id="high_priority",
+                name="High Priority Schema",
+                instrument="",
+                selector="filename:starts_with:test",
+                variables={
+                    "high_only": {"source": "VALUE", "value": "high_unique", "value_type": "string"},
+                },
+                schema={
+                    "high_field": {"value": "<high_only>", "type": "string"},
+                },
+            ),
+            "middle_priority": MetadataSchema(
+                order=2,  # Middle priority
+                id="middle_priority",
+                name="Middle Priority Schema",
+                instrument="",
+                selector="filename:starts_with:test",
+                variables={
+                    "common_field": {"source": "VALUE", "value": "middle_priority_value", "value_type": "string"},
+                    "middle_only": {"source": "VALUE", "value": "middle_unique", "value_type": "string"},
+                },
+                schema={
+                    "common_field": {"value": "<common_field>", "type": "string"},
+                    "middle_field": {"value": "<middle_only>", "type": "string"},
+                },
+            ),
+        }
+    )
+    
+    merged_schema = select_applicable_schema(Path("test_data.nxs"), schemas)
+    
+    assert "common_field" in merged_schema.variables
+    assert "low_only" in merged_schema.variables
+    assert "high_only" in merged_schema.variables
+    assert "middle_only" in merged_schema.variables
+    
+    # High priority schema should win for common_field conflicts (order=1 beats order=2 and order=3)
+    # Since high_priority doesn't have common_field, middle_priority (order=2) should beat low_priority (order=3)
+    assert merged_schema.variables["common_field"]["value"] == "middle_priority_value"
+    
+    assert "common_field" in merged_schema.schema
+    assert "low_field" in merged_schema.schema
+    assert "high_field" in merged_schema.schema
+    assert "middle_field" in merged_schema.schema
+
+
+def test_metadata_schema_same_order_conflict_raises_error() -> None:
+    """Test that when two schemas have the same order and conflict, an error is raised."""
+    schemas = OrderedDict(
+        {
+            "schema1": MetadataSchema(
+                order=1,  # Same order
+                id="schema1",
+                name="Schema 1",
+                instrument="",
+                selector="filename:starts_with:test",
+                variables={
+                    "common_var": {"source": "VALUE", "value": "schema1_value", "value_type": "string"},
+                    "schema1_only": {"source": "VALUE", "value": "unique1", "value_type": "string"},
+                },
+                schema={
+                    "common_field": {"value": "<common_var>", "type": "string"},
+                    "schema1_field": {"value": "<schema1_only>", "type": "string"},
+                },
+            ),
+            "schema2": MetadataSchema(
+                order=1,  # Same order - conflict!
+                id="schema2",
+                name="Schema 2",
+                instrument="",
+                selector="filename:starts_with:test",
+                variables={
+                    "common_var": {"source": "VALUE", "value": "schema2_value", "value_type": "string"},  # Conflict
+                    "schema2_only": {"source": "VALUE", "value": "unique2", "value_type": "string"},
+                },
+                schema={
+                    "common_field": {"value": "<common_var>", "type": "string"},  # Conflict
+                    "schema2_field": {"value": "<schema2_only>", "type": "string"},
+                },
+            ),
+        }
+    )
+    
+    # Should raise an error due to same order conflict
+    with pytest.raises(ValueError, match="Schema conflict detected: schemas 'schema1' and 'schema2' have the same order \\(1\\) and conflicting variable 'common_var'"):
+        select_applicable_schema(Path("test_file.nxs"), schemas)
