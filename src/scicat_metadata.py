@@ -2,6 +2,7 @@
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 import json
 import pathlib
+import sys
 from collections import OrderedDict
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -231,10 +232,91 @@ def select_applicable_schema(
     """
     Evaluates which metadata schema configuration is applicable to ``nexus_file``.
 
-    Order of the schemas matters and first schema that is suitable is selected.
+    Order of the schemas matters and first schema that is suitable is selected in priority.
+    if other schemas are also suitable, keep what is not in conflict,
+    if conflict the one with lowest order value has priority.
+    Schemas without order field are treated as having the lowest priority (highest order value).
     """
-    for schema in schemas.values():
-        if _select_applicable_schema(schema.selector, str(nexus_file)):
-            return schema
+    matching_schemas = [
+        schema
+        for schema in schemas.values()
+        if _select_applicable_schema(schema.selector, str(nexus_file))
+    ]
 
-    raise Exception("No applicable metadata schema configuration found!!")
+    if not matching_schemas:
+        return None
+
+    if len(matching_schemas) == 1:
+        return matching_schemas[0]
+
+    # Sort by order (lower order = higher priority)
+    # Schemas without order field get the maximum integer value (lowest priority)
+    DEFAULT_ORDER = sys.maxsize
+    matching_schemas.sort(key=lambda s: getattr(s, 'order', DEFAULT_ORDER))
+
+    result_schema = matching_schemas[0]
+
+    from copy import deepcopy
+
+    result_schema = deepcopy(result_schema)
+
+    merged_ids = [result_schema.id]
+    merged_names = [result_schema.name]
+    merged_selectors = [result_schema.selector]
+
+    result_order = getattr(result_schema, 'order', DEFAULT_ORDER)
+
+    for schema in matching_schemas[1:]:
+        merged_ids.append(schema.id)
+        merged_names.append(schema.name)
+        merged_selectors.append(schema.selector)
+
+        schema_order = getattr(schema, 'order', DEFAULT_ORDER)
+
+        # Merge variables - handle conflicts based on order
+        for key, value in schema.variables.items():
+            if key not in result_schema.variables:
+                result_schema.variables[key] = value
+            elif schema_order < result_order:
+                result_schema.variables[key] = value
+            elif schema_order == result_order:
+                # Same order conflict - raise error
+                # Special case: if both schemas have no order field (both DEFAULT_ORDER)
+                if schema_order == DEFAULT_ORDER:
+                    raise ValueError(
+                        f"Schema conflict detected: schemas '{result_schema.id.split('_')[0]}' "
+                        f"and '{schema.id}' both have no order field and conflicting variable '{key}'"
+                    )
+                else:
+                    raise ValueError(
+                        f"Schema conflict detected: schemas '{result_schema.id.split('_')[0]}' "
+                        f"and '{schema.id}' have the same order ({schema_order}) and "
+                        f"conflicting variable '{key}'"
+                    )
+
+        # Merge schema fields - handle conflicts based on order
+        for key, item in schema.schema.items():
+            if key not in result_schema.schema:
+                result_schema.schema[key] = item
+            elif schema_order < result_order:
+                result_schema.schema[key] = item
+            elif schema_order == result_order:
+                # Same order conflict - raise error
+                # Special case: if both schemas have no order field (both DEFAULT_ORDER)
+                if schema_order == DEFAULT_ORDER:
+                    raise ValueError(
+                        f"Schema conflict detected: schemas '{result_schema.id.split('_')[0]}' "
+                        f"and '{schema.id}' both have no order field and conflicting schema field '{key}'"
+                    )
+                else:
+                    raise ValueError(
+                        f"Schema conflict detected: schemas '{result_schema.id.split('_')[0]}' "
+                        f"and '{schema.id}' have the same order ({schema_order}) and "
+                        f"conflicting schema field '{key}'"
+                    )
+
+    result_schema.id = "_".join(merged_ids)
+    result_schema.name = " & ".join(merged_names)
+    result_schema.selector = {"and": merged_selectors}
+
+    return result_schema
