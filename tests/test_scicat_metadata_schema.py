@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 import json
+import sys
 from collections import OrderedDict
 from pathlib import Path
 
@@ -370,4 +371,106 @@ def test_metadata_schema_same_order_conflict_raises_error() -> None:
     
     # Should raise an error due to same order conflict
     with pytest.raises(ValueError, match="Schema conflict detected: schemas 'schema1' and 'schema2' have the same order \\(1\\) and conflicting variable 'common_var'"):
+        select_applicable_schema(Path("test_file.nxs"), schemas)
+
+
+def test_metadata_schema_no_order_field_treated_as_lowest_priority() -> None:
+    """Test that schemas without order field are treated as lowest priority."""
+    # Create schema without order field by manually setting attributes
+    schema_with_order = MetadataSchema(
+        order=1,
+        id="schema_with_order",
+        name="Schema With Order",
+        instrument="",
+        selector="filename:starts_with:test",
+        variables={
+            "common_var": {"source": "VALUE", "value": "high_priority_value", "value_type": "string"},
+            "ordered_only": {"source": "VALUE", "value": "ordered_unique", "value_type": "string"},
+        },
+        schema={
+            "common_field": {"value": "<common_var>", "type": "string"},
+            "ordered_field": {"value": "<ordered_only>", "type": "string"},
+        },
+    )
+    
+    schema_no_order = MetadataSchema(
+        order=sys.maxsize,  # Simulate no order by using maximum integer value
+        id="schema_no_order",
+        name="Schema No Order",
+        instrument="",
+        selector="filename:starts_with:test",
+        variables={
+            "common_var": {"source": "VALUE", "value": "low_priority_value", "value_type": "string"},
+            "unordered_only": {"source": "VALUE", "value": "unordered_unique", "value_type": "string"},
+        },
+        schema={
+            "common_field": {"value": "<common_var>", "type": "string"},
+            "unordered_field": {"value": "<unordered_only>", "type": "string"},
+        },
+    )
+    
+    # Remove order attribute to simulate missing order field
+    delattr(schema_no_order, 'order')
+    
+    schemas = OrderedDict({
+        "schema_no_order": schema_no_order,
+        "schema_with_order": schema_with_order,
+    })
+    
+    merged_schema = select_applicable_schema(Path("test_file.nxs"), schemas)
+    
+    # Schema with order should have priority over schema without order
+    assert "common_var" in merged_schema.variables
+    assert "ordered_only" in merged_schema.variables
+    assert "unordered_only" in merged_schema.variables
+    
+    # Schema with order should win the conflict
+    assert merged_schema.variables["common_var"]["value"] == "high_priority_value"
+    
+    assert "common_field" in merged_schema.schema
+    assert "ordered_field" in merged_schema.schema
+    assert "unordered_field" in merged_schema.schema
+
+
+def test_metadata_schema_no_order_fields_conflict_raises_error() -> None:
+    """Test that when two schemas have no order field and conflict, an error is raised."""
+    schema1 = MetadataSchema(
+        order=sys.maxsize,  # Will be removed
+        id="schema1",
+        name="Schema 1",
+        instrument="",
+        selector="filename:starts_with:test",
+        variables={
+            "common_var": {"source": "VALUE", "value": "schema1_value", "value_type": "string"},
+        },
+        schema={
+            "common_field": {"value": "<common_var>", "type": "string"},
+        },
+    )
+    
+    schema2 = MetadataSchema(
+        order=sys.maxsize,  # Will be removed  
+        id="schema2",
+        name="Schema 2",
+        instrument="",
+        selector="filename:starts_with:test",
+        variables={
+            "common_var": {"source": "VALUE", "value": "schema2_value", "value_type": "string"},
+        },
+        schema={
+            "common_field": {"value": "<common_var>", "type": "string"},
+        },
+    )
+    
+    # Remove order attributes to simulate missing order fields
+    delattr(schema1, 'order')
+    delattr(schema2, 'order')
+    
+    schemas = OrderedDict({
+        "schema1": schema1,
+        "schema2": schema2,
+    })
+    
+    # Should raise an error due to no order field conflict
+    with pytest.raises(ValueError, match="Schema conflict detected: schemas 'schema1' and 'schema2' both have no order field and conflicting variable 'common_var'"):
         select_applicable_schema(Path("test_file.nxs"), schemas)
