@@ -298,7 +298,8 @@ def test_metadata_schema_no_matching_schemas_returns_none() -> None:
 
 
 def test_metadata_schema_three_schemas_priority_resolution() -> None:
-    """Test that with 3 schemas, higher priority (lower order) overrides lower priority for conflicting fields."""
+    """Test that with 3 schemas, higher priority (lower order) overrides lower priority
+    for conflicting fields."""
     schemas = OrderedDict(
         {
             "low_priority": MetadataSchema(
@@ -375,7 +376,8 @@ def test_metadata_schema_three_schemas_priority_resolution() -> None:
     assert "middle_only" in merged_schema.variables
 
     # High priority schema should win for common_field conflicts (order=1 beats order=2 and order=3)
-    # Since high_priority doesn't have common_field, middle_priority (order=2) should beat low_priority (order=3)
+    # Since high_priority doesn't have common_field, middle_priority (order=2) should beat low_priority
+    # (order=3)
     assert merged_schema.variables["common_field"]["value"] == "middle_priority_value"
 
     assert "common_field" in merged_schema.schema
@@ -443,7 +445,8 @@ def test_metadata_schema_same_order_conflict_raises_error() -> None:
     # Should raise an error due to same order conflict
     with pytest.raises(
         ValueError,
-        match="Schema conflict detected: schemas 'schema1' and 'schema2' have the same order \\(1\\) and conflicting variable 'common_var'",
+        match="Schema conflict detected: schemas 'schema1' and 'schema2' have the same order \\(1\\) and "
+        "conflicting variable 'common_var'",
     ):
         select_applicable_schema(Path("test_file.nxs"), schemas)
 
@@ -576,6 +579,7 @@ def test_metadata_schema_no_order_fields_conflict_raises_error() -> None:
     # Should raise an error due to no order field conflict
     with pytest.raises(
         ValueError,
-        match="Schema conflict detected: schemas 'schema1' and 'schema2' both have no order field and conflicting variable 'common_var'",
+        match="Schema conflict detected: schemas 'schema1' and 'schema2' both have no order field and "
+        "conflicting variable 'common_var'",
     ):
         select_applicable_schema(Path("test_file.nxs"), schemas)

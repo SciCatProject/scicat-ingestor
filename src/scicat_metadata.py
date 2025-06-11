@@ -233,13 +233,15 @@ def select_applicable_schema(
     Evaluates which metadata schema configuration is applicable to ``nexus_file``.
 
     Order of the schemas matters and first schema that is suitable is selected in priority.
-    if other schemas are also suitable, keep what is not in conflict, if conflict the one with lowest order value has priority.
+    if other schemas are also suitable, keep what is not in conflict,
+    if conflict the one with lowest order value has priority.
     Schemas without order field are treated as having the lowest priority (highest order value).
     """
-    matching_schemas = []
-    for schema in schemas.values():
-        if _select_applicable_schema(schema.selector, str(nexus_file)):
-            matching_schemas.append(schema)
+    matching_schemas = [
+        schema
+        for schema in schemas.values()
+        if _select_applicable_schema(schema.selector, str(nexus_file))
+    ]
 
     if not matching_schemas:
         return None
@@ -282,33 +284,35 @@ def select_applicable_schema(
                 # Special case: if both schemas have no order field (both DEFAULT_ORDER)
                 if schema_order == DEFAULT_ORDER:
                     raise ValueError(
-                        f"Schema conflict detected: schemas '{result_schema.id.split('_')[0]}' and '{schema.id}' "
-                        f"both have no order field and conflicting variable '{key}'"
+                        f"Schema conflict detected: schemas '{result_schema.id.split('_')[0]}' "
+                        f"and '{schema.id}' both have no order field and conflicting variable '{key}'"
                     )
                 else:
                     raise ValueError(
-                        f"Schema conflict detected: schemas '{result_schema.id.split('_')[0]}' and '{schema.id}' "
-                        f"have the same order ({schema_order}) and conflicting variable '{key}'"
+                        f"Schema conflict detected: schemas '{result_schema.id.split('_')[0]}' "
+                        f"and '{schema.id}' have the same order ({schema_order}) and "
+                        f"conflicting variable '{key}'"
                     )
 
         # Merge schema fields - handle conflicts based on order
-        for key, value in schema.schema.items():
+        for key, item in schema.schema.items():
             if key not in result_schema.schema:
-                result_schema.schema[key] = value
+                result_schema.schema[key] = item
             elif schema_order < result_order:
-                result_schema.schema[key] = value
+                result_schema.schema[key] = item
             elif schema_order == result_order:
                 # Same order conflict - raise error
                 # Special case: if both schemas have no order field (both DEFAULT_ORDER)
                 if schema_order == DEFAULT_ORDER:
                     raise ValueError(
-                        f"Schema conflict detected: schemas '{result_schema.id.split('_')[0]}' and '{schema.id}' "
-                        f"both have no order field and conflicting schema field '{key}'"
+                        f"Schema conflict detected: schemas '{result_schema.id.split('_')[0]}' "
+                        f"and '{schema.id}' both have no order field and conflicting schema field '{key}'"
                     )
                 else:
                     raise ValueError(
-                        f"Schema conflict detected: schemas '{result_schema.id.split('_')[0]}' and '{schema.id}' "
-                        f"have the same order ({schema_order}) and conflicting schema field '{key}'"
+                        f"Schema conflict detected: schemas '{result_schema.id.split('_')[0]}' "
+                        f"and '{schema.id}' have the same order ({schema_order}) and "
+                        f"conflicting schema field '{key}'"
                     )
 
     result_schema.id = "_".join(merged_ids)
