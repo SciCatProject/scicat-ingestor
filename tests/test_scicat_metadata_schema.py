@@ -142,3 +142,356 @@ def test_metadata_schema_selection_wrong_selector_function_name_raises() -> None
                 }
             ),
         )
+
+
+def test_schema_import_resolution(tmp_path: Path) -> None:
+    """Test that schema imports are correctly resolved."""
+    module_schema = {
+        "id": "base-schema",
+        "name": "Base Schema",
+        "variables": {
+            "base_var1": {
+                "source": "VALUE",
+                "value": "base_value1",
+                "value_type": "string",
+            },
+            "base_var2": {
+                "source": "VALUE",
+                "value": "base_value2",
+                "value_type": "string",
+            },
+        },
+        "schema": {
+            "base_field1": {
+                "machine_name": "base_field1",
+                "field_type": "scientific_metadata",
+                "value": "<base_var1>",
+                "type": "string",
+            },
+            "base_field2": {
+                "machine_name": "base_field2",
+                "field_type": "scientific_metadata",
+                "value": "<base_var2>",
+                "type": "string",
+            },
+        },
+    }
+
+    importing_schema = {
+        "id": "importing-schema",
+        "name": "Importing Schema",
+        "import": ["module_schema.json"],
+        "order": 1,
+        "instrument": "Test Instrument",
+        "selector": "filename:starts_with:test",
+        "variables": {
+            "importing_var": {
+                "source": "VALUE",
+                "value": "importing_value",
+                "value_type": "string",
+            },
+            "base_var1": {
+                "source": "VALUE",
+                "value": "overridden_value",
+                "value_type": "string",
+            },
+        },
+        "schema": {
+            "importing_field": {
+                "machine_name": "importing_field",
+                "field_type": "scientific_metadata",
+                "value": "<importing_var>",
+                "type": "string",
+            },
+            "base_field1": {
+                "machine_name": "base_field1",
+                "field_type": "scientific_metadata",
+                "value": "<base_var1>",
+                "type": "string",
+            },
+        },
+    }
+
+    module_schema_file = tmp_path / "module_schema.json"
+    importing_schema_file = tmp_path / "importing_schema.json"
+
+    module_schema_file.write_text(json.dumps(module_schema))
+    importing_schema_file.write_text(json.dumps(importing_schema))
+
+    from scicat_metadata import _load_json_schema, _resolve_schema_imports
+
+    loaded_schema = _load_json_schema(importing_schema_file)
+    resolved_schema = _resolve_schema_imports(loaded_schema, importing_schema_file)
+
+    assert "base_var1" in resolved_schema["variables"]
+    assert "base_var2" in resolved_schema["variables"]
+    assert "importing_var" in resolved_schema["variables"]
+
+    assert resolved_schema["variables"]["base_var1"]["value"] == "overridden_value"
+    assert resolved_schema["variables"]["base_var2"]["value"] == "base_value2"
+    assert resolved_schema["variables"]["importing_var"]["value"] == "importing_value"
+
+    assert "base_field1" in resolved_schema["schema"]
+    assert "base_field2" in resolved_schema["schema"]
+    assert "importing_field" in resolved_schema["schema"]
+
+    assert "import" not in resolved_schema
+
+
+def test_schema_import_circular_dependency_raises(tmp_path: Path) -> None:
+    """Test that circular dependencies in imports are detected and raise an error."""
+    schema_a = {
+        "id": "schema-a",
+        "name": "Schema A",
+        "import": ["schema_b.json"],
+        "variables": {
+            "var_a": {"source": "VALUE", "value": "a", "value_type": "string"}
+        },
+        "schema": {},
+    }
+
+    schema_b = {
+        "id": "schema-b",
+        "name": "Schema B",
+        "import": ["schema_a.json"],
+        "variables": {
+            "var_b": {"source": "VALUE", "value": "b", "value_type": "string"}
+        },
+        "schema": {},
+    }
+
+    schema_a_file = tmp_path / "schema_a.json"
+    schema_b_file = tmp_path / "schema_b.json"
+
+    schema_a_file.write_text(json.dumps(schema_a))
+    schema_b_file.write_text(json.dumps(schema_b))
+
+    from scicat_metadata import _load_json_schema, _resolve_schema_imports
+
+    loaded_schema = _load_json_schema(schema_a_file)
+
+    with pytest.raises(ValueError, match="Circular dependency detected"):
+        _resolve_schema_imports(loaded_schema, schema_a_file)
+
+
+def test_schema_import_triangle_circular_dependency_raises(tmp_path: Path) -> None:
+    """Test that triangle circular dependencies (A->B->C->A) are detected and raise an error."""
+    schema_a = {
+        "id": "schema-a",
+        "name": "Schema A",
+        "import": ["schema_b.json"],
+        "variables": {
+            "var_a": {"source": "VALUE", "value": "a", "value_type": "string"}
+        },
+        "schema": {},
+    }
+
+    schema_b = {
+        "id": "schema-b",
+        "name": "Schema B",
+        "import": ["schema_c.json"],
+        "variables": {
+            "var_b": {"source": "VALUE", "value": "b", "value_type": "string"}
+        },
+        "schema": {},
+    }
+
+    schema_c = {
+        "id": "schema-c",
+        "name": "Schema C",
+        "import": ["schema_a.json"],
+        "variables": {
+            "var_c": {"source": "VALUE", "value": "c", "value_type": "string"}
+        },
+        "schema": {},
+    }
+
+    schema_a_file = tmp_path / "schema_a.json"
+    schema_b_file = tmp_path / "schema_b.json"
+    schema_c_file = tmp_path / "schema_c.json"
+
+    schema_a_file.write_text(json.dumps(schema_a))
+    schema_b_file.write_text(json.dumps(schema_b))
+    schema_c_file.write_text(json.dumps(schema_c))
+
+    from scicat_metadata import _load_json_schema, _resolve_schema_imports
+
+    loaded_schema = _load_json_schema(schema_a_file)
+
+    with pytest.raises(ValueError, match="Circular dependency detected"):
+        _resolve_schema_imports(loaded_schema, schema_a_file)
+
+
+def test_schema_import_missing_file_raises(tmp_path: Path) -> None:
+    """Test that importing a non-existent file raises FileNotFoundError."""
+    importing_schema = {
+        "id": "importing-schema",
+        "name": "Importing Schema",
+        "import": ["nonexistent.json"],
+        "variables": {},
+        "schema": {},
+    }
+
+    importing_schema_file = tmp_path / "importing_schema.json"
+    importing_schema_file.write_text(json.dumps(importing_schema))
+
+    from scicat_metadata import _load_json_schema, _resolve_schema_imports
+
+    loaded_schema = _load_json_schema(importing_schema_file)
+
+    with pytest.raises(FileNotFoundError, match="Import file .* does not exist"):
+        _resolve_schema_imports(loaded_schema, importing_schema_file)
+
+
+def test_schema_import_invalid_format_raises(tmp_path: Path) -> None:
+    """Test that invalid import format raises ValueError."""
+    importing_schema = {
+        "id": "importing-schema",
+        "name": "Importing Schema",
+        "import": "not_a_list.json",  # Should be a list
+        "variables": {},
+        "schema": {},
+    }
+
+    importing_schema_file = tmp_path / "importing_schema.json"
+    importing_schema_file.write_text(json.dumps(importing_schema))
+
+    from scicat_metadata import _load_json_schema, _resolve_schema_imports
+
+    loaded_schema = _load_json_schema(importing_schema_file)
+
+    with pytest.raises(ValueError, match="Import must be a list of file paths"):
+        _resolve_schema_imports(loaded_schema, importing_schema_file)
+
+
+def test_schema_import_multiple_imports(tmp_path: Path) -> None:
+    """Test importing from multiple schema files."""
+    module_schema_1 = {
+        "id": "base-1",
+        "variables": {
+            "var1": {"source": "VALUE", "value": "value1", "value_type": "string"}
+        },
+        "schema": {
+            "field1": {
+                "machine_name": "field1",
+                "field_type": "scientific_metadata",
+                "value": "<var1>",
+                "type": "string",
+            }
+        },
+    }
+
+    module_schema_2 = {
+        "id": "base-2",
+        "variables": {
+            "var2": {"source": "VALUE", "value": "value2", "value_type": "string"}
+        },
+        "schema": {
+            "field2": {
+                "machine_name": "field2",
+                "field_type": "scientific_metadata",
+                "value": "<var2>",
+                "type": "string",
+            }
+        },
+    }
+
+    importing_schema = {
+        "id": "importing",
+        "import": ["base1.json", "base2.json"],
+        "order": 1,
+        "instrument": "Test",
+        "selector": "filename:starts_with:test",
+        "variables": {
+            "var3": {"source": "VALUE", "value": "value3", "value_type": "string"}
+        },
+        "schema": {
+            "field3": {
+                "machine_name": "field3",
+                "field_type": "scientific_metadata",
+                "value": "<var3>",
+                "type": "string",
+            }
+        },
+    }
+
+    base1_file = tmp_path / "base1.json"
+    base2_file = tmp_path / "base2.json"
+    importing_file = tmp_path / "importing.json"
+
+    base1_file.write_text(json.dumps(module_schema_1))
+    base2_file.write_text(json.dumps(module_schema_2))
+    importing_file.write_text(json.dumps(importing_schema))
+
+    from scicat_metadata import _load_json_schema, _resolve_schema_imports
+
+    loaded_schema = _load_json_schema(importing_file)
+    resolved_schema = _resolve_schema_imports(loaded_schema, importing_file)
+
+    assert "var1" in resolved_schema["variables"]
+    assert "var2" in resolved_schema["variables"]
+    assert "var3" in resolved_schema["variables"]
+
+    assert "field1" in resolved_schema["schema"]
+    assert "field2" in resolved_schema["schema"]
+    assert "field3" in resolved_schema["schema"]
+
+
+def test_schema_with_imports_can_be_loaded_as_metadata_schema(tmp_path: Path) -> None:
+    """Test that a schema with imports can be successfully loaded as a MetadataSchema object."""
+    module_schema = {
+        "variables": {
+            "base_var": {
+                "source": "VALUE",
+                "value": "base_value",
+                "value_type": "string",
+            }
+        },
+        "schema": {
+            "base_field": {
+                "machine_name": "base_field",
+                "field_type": "scientific_metadata",
+                "value": "<base_var>",
+                "type": "string",
+            }
+        },
+    }
+
+    importing_schema = {
+        "id": "test-schema",
+        "name": "Test Schema",
+        "order": 1,
+        "instrument": "Test Instrument",
+        "selector": "filename:starts_with:test",
+        "import": ["base.json"],
+        "variables": {
+            "main_var": {
+                "source": "VALUE",
+                "value": "main_value",
+                "value_type": "string",
+            }
+        },
+        "schema": {
+            "main_field": {
+                "machine_name": "main_field",
+                "field_type": "scientific_metadata",
+                "value": "<main_var>",
+                "type": "string",
+            }
+        },
+    }
+
+    base_file = tmp_path / "base.json"
+    importing_file = tmp_path / "importing.json"
+
+    base_file.write_text(json.dumps(module_schema))
+    importing_file.write_text(json.dumps(importing_schema))
+
+    schema = MetadataSchema.from_file(importing_file)
+
+    assert schema.id == "test-schema"
+    assert schema.name == "Test Schema"
+    assert "base_var" in schema.variables
+    assert "main_var" in schema.variables
+    assert "base_field" in schema.schema
+    assert "main_field" in schema.schema

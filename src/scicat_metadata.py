@@ -41,6 +41,70 @@ def _load_json_schema(schema_file_name: pathlib.Path) -> dict:
     return json.loads(schema_file_name.read_text())
 
 
+def _resolve_schema_imports(
+    schema: dict[str, Any],
+    schema_file_name: pathlib.Path,
+    caller_schemas: list[pathlib.Path] | None = None,
+) -> dict[str, Any]:
+    """
+    Resolve imports in the schema dictionary.
+
+    Imports are defined as a list of modules file relative paths to the schema file.
+    The importer has priority over imported schemas in case of conflicts.
+
+    Args:
+        schema: The schema dictionary to resolve imports for
+        schema_file_name: Path to the current schema file
+        caller_schemas: List of schema file paths in the import chain to detect circular dependencies
+    """
+    if caller_schemas is None:
+        caller_schemas = []
+
+    if schema_file_name in caller_schemas:
+        raise ValueError(
+            "Circular dependency detected: "
+            f"{' -> '.join(str(p) for p in caller_schemas)} -> {schema_file_name}"
+        )
+
+    if "import" in schema:
+        if not isinstance(schema["import"], list):
+            raise ValueError("Import must be a list of file paths.")
+        result_schema = schema.copy()
+
+        current_caller_schemas = [*caller_schemas, schema_file_name]
+
+        for import_path in schema["import"]:
+            import_file_path = schema_file_name.parent / pathlib.Path(import_path)
+            if not import_file_path.exists():
+                raise FileNotFoundError(
+                    f"Import file {import_file_path} does not exist."
+                )
+
+            imported_schema = _load_json_schema(import_file_path)
+            resolved_imported_schema = _resolve_schema_imports(
+                imported_schema, import_file_path, current_caller_schemas
+            )
+
+            for key, value in resolved_imported_schema.items():
+                if key == "import":
+                    continue
+                elif key in ["variables", "schema"]:
+                    if key not in result_schema:
+                        result_schema[key] = {}
+
+                    for sub_key, sub_value in value.items():
+                        if sub_key not in result_schema[key]:
+                            result_schema[key][sub_key] = sub_value
+                else:
+                    if key not in result_schema:
+                        result_schema[key] = value
+
+        result_schema.pop("import", None)
+        return result_schema
+
+    return schema
+
+
 @dataclass(kw_only=True)
 class MetadataSchemaVariable:
     source: str
@@ -140,7 +204,10 @@ class MetadataSchema:
 
     @classmethod
     def from_file(cls, schema_file_name: pathlib.Path) -> "MetadataSchema":
-        return cls.from_dict(_load_json_schema(schema_file_name))
+        resolved_schema = _resolve_schema_imports(
+            _load_json_schema(schema_file_name), schema_file_name
+        )
+        return cls.from_dict(resolved_schema)
 
 
 def render_variable_value(var_value: Any, variable_registry: dict) -> str:
