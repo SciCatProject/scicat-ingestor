@@ -1,0 +1,56 @@
+{
+  "id": "d17-example-schema",
+  "name": "D17 Instrument Example Schema",
+  "order": 1,
+  "import": ["ill-module-001"],
+  "instrument": "D17",
+  "selector": "filename:starts_with:/data/d17",
+  "variables": {
+    "instrument_det": {
+      "source": "NXS",
+      "path": "/entry0/instrument/det/value",
+      "value_type": "string"
+    },
+    "incident_angle": {
+      "source": "NXS",
+      "path": "/entry0/instrument/MainParameters/Incident_angle",
+      "value_type": "string"
+    },
+    "opening": {
+      "source": "NXS",
+      "path": "/entry0/instrument/VirtualChopper/actual_opening",
+      "value_type": "string"
+    }
+  },
+  "schema": {
+    "instrument_properties": {
+      "type": "dict",
+      "field_type": "scientific_metadata",
+      "machine_name": "instrumentProperties",
+      "human_name": "D17 Instrument Properties",
+      "value": {
+        "det": {
+          "field_type": "scientific_metadata",
+          "machine_name": "instrument_det",
+          "human_name": "Detector",
+          "value": "<instrument_det>",
+          "type": "string"
+        },
+        "incident_angle": {
+          "field_type": "scientific_metadata",
+          "machine_name": "incident_angle",
+          "human_name": "Incident Angle",
+          "value": "<incident_angle>",
+          "type": "string"
+        },
+        "opening": {
+          "field_type": "scientific_metadata",
+          "machine_name": "opening",
+          "human_name": "Opening",
+          "value": "<opening>",
+          "type": "string"
+        }
+      }
+    }
+  }
+}
