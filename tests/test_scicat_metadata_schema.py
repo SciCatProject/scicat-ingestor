@@ -8,6 +8,9 @@ import pytest
 
 from scicat_metadata import (
     MetadataSchema,
+    _load_all_schemas_from_directory,
+    _load_json_schema,
+    _resolve_schema_imports,
     build_metadata_variables,
     collect_schemas,
     list_schema_file_names,
@@ -150,9 +153,12 @@ def test_metadata_schema_selection_wrong_selector_function_name_raises() -> None
 
 
 def test_schema_import_resolution(tmp_path: Path) -> None:
-    """Test that schema imports are correctly resolved."""
+    """Test that schema imports are correctly resolved using IDs."""
+    modules_dir = tmp_path / "modules"
+    modules_dir.mkdir()
+
     module_schema = {
-        "id": "module-schema",
+        "id": "module-schema-001",
         "name": "Module Schema",
         "variables": {
             "module_var1": {
@@ -185,7 +191,7 @@ def test_schema_import_resolution(tmp_path: Path) -> None:
     importing_schema = {
         "id": "importing-schema",
         "name": "Importing Schema",
-        "import": ["module_schema.json"],
+        "import": ["module-schema-001"],
         "order": 1,
         "instrument": "Test Instrument",
         "selector": "filename:starts_with:test",
@@ -217,16 +223,22 @@ def test_schema_import_resolution(tmp_path: Path) -> None:
         },
     }
 
-    module_schema_file = tmp_path / "module_schema.json"
-    importing_schema_file = tmp_path / "importing_schema.json"
+    module_schema_file = modules_dir / "module_schema.imsc.json"
+    importing_schema_file = tmp_path / "importing_schema.imsc.json"
 
     module_schema_file.write_text(json.dumps(module_schema))
     importing_schema_file.write_text(json.dumps(importing_schema))
 
-    from scicat_metadata import _load_json_schema, _resolve_schema_imports
-
+    all_schemas = _load_all_schemas_from_directory(tmp_path)
     loaded_schema = _load_json_schema(importing_schema_file)
-    resolved_schema = _resolve_schema_imports(loaded_schema, importing_schema_file)
+    resolved_schema = _resolve_schema_imports(
+        loaded_schema, importing_schema_file, all_schemas=all_schemas
+    )
+
+    assert "module-schema-001" in all_schemas
+    schema_data, file_path = all_schemas["module-schema-001"]
+    assert file_path == module_schema_file
+    assert schema_data["id"] == "module-schema-001"
 
     assert "module_var1" in resolved_schema["variables"]
     assert "module_var2" in resolved_schema["variables"]
@@ -245,10 +257,13 @@ def test_schema_import_resolution(tmp_path: Path) -> None:
 
 def test_schema_import_circular_dependency_raises(tmp_path: Path) -> None:
     """Test that circular dependencies in imports are detected and raise an error."""
+    modules_dir = tmp_path / "modules"
+    modules_dir.mkdir()
+
     schema_a = {
         "id": "schema-a",
         "name": "Schema A",
-        "import": ["schema_b.json"],
+        "import": ["schema-b"],
         "variables": {
             "var_a": {"source": "VALUE", "value": "a", "value_type": "string"}
         },
@@ -258,33 +273,35 @@ def test_schema_import_circular_dependency_raises(tmp_path: Path) -> None:
     schema_b = {
         "id": "schema-b",
         "name": "Schema B",
-        "import": ["schema_a.json"],
+        "import": ["schema-a"],
         "variables": {
             "var_b": {"source": "VALUE", "value": "b", "value_type": "string"}
         },
         "schema": {},
     }
 
-    schema_a_file = tmp_path / "schema_a.json"
-    schema_b_file = tmp_path / "schema_b.json"
+    schema_a_file = modules_dir / "schema_a.imsc.json"
+    schema_b_file = modules_dir / "schema_b.imsc.json"
 
     schema_a_file.write_text(json.dumps(schema_a))
     schema_b_file.write_text(json.dumps(schema_b))
 
-    from scicat_metadata import _load_json_schema, _resolve_schema_imports
-
+    all_schemas = _load_all_schemas_from_directory(tmp_path)
     loaded_schema = _load_json_schema(schema_a_file)
 
     with pytest.raises(ValueError, match="Circular dependency detected"):
-        _resolve_schema_imports(loaded_schema, schema_a_file)
+        _resolve_schema_imports(loaded_schema, schema_a_file, all_schemas=all_schemas)
 
 
 def test_schema_import_triangle_circular_dependency_raises(tmp_path: Path) -> None:
     """Test that triangle circular dependencies (A->B->C->A) are detected and raise an error."""
+    modules_dir = tmp_path / "modules"
+    modules_dir.mkdir()
+
     schema_a = {
         "id": "schema-a",
         "name": "Schema A",
-        "import": ["schema_b.json"],
+        "import": ["schema-b"],
         "variables": {
             "var_a": {"source": "VALUE", "value": "a", "value_type": "string"}
         },
@@ -294,7 +311,7 @@ def test_schema_import_triangle_circular_dependency_raises(tmp_path: Path) -> No
     schema_b = {
         "id": "schema-b",
         "name": "Schema B",
-        "import": ["schema_c.json"],
+        "import": ["schema-c"],
         "variables": {
             "var_b": {"source": "VALUE", "value": "b", "value_type": "string"}
         },
@@ -304,48 +321,53 @@ def test_schema_import_triangle_circular_dependency_raises(tmp_path: Path) -> No
     schema_c = {
         "id": "schema-c",
         "name": "Schema C",
-        "import": ["schema_a.json"],
+        "import": ["schema-a"],
         "variables": {
             "var_c": {"source": "VALUE", "value": "c", "value_type": "string"}
         },
         "schema": {},
     }
 
-    schema_a_file = tmp_path / "schema_a.json"
-    schema_b_file = tmp_path / "schema_b.json"
-    schema_c_file = tmp_path / "schema_c.json"
+    schema_a_file = modules_dir / "schema_a.imsc.json"
+    schema_b_file = modules_dir / "schema_b.imsc.json"
+    schema_c_file = modules_dir / "schema_c.imsc.json"
 
     schema_a_file.write_text(json.dumps(schema_a))
     schema_b_file.write_text(json.dumps(schema_b))
     schema_c_file.write_text(json.dumps(schema_c))
 
-    from scicat_metadata import _load_json_schema, _resolve_schema_imports
-
+    all_schemas = _load_all_schemas_from_directory(tmp_path)
     loaded_schema = _load_json_schema(schema_a_file)
 
     with pytest.raises(ValueError, match="Circular dependency detected"):
-        _resolve_schema_imports(loaded_schema, schema_a_file)
+        _resolve_schema_imports(loaded_schema, schema_a_file, all_schemas=all_schemas)
 
 
-def test_schema_import_missing_file_raises(tmp_path: Path) -> None:
-    """Test that importing a non-existent file raises FileNotFoundError."""
+def test_schema_import_missing_id_raises(tmp_path: Path) -> None:
+    """Test that importing a non-existent schema ID raises ValueError."""
     importing_schema = {
         "id": "importing-schema",
         "name": "Importing Schema",
-        "import": ["nonexistent.json"],
+        "import": ["nonexistent-schema-id"],
+        "order": 1,
+        "instrument": "Test",
+        "selector": "filename:starts_with:test",
         "variables": {},
         "schema": {},
     }
 
-    importing_schema_file = tmp_path / "importing_schema.json"
+    importing_schema_file = tmp_path / "importing_schema.imsc.json"
     importing_schema_file.write_text(json.dumps(importing_schema))
 
-    from scicat_metadata import _load_json_schema, _resolve_schema_imports
-
+    all_schemas = _load_all_schemas_from_directory(tmp_path)
     loaded_schema = _load_json_schema(importing_schema_file)
 
-    with pytest.raises(FileNotFoundError, match="Import file .* does not exist"):
-        _resolve_schema_imports(loaded_schema, importing_schema_file)
+    with pytest.raises(
+        ValueError, match="Import schema ID 'nonexistent-schema-id' not found"
+    ):
+        _resolve_schema_imports(
+            loaded_schema, importing_schema_file, all_schemas=all_schemas
+        )
 
 
 def test_schema_import_invalid_format_raises(tmp_path: Path) -> None:
@@ -353,24 +375,25 @@ def test_schema_import_invalid_format_raises(tmp_path: Path) -> None:
     importing_schema = {
         "id": "importing-schema",
         "name": "Importing Schema",
-        "import": "not_a_list.json",  # Should be a list
+        "import": "not_a_list",
         "variables": {},
         "schema": {},
     }
 
-    importing_schema_file = tmp_path / "importing_schema.json"
+    importing_schema_file = tmp_path / "importing_schema.imsc.json"
     importing_schema_file.write_text(json.dumps(importing_schema))
-
-    from scicat_metadata import _load_json_schema, _resolve_schema_imports
 
     loaded_schema = _load_json_schema(importing_schema_file)
 
-    with pytest.raises(ValueError, match="Import must be a list of file paths"):
+    with pytest.raises(ValueError, match="Import must be a list of schema IDs"):
         _resolve_schema_imports(loaded_schema, importing_schema_file)
 
 
 def test_schema_import_multiple_imports(tmp_path: Path) -> None:
-    """Test importing from multiple schema files."""
+    """Test importing from multiple schema IDs."""
+    modules_dir = tmp_path / "modules"
+    modules_dir.mkdir()
+
     module_schema_1 = {
         "id": "module-1",
         "variables": {
@@ -403,7 +426,7 @@ def test_schema_import_multiple_imports(tmp_path: Path) -> None:
 
     importing_schema = {
         "id": "importing",
-        "import": ["module1.json", "module2.json"],
+        "import": ["module-1", "module-2"],
         "order": 1,
         "instrument": "Test",
         "selector": "filename:starts_with:test",
@@ -420,18 +443,19 @@ def test_schema_import_multiple_imports(tmp_path: Path) -> None:
         },
     }
 
-    module1_file = tmp_path / "module1.json"
-    module2_file = tmp_path / "module2.json"
-    importing_file = tmp_path / "importing.json"
+    module1_file = modules_dir / "module1.imsc.json"
+    module2_file = modules_dir / "module2.imsc.json"
+    importing_file = tmp_path / "importing.imsc.json"
 
     module1_file.write_text(json.dumps(module_schema_1))
     module2_file.write_text(json.dumps(module_schema_2))
     importing_file.write_text(json.dumps(importing_schema))
 
-    from scicat_metadata import _load_json_schema, _resolve_schema_imports
-
+    all_schemas = _load_all_schemas_from_directory(tmp_path)
     loaded_schema = _load_json_schema(importing_file)
-    resolved_schema = _resolve_schema_imports(loaded_schema, importing_file)
+    resolved_schema = _resolve_schema_imports(
+        loaded_schema, importing_file, all_schemas=all_schemas
+    )
 
     assert "var1" in resolved_schema["variables"]
     assert "var2" in resolved_schema["variables"]
@@ -444,7 +468,11 @@ def test_schema_import_multiple_imports(tmp_path: Path) -> None:
 
 def test_schema_with_imports_can_be_loaded_as_metadata_schema(tmp_path: Path) -> None:
     """Test that a schema with imports can be successfully loaded as a MetadataSchema object."""
+    modules_dir = tmp_path / "modules"
+    modules_dir.mkdir()
+
     module_schema = {
+        "id": "test-module",
         "variables": {
             "module_var": {
                 "source": "VALUE",
@@ -468,7 +496,7 @@ def test_schema_with_imports_can_be_loaded_as_metadata_schema(tmp_path: Path) ->
         "order": 1,
         "instrument": "Test Instrument",
         "selector": "filename:starts_with:test",
-        "import": ["module.json"],
+        "import": ["test-module"],
         "variables": {
             "main_var": {
                 "source": "VALUE",
@@ -486,8 +514,8 @@ def test_schema_with_imports_can_be_loaded_as_metadata_schema(tmp_path: Path) ->
         },
     }
 
-    module_file = tmp_path / "module.json"
-    importing_file = tmp_path / "importing.json"
+    module_file = modules_dir / "module.imsc.json"
+    importing_file = tmp_path / "importing.imsc.json"
 
     module_file.write_text(json.dumps(module_schema))
     importing_file.write_text(json.dumps(importing_schema))

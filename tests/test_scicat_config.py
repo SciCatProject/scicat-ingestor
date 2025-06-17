@@ -101,6 +101,7 @@ def test_config_with_schema_imports_directory(tmp_path: Path) -> None:
     modules_dir.mkdir()
 
     module_schema = {
+        "id": "test-module-001",
         "variables": {
             "common_var": {
                 "source": "VALUE",
@@ -124,7 +125,7 @@ def test_config_with_schema_imports_directory(tmp_path: Path) -> None:
         "order": 1,
         "instrument": "Test",
         "selector": "filename:starts_with:test",
-        "import": ["modules/module.imsc.json"],
+        "import": ["test-module-001"],
         "variables": {
             "instrument_var": {
                 "source": "VALUE",
@@ -167,6 +168,7 @@ def test_config_validation_with_import_enabled_schemas(tmp_path: Path) -> None:
     modules_dir.mkdir()
 
     module_schema = {
+        "id": "test-config-module",
         "variables": {
             "module_var": {
                 "source": "VALUE",
@@ -190,7 +192,7 @@ def test_config_validation_with_import_enabled_schemas(tmp_path: Path) -> None:
         "order": 1,
         "instrument": "Test",
         "selector": "filename:starts_with:test",
-        "import": ["modules/module.imsc.json"],
+        "import": ["test-config-module"],
         "variables": {
             "specific_var": {
                 "source": "VALUE",

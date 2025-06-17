@@ -2,7 +2,7 @@
   "id": "d17-example-schema",
   "name": "D17 Instrument Example Schema",
   "order": 1,
-  "import": ["modules/ill.imsc.json.example"],
+  "import": ["ill-module-001"],
   "instrument": "D17",
   "selector": "filename:starts_with:/data/d17",
   "variables": {
