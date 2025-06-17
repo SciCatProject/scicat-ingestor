@@ -124,7 +124,7 @@ def test_config_with_schema_imports_directory(tmp_path: Path) -> None:
         "order": 1,
         "instrument": "Test",
         "selector": "filename:starts_with:test",
-        "import": ["modules/base.imsc.json"],
+        "import": ["modules/module.imsc.json"],
         "variables": {
             "instrument_var": {
                 "source": "VALUE",
@@ -142,10 +142,10 @@ def test_config_with_schema_imports_directory(tmp_path: Path) -> None:
         },
     }
 
-    base_file = modules_dir / "base.imsc.json"
+    module_file = modules_dir / "module.imsc.json"
     instrument_file = schemas_dir / "instrument.imsc.json"
 
-    base_file.write_text(json.dumps(module_schema))
+    module_file.write_text(json.dumps(module_schema))
     instrument_file.write_text(json.dumps(instrument_schema))
 
     schema = MetadataSchema.from_file(instrument_file)
@@ -165,19 +165,20 @@ def test_config_validation_with_import_enabled_schemas(tmp_path: Path) -> None:
     modules_dir = schemas_dir / "modules"
     schemas_dir.mkdir()
     modules_dir.mkdir()
+
     module_schema = {
         "variables": {
-            "base_var": {
+            "module_var": {
                 "source": "VALUE",
-                "value": "base_value",
+                "value": "module_value",
                 "value_type": "string",
             }
         },
         "schema": {
-            "base_field": {
-                "machine_name": "base_field",
+            "module_field": {
+                "machine_name": "module_field",
                 "field_type": "scientific_metadata",
-                "value": "<base_var>",
+                "value": "<module_var>",
                 "type": "string",
             }
         },
@@ -189,7 +190,7 @@ def test_config_validation_with_import_enabled_schemas(tmp_path: Path) -> None:
         "order": 1,
         "instrument": "Test",
         "selector": "filename:starts_with:test",
-        "import": ["modules/base_module.imsc.json"],
+        "import": ["modules/module.imsc.json"],
         "variables": {
             "specific_var": {
                 "source": "VALUE",
@@ -207,10 +208,10 @@ def test_config_validation_with_import_enabled_schemas(tmp_path: Path) -> None:
         },
     }
 
-    base_file = modules_dir / "base_module.imsc.json"
+    module_file = modules_dir / "module.imsc.json"
     schema_file = schemas_dir / "test.imsc.json"
 
-    base_file.write_text(json.dumps(module_schema))
+    module_file.write_text(json.dumps(module_schema))
     schema_file.write_text(json.dumps(schema_with_import))
 
     from scicat_metadata import collect_schemas
@@ -223,13 +224,13 @@ def test_config_validation_with_import_enabled_schemas(tmp_path: Path) -> None:
         loaded_schema = schemas["test-schema"]
         assert loaded_schema.id == "test-schema"
 
-        assert "base_var" in loaded_schema.variables
+        assert "module_var" in loaded_schema.variables
         assert "specific_var" in loaded_schema.variables
 
-        assert "base_field" in loaded_schema.schema
+        assert "module_field" in loaded_schema.schema
         assert "specific_field" in loaded_schema.schema
 
-        assert loaded_schema.variables["base_var"].value == "base_value"
+        assert loaded_schema.variables["module_var"].value == "module_value"
         assert loaded_schema.variables["specific_var"].value == "specific_value"
 
     except Exception as e:

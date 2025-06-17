@@ -14,9 +14,13 @@ from scicat_metadata import (
     select_applicable_schema,
 )
 
-ALL_SCHEMA_EXAMPLES = list_schema_file_names(
-    Path(__file__).parent.parent / Path("resources")
-)
+ALL_SCHEMA_EXAMPLES = [
+    schema_file
+    for schema_file in list_schema_file_names(
+        Path(__file__).parent.parent / Path("resources")
+    )
+    if "modules/" not in str(schema_file)  # Exclude module files
+]
 
 
 @pytest.fixture
@@ -59,6 +63,7 @@ def test_collect_metadata_schema() -> None:
         list(schemas.keys())
         == [
             "715ce7ba-3f91-11ef-932f-37a5c6fd60b1",  # Coda, 1, Coda Metadata Schema
+            "d17-example-schema",  # D17, 1, D17 Instrument Example Schema
             "72a991ee-437a-11ef-8fd2-1f95660accb7",  # Dream, 1, dream Metadata Schema
             "c5bed39a-4379-11ef-ba5a-ffbc783163b6",  # Base, 1, Generic metadata schema
             "891322f6-437a-11ef-980a-7bdc756bd0b3",  # Loki, 1, Loki Metadata Schema
@@ -147,31 +152,31 @@ def test_metadata_schema_selection_wrong_selector_function_name_raises() -> None
 def test_schema_import_resolution(tmp_path: Path) -> None:
     """Test that schema imports are correctly resolved."""
     module_schema = {
-        "id": "base-schema",
-        "name": "Base Schema",
+        "id": "module-schema",
+        "name": "Module Schema",
         "variables": {
-            "base_var1": {
+            "module_var1": {
                 "source": "VALUE",
-                "value": "base_value1",
+                "value": "module_value1",
                 "value_type": "string",
             },
-            "base_var2": {
+            "module_var2": {
                 "source": "VALUE",
-                "value": "base_value2",
+                "value": "module_value2",
                 "value_type": "string",
             },
         },
         "schema": {
-            "base_field1": {
-                "machine_name": "base_field1",
+            "module_field1": {
+                "machine_name": "module_field1",
                 "field_type": "scientific_metadata",
-                "value": "<base_var1>",
+                "value": "<module_var1>",
                 "type": "string",
             },
-            "base_field2": {
-                "machine_name": "base_field2",
+            "module_field2": {
+                "machine_name": "module_field2",
                 "field_type": "scientific_metadata",
-                "value": "<base_var2>",
+                "value": "<module_var2>",
                 "type": "string",
             },
         },
@@ -190,7 +195,7 @@ def test_schema_import_resolution(tmp_path: Path) -> None:
                 "value": "importing_value",
                 "value_type": "string",
             },
-            "base_var1": {
+            "module_var1": {
                 "source": "VALUE",
                 "value": "overridden_value",
                 "value_type": "string",
@@ -203,10 +208,10 @@ def test_schema_import_resolution(tmp_path: Path) -> None:
                 "value": "<importing_var>",
                 "type": "string",
             },
-            "base_field1": {
-                "machine_name": "base_field1",
+            "module_field1": {
+                "machine_name": "module_field1",
                 "field_type": "scientific_metadata",
-                "value": "<base_var1>",
+                "value": "<module_var1>",
                 "type": "string",
             },
         },
@@ -223,16 +228,16 @@ def test_schema_import_resolution(tmp_path: Path) -> None:
     loaded_schema = _load_json_schema(importing_schema_file)
     resolved_schema = _resolve_schema_imports(loaded_schema, importing_schema_file)
 
-    assert "base_var1" in resolved_schema["variables"]
-    assert "base_var2" in resolved_schema["variables"]
+    assert "module_var1" in resolved_schema["variables"]
+    assert "module_var2" in resolved_schema["variables"]
     assert "importing_var" in resolved_schema["variables"]
 
-    assert resolved_schema["variables"]["base_var1"]["value"] == "overridden_value"
-    assert resolved_schema["variables"]["base_var2"]["value"] == "base_value2"
+    assert resolved_schema["variables"]["module_var1"]["value"] == "overridden_value"
+    assert resolved_schema["variables"]["module_var2"]["value"] == "module_value2"
     assert resolved_schema["variables"]["importing_var"]["value"] == "importing_value"
 
-    assert "base_field1" in resolved_schema["schema"]
-    assert "base_field2" in resolved_schema["schema"]
+    assert "module_field1" in resolved_schema["schema"]
+    assert "module_field2" in resolved_schema["schema"]
     assert "importing_field" in resolved_schema["schema"]
 
     assert "import" not in resolved_schema
@@ -367,7 +372,7 @@ def test_schema_import_invalid_format_raises(tmp_path: Path) -> None:
 def test_schema_import_multiple_imports(tmp_path: Path) -> None:
     """Test importing from multiple schema files."""
     module_schema_1 = {
-        "id": "base-1",
+        "id": "module-1",
         "variables": {
             "var1": {"source": "VALUE", "value": "value1", "value_type": "string"}
         },
@@ -382,7 +387,7 @@ def test_schema_import_multiple_imports(tmp_path: Path) -> None:
     }
 
     module_schema_2 = {
-        "id": "base-2",
+        "id": "module-2",
         "variables": {
             "var2": {"source": "VALUE", "value": "value2", "value_type": "string"}
         },
@@ -398,7 +403,7 @@ def test_schema_import_multiple_imports(tmp_path: Path) -> None:
 
     importing_schema = {
         "id": "importing",
-        "import": ["base1.json", "base2.json"],
+        "import": ["module1.json", "module2.json"],
         "order": 1,
         "instrument": "Test",
         "selector": "filename:starts_with:test",
@@ -415,12 +420,12 @@ def test_schema_import_multiple_imports(tmp_path: Path) -> None:
         },
     }
 
-    base1_file = tmp_path / "base1.json"
-    base2_file = tmp_path / "base2.json"
+    module1_file = tmp_path / "module1.json"
+    module2_file = tmp_path / "module2.json"
     importing_file = tmp_path / "importing.json"
 
-    base1_file.write_text(json.dumps(module_schema_1))
-    base2_file.write_text(json.dumps(module_schema_2))
+    module1_file.write_text(json.dumps(module_schema_1))
+    module2_file.write_text(json.dumps(module_schema_2))
     importing_file.write_text(json.dumps(importing_schema))
 
     from scicat_metadata import _load_json_schema, _resolve_schema_imports
@@ -441,17 +446,17 @@ def test_schema_with_imports_can_be_loaded_as_metadata_schema(tmp_path: Path) ->
     """Test that a schema with imports can be successfully loaded as a MetadataSchema object."""
     module_schema = {
         "variables": {
-            "base_var": {
+            "module_var": {
                 "source": "VALUE",
-                "value": "base_value",
+                "value": "module_value",
                 "value_type": "string",
             }
         },
         "schema": {
-            "base_field": {
-                "machine_name": "base_field",
+            "module_field": {
+                "machine_name": "module_field",
                 "field_type": "scientific_metadata",
-                "value": "<base_var>",
+                "value": "<module_var>",
                 "type": "string",
             }
         },
@@ -463,7 +468,7 @@ def test_schema_with_imports_can_be_loaded_as_metadata_schema(tmp_path: Path) ->
         "order": 1,
         "instrument": "Test Instrument",
         "selector": "filename:starts_with:test",
-        "import": ["base.json"],
+        "import": ["module.json"],
         "variables": {
             "main_var": {
                 "source": "VALUE",
@@ -481,17 +486,17 @@ def test_schema_with_imports_can_be_loaded_as_metadata_schema(tmp_path: Path) ->
         },
     }
 
-    base_file = tmp_path / "base.json"
+    module_file = tmp_path / "module.json"
     importing_file = tmp_path / "importing.json"
 
-    base_file.write_text(json.dumps(module_schema))
+    module_file.write_text(json.dumps(module_schema))
     importing_file.write_text(json.dumps(importing_schema))
 
     schema = MetadataSchema.from_file(importing_file)
 
     assert schema.id == "test-schema"
     assert schema.name == "Test Schema"
-    assert "base_var" in schema.variables
+    assert "module_var" in schema.variables
     assert "main_var" in schema.variables
-    assert "base_field" in schema.schema
+    assert "module_field" in schema.schema
     assert "main_field" in schema.schema
