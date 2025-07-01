@@ -8,17 +8,17 @@
 -r base.txt
 babel==2.17.0
     # via mkdocs-material
-backrefs==5.8
+backrefs==5.9
     # via mkdocs-material
 beautifulsoup4==4.13.4
     # via mkdocs-mermaid2-plugin
-bracex==2.5.post1
+bracex==2.6
     # via wcmatch
-click==8.2.0
+click==8.2.1
     # via mkdocs
 colorama==0.4.6
     # via mkdocs-material
-editorconfig==0.17.0
+editorconfig==0.17.1
     # via jsbeautifier
 ghp-import==2.1.0
     # via mkdocs
@@ -33,7 +33,7 @@ jinja2==3.1.6
     #   mkdocs-material
 jsbeautifier==1.15.4
     # via mkdocs-mermaid2-plugin
-markdown==3.8
+markdown==3.8.2
     # via
     #   mkdocs
     #   mkdocs-material
@@ -56,9 +56,9 @@ mkdocs==1.6.1
     #   mkdocs-mermaid2-plugin
 mkdocs-get-deps==0.2.0
     # via mkdocs
-mkdocs-include-markdown-plugin==7.1.5
+mkdocs-include-markdown-plugin==7.1.6
     # via -r docs.in
-mkdocs-material==9.6.13
+mkdocs-material==9.6.14
     # via -r docs.in
 mkdocs-material-extensions==1.3.1
     # via mkdocs-material
@@ -72,7 +72,7 @@ pathspec==0.12.1
     # via mkdocs
 platformdirs==4.3.8
     # via mkdocs-get-deps
-pymdown-extensions==10.15
+pymdown-extensions==10.16
     # via
     #   mkdocs-material
     #   mkdocs-mermaid2-plugin
@@ -87,7 +87,7 @@ pyyaml==6.0.2
     #   mkdocs-get-deps
     #   pymdown-extensions
     #   pyyaml-env-tag
-pyyaml-env-tag==1.0
+pyyaml-env-tag==1.1
     # via
     #   mike
     #   mkdocs
@@ -97,15 +97,15 @@ six==1.17.0
     #   python-dateutil
 soupsieve==2.7
     # via beautifulsoup4
-typing-extensions==4.13.2
+typing-extensions==4.14.0
     # via beautifulsoup4
 verspec==0.1.0
     # via mike
 watchdog==6.0.0
     # via mkdocs
-wcmatch==10.0
+wcmatch==10.1
     # via mkdocs-include-markdown-plugin
-zipp==3.21.0
+zipp==3.23.0
     # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
