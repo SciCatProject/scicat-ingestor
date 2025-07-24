@@ -41,6 +41,107 @@ def _load_json_schema(schema_file_name: pathlib.Path) -> dict:
     return json.loads(schema_file_name.read_text())
 
 
+def _resolve_schema_imports(
+    schema: dict[str, Any],
+    schema_file_name: pathlib.Path,
+    caller_schemas: list[pathlib.Path] | None = None,
+    all_schemas: dict[str, tuple[dict[str, Any], pathlib.Path]] | None = None,
+) -> dict[str, Any]:
+    """
+    Resolve imports in the schema dictionary.
+
+    Imports are defined as a list of schema IDs to import.
+    The importer has priority over imported schemas in case of conflicts.
+
+    Args:
+        schema: The schema dictionary to resolve imports for
+        schema_file_name: Path to the current schema file
+        caller_schemas: List of schema file paths in the import chain to detect circular dependencies
+        all_schemas: Dictionary of all available schemas by ID, with (schema_data, file_path) tuples
+    """
+    if caller_schemas is None:
+        caller_schemas = []
+
+    if schema_file_name in caller_schemas:
+        raise ValueError(
+            "Circular dependency detected: "
+            f"{' -> '.join(str(p) for p in caller_schemas)} -> {schema_file_name}"
+        )
+
+    if "import" in schema:
+        if not isinstance(schema["import"], list):
+            raise ValueError("Import must be a list of schema IDs.")
+
+        if all_schemas is None:
+            all_schemas = _load_all_schemas_from_directory(schema_file_name.parent)
+
+        result_schema = schema.copy()
+        current_caller_schemas = [*caller_schemas, schema_file_name]
+
+        for import_id in schema["import"]:
+            if import_id not in all_schemas:
+                raise ValueError(
+                    f"Import schema ID '{import_id}' not found in available schemas."
+                )
+
+            imported_schema, imported_file_path = all_schemas[import_id]
+            resolved_imported_schema = _resolve_schema_imports(
+                imported_schema,
+                imported_file_path,
+                current_caller_schemas,
+                all_schemas,
+            )
+
+            for key, value in resolved_imported_schema.items():
+                if key == "import":
+                    continue
+                elif key in ["variables", "schema"]:
+                    if key not in result_schema:
+                        result_schema[key] = {}
+
+                    for sub_key, sub_value in value.items():
+                        if sub_key not in result_schema[key]:
+                            result_schema[key][sub_key] = sub_value
+                else:
+                    if key not in result_schema:
+                        result_schema[key] = value
+
+        result_schema.pop("import", None)
+        return result_schema
+
+    return schema
+
+
+def _load_all_schemas_from_directory(
+    base_dir: pathlib.Path,
+) -> dict[str, tuple[dict[str, Any], pathlib.Path]]:
+    """Load all schemas from a directory and its subdirectories, indexed by ID.
+
+    Returns a dictionary where keys are schema IDs and values are tuples of (schema_data, file_path).
+    """
+    schemas = {}
+
+    def _scan_directory(directory: pathlib.Path) -> None:
+        if not directory.exists():
+            return
+
+        for item in directory.iterdir():
+            if item.is_dir():
+                _scan_directory(item)
+            elif (
+                item.is_file()
+                and "imsc.json" in item.name
+                and not item.name.startswith(".")
+            ):
+                schema_data = _load_json_schema(item)
+                if "id" in schema_data:
+                    schemas[schema_data["id"]] = (schema_data, item)
+
+    _scan_directory(base_dir)
+
+    return schemas
+
+
 @dataclass(kw_only=True)
 class MetadataSchemaVariable:
     source: str
@@ -140,7 +241,10 @@ class MetadataSchema:
 
     @classmethod
     def from_file(cls, schema_file_name: pathlib.Path) -> "MetadataSchema":
-        return cls.from_dict(_load_json_schema(schema_file_name))
+        resolved_schema = _resolve_schema_imports(
+            _load_json_schema(schema_file_name), schema_file_name
+        )
+        return cls.from_dict(resolved_schema)
 
 
 def render_variable_value(var_value: Any, variable_registry: dict) -> str:
