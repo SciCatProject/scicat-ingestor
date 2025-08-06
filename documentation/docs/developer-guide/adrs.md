@@ -158,3 +158,14 @@ Another downside is that ``Yaml`` is less secure than ``json`` due to its flexib
 Service maintainers are expected to keep these configuration/schema files in a secured isolated environment<br>
 and we implement extra safety/validation layers of configuration/schema files in the relevant places.<br>
 For example, ``yaml`` must be loaded with ``safe_load`` method.
+
+### Supporting Tool for Transition
+We were already using ``json`` in our production environment so to make the transition smoother,<br>
+we implemented a tool that can translate ``json`` to ``yaml`` easily.
+
+```bash
+scicat_json_to_yaml --input-file PATH/TO/THE/JSON/FILE
+```
+
+It can be used for any configuration or schema files.
+
