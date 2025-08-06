@@ -12,7 +12,7 @@ In more detail, each schema file contains following information:
 | variables definition | How to construct a `local variable set`, i.e. variable `pid` is the string from `/entry/entry_identifier_uuid` in the nexus file. |
 | dataset creation | How to populate fields in a SciCat dataset using the `local variable set` |
 
-The schema files are written in `json` format and all have `imsc.json` extension.<br>
+The schema files are written in `yaml` format and all have `imsc.yml` extension.<br>
 `imsc` stands for SciCat `i`ngestor `m`etadata `sc`hema.<br>
 Each schema file has mandatory fields.
 

@@ -20,7 +20,7 @@ class DummyConfig:
 
 @pytest.fixture
 def template_config_file() -> Path:
-    return Path(__file__).parent / "../resources/config.sample.json"
+    return Path(__file__).parent / "../resources/config.sample.yml"
 
 
 def test_template_config_file_synchronized(template_config_file: Path) -> None:
@@ -34,10 +34,10 @@ def test_template_config_file_synchronized(template_config_file: Path) -> None:
     synchronize_config
     ```
     """
-    import json
+    import yaml
 
     assert (
-        json.loads(template_config_file.read_text())
+        yaml.safe_load(template_config_file.read_text())
         == OnlineIngestorConfig(config_file="").to_dict()
     )
 
@@ -46,11 +46,19 @@ def test_config_validator(template_config_file: Path) -> None:
     _validate_config_file(OnlineIngestorConfig, template_config_file)
 
 
+def test_config_validator_json_file_warns() -> None:
+    with pytest.warns(DeprecationWarning, match="deprecated. Please use YAML format"):
+        _validate_config_file(
+            OnlineIngestorConfig,
+            Path(__file__).parent / "resources/legacy_json_config.json",
+        )
+
+
 def test_config_validator_unused_args_raises() -> None:
     with pytest.raises(ValueError, match="Invalid argument found: \n\t\t- config_file"):
         _validate_config_file(
             DummyConfig,
-            Path(__file__).parent / "invalid_config.json",
+            Path(__file__).parent / "resources/invalid_config.yml",
         )
 
 

@@ -55,7 +55,7 @@ In the case of the ESS test environment, the command looks like this:
 ``` bash
 /root/micromamba/envs/scicat-ingestor/bin/python \
 /ess/services/scicat-ingestor/software/src/scicat_online_ingestor.py \
--c /ess/services/scicat-ingestor/config/scicat_ingestor_config.json
+-c /ess/services/scicat-ingestor/config/scicat_ingestor_config.yml
 ```
 
 ## Configuration

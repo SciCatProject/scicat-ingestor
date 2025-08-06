@@ -1,7 +1,7 @@
 # Offline Ingestor
 
 ``offline-ingestor`` is a simple command line interface.
-When it is called, ``offline-ingestor`` ingests one data file according to a specific schema file (.imsc.json).
+When it is called, ``offline-ingestor`` ingests one data file according to a specific schema file (.imsc.yml).
 
 !!! tip
 
@@ -41,7 +41,7 @@ the command could be:
 ```bash
 conda activate scicat-ingestor
 scicat_background_ingestor \
-    -c /ess/services/scicat-ingestor/config/scicat_ingestor_config.json \
+    -c /ess/services/scicat-ingestor/config/scicat_ingestor_config.yml \
     --nexus-file /ess/data/coda/2025/123321/raw/123321_000123456.hdf
 ```
 
@@ -49,7 +49,7 @@ or if you want to run the ingestor module directly,
 
 ```bash
 /root/micromamba/envs/scicat-ingestor/bin/python -m /ess/services/scicat-ingestor/software/src/scicat_offline_ingestor.py \
-    -c /ess/services/scicat-ingestor/config/scicat_ingestor_config.json \
+    -c /ess/services/scicat-ingestor/config/scicat_ingestor_config.yml \
     --nexus-file /ess/data/coda/2025/123321/raw/123321_000123456.hdf
 
 ```

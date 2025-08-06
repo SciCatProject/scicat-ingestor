@@ -9,6 +9,17 @@ import graypy
 from scicat_configuration import OfflineIngestorConfig, OnlineIngestorConfig
 
 
+def build_devtool_logger(tool_name: str) -> logging.Logger:
+    from rich.logging import RichHandler
+
+    logger = logging.getLogger(f'scicat-devtool-{tool_name}')
+
+    # Since it is a dev tool, we always set the level to DEBUG
+    logger.addHandler(RichHandler(level=logging.DEBUG, markup=True))
+    logger.setLevel(logging.DEBUG)
+    return logger
+
+
 def build_logger(
     config: OnlineIngestorConfig | OfflineIngestorConfig,
 ) -> logging.Logger:

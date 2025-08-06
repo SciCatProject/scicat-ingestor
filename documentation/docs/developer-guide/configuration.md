@@ -4,7 +4,7 @@ As `scicat-ingestor` communicates with various frameworks via network,
 there are many configurations to maintain and handle.
 
 Therefore we decided to group them as a nested dataclass and keep the dataclass as a source of truth.<br>
-Then it is exported as a json file in ``resources/config.sample.json`` which has all possible options with their<br>
+Then it is exported as a json file in ``resources/config.sample.yml`` which has all possible options with their<br>
 default values.
 > See [Architecture Decision Records](adrs.md#adr-001-use-dataclass-instead-of-jinja-or-dict-to-create-datasetdata-block-instances) to see why.
 

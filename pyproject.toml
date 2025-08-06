@@ -34,6 +34,7 @@ dependencies = [
   "h5py",
   "kafka-python",
   "requests",
+  "pyyaml>=6.0.2",
   "rich"
 ]
 
@@ -52,8 +53,14 @@ test = [
 [project.scripts]
 scicat_ingestor = "scicat_online_ingestor:main"
 scicat_background_ingestor = "scicat_offline_ingestor:main"
+# Dev Tools
 scicat_validate_ingestor_config = "scicat_configuration:validate_config_file"
+scicat_validate_metadata_schema = "scicat_metadata:validate_schema"
 scicat_synchronize_config = "scicat_configuration:synchronize_config_file"
+scicat_json_to_yaml = "scicat_configuration:json_to_yaml"
+    # We don't have to test this json to yaml script because we always check if
+    # the config/schema files match the dataclasses.
+    # It can be removed as soon as we stop supporting legacy JSON config files.
 
 [project.entry-points."scicat_ingestor.metadata_extractor"]
 max = "numpy:max"

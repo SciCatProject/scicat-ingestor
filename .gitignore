@@ -42,6 +42,8 @@ __pycache__/
 
 # User configuration
 config.*.json
+config.*.yaml
+config.*.yml
 
 # Log files
 *.log
