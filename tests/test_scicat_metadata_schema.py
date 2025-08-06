@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
-import json
 from collections import OrderedDict
 from pathlib import Path
 
 import pytest
+import yaml
 
 from scicat_metadata import (
     MetadataSchema,
@@ -21,12 +21,17 @@ ALL_SCHEMA_EXAMPLES = list_schema_file_names(
 
 @pytest.fixture
 def base_metadata_schema_file() -> Path:
-    return Path("resources/base.imsc.json.example")
+    return Path("resources/base.imsc.yml.example")
 
 
 @pytest.fixture
 def base_metadata_schema_dict(base_metadata_schema_file: Path) -> dict:
-    return json.loads(base_metadata_schema_file.read_text())
+    loaded_schema = yaml.safe_load(base_metadata_schema_file.read_text())
+    if not isinstance(loaded_schema, dict):
+        raise ValueError(
+            f"Invalid schema file {base_metadata_schema_file}. Schema must be a dictionary."
+        )
+    return loaded_schema
 
 
 def test_build_metadata_variables(base_metadata_schema_dict: dict):

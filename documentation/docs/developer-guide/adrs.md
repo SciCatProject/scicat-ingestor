@@ -136,3 +136,25 @@ data_file_item = {
     For example, there can be multiple kafka brokers so in principle we could allow a list of string as an argument type or a single string value.
     However we decided to keep it only as a string, and if multiple brokers are needed, user should write them joined by comma(,).
     On the other hand, access group option is always `list` even if there may be only one access group.
+
+## ADR-002: Use ``yaml`` instead of ``json`` for metadata schema and ingestor configuration.
+
+> Use ``yaml`` for human-interacting configuration files and ``json`` for communication between processes or services.
+
+### Reason
+``Yaml`` has better human readability compared to ``json`` and allows ``comments``.<br>
+It will be much easier with commenting allowed to share configuration details and context with other maintainers.
+
+We decided to make schema files modular.<br>
+It means service maintainers can build complicated metadata schema without duplicating schema files.<br>
+That means it should be easy to track intention/context of each module.<br>
+So ``comments`` feature of configuration file was prioritized to the robustness/performance of parsing the configuration.
+
+### Downside
+Parsing ``Yaml`` can be much slower than ``json`` if we have too complex structure.<br>
+However, we will avoid such structure of configuration as it is mainly written by human.
+
+Another downside is that ``Yaml`` is less secure than ``json`` due to its flexibility.<br>
+Service maintainers are expected to keep these configuration/schema files in a secured isolated environment<br>
+and we implement extra safety/validation layers of configuration/schema files in the relevant places.<br>
+For example, ``yaml`` must be loaded with ``safe_load`` method.

@@ -26,7 +26,7 @@ from scicat_metadata import (
     HIGH_LEVEL_METADATA_TYPE,
     SCIENTIFIC_METADATA_TYPE,
     VALID_METADATA_TYPES,
-    MetadataItem,
+    MetadataItemConfig,
     MetadataSchemaVariable,
     NexusFileMetadataVariable,
     ScicatMetadataVariable,
@@ -168,6 +168,16 @@ def _retrieve_values_from_file(
     else:
         value = _retrieve_as_string(h5file, variable_recipe.path)
     return value
+
+
+@dataclass(kw_only=True)
+class MetadataValueSpec:
+    value: Any
+    type: str
+    machine_name: str
+    human_name: str
+    unit: str | None = None
+    unit_hardcoded: bool | None = None
 
 
 def extract_variables_values(
@@ -463,8 +473,8 @@ def create_data_file_list(
 
 
 def _filter_by_field_type(
-    schemas: Iterable[MetadataItem], field_type: str
-) -> list[MetadataItem]:
+    schemas: Iterable[MetadataItemConfig], field_type: str
+) -> list[MetadataItemConfig]:
     return [field for field in schemas if field.field_type == field_type]
 
 
@@ -472,9 +482,28 @@ def _render_variable_as_type(value: Any, variable_map: dict, dtype: str) -> Any:
     return convert_to_type(render_variable_value(value, variable_map), dtype)
 
 
+@dataclass(kw_only=True)
+class MetadataItemValueSpec:
+    value: Any
+    type: str
+    human_name: str
+    unit: str
+    unit_hardcoded: bool
+
+
+def _retrieve_metadata_value_spec(
+    *,
+    variable_map: dict,
+    item_config: MetadataItemConfig,
+) -> MetadataItemValueSpec:
+    return MetadataItemValueSpec(
+        _render_variable_as_type(item_config.value, variable_map, item_config.type)
+    )
+
+
 def _create_scientific_metadata(
     *,
-    sm_schemas: list[MetadataItem],
+    sm_schemas: list[MetadataItemConfig],
     variable_map: dict,
 ) -> dict:
     """Create scientific metadata from the metadata schema configuration.
@@ -492,8 +521,8 @@ def _create_scientific_metadata(
     return {
         field.machine_name: {
             "value": _render_variable_as_type(field.value, variable_map, field.type),
-            "unit": getattr(field, "unit", ""),
-            "human_name": getattr(field, "human_name", field.machine_name),
+            "unit": field.unit or "",
+            "human_name": field.human_name or field.machine_name,
             "type": field.type,
         }
         for field in sm_schemas
@@ -501,7 +530,7 @@ def _create_scientific_metadata(
 
 
 def _validate_metadata_schemas(
-    metadata_schema: dict[str, MetadataItem],
+    metadata_schema: dict[str, MetadataItemConfig],
 ) -> None:
     invalid_types = [
         field.field_type
@@ -520,7 +549,7 @@ def _validate_metadata_schemas(
 
 def create_scicat_dataset_instance(
     *,
-    metadata_schema: dict[str, MetadataItem],  # metadata-schema["schema"]
+    metadata_schema: dict[str, MetadataItemConfig],  # metadata-schema["schema"]
     variable_map: dict,
     data_file_list: list[DataFileListItem],
     config: DatasetOptions,

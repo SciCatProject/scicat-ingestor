@@ -1,12 +1,17 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
+
+import argparse
 import json
+import logging
 import pathlib
 from collections import OrderedDict
 from collections.abc import Callable
 from dataclasses import dataclass
 from importlib.metadata import entry_points
 from typing import Any
+
+import yaml
 
 SCIENTIFIC_METADATA_TYPE = "scientific_metadata"
 HIGH_LEVEL_METADATA_TYPE = "high_level"
@@ -21,6 +26,16 @@ def load_metadata_extractors(extractor_name: str) -> Callable:
     ].load()
 
 
+def _is_file_name_valid(file_name: str) -> bool:
+    return (
+        (
+            'imsc.json' in file_name
+        )  # Should be removed once we stop supporting JSON schema files
+        or ('imsc.yml' in file_name)
+        or ('imsc.yaml' in file_name)
+    ) and not file_name.startswith('.')
+
+
 def list_schema_file_names(schemas_directory: pathlib.Path) -> list[pathlib.Path]:
     """
     Return a list of the metadata schema file names found in ``schemas_directory``.
@@ -33,12 +48,44 @@ def list_schema_file_names(schemas_directory: pathlib.Path) -> list[pathlib.Path
     return [
         schemas_directory / pathlib.Path(file_name)
         for file_name in os.listdir(schemas_directory)
-        if ("imsc.json" in file_name) and not file_name.startswith(".")
+        if _is_file_name_valid(file_name)
     ]
 
 
-def _load_json_schema(schema_file_name: pathlib.Path) -> dict:
-    return json.loads(schema_file_name.read_text())
+def _is_json_file(text: str) -> bool:
+    """Check if the text is a valid JSON file."""
+    try:
+        json.loads(text)
+        return True
+    except json.JSONDecodeError:
+        return False
+
+
+def _load_schema_file(schema_file_name: pathlib.Path) -> dict:
+    import warnings
+
+    text = schema_file_name.read_text()
+    if _is_json_file(text):
+        # If it is a JSON file, load it as JSON.
+        # We cannot use try-except here since `yaml.safe_load`
+        # can also load JSON strings.
+        warnings.warn(
+            "The json schema file format is deprecated. Please use YAML format.\n"
+            "You can dump the schema to YAML using `scicat-json-to-yaml` command."
+            "This warning will be removed from future versions.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+        return json.loads(text)
+    else:
+        loaded_schema = yaml.safe_load(text)
+
+    if not isinstance(loaded_schema, dict):
+        raise ValueError(
+            f"Invalid schema file {schema_file_name}. Schema must be a dictionary."
+        )
+
+    return loaded_schema
 
 
 @dataclass(kw_only=True)
@@ -75,12 +122,13 @@ class ValueMetadataVariable(MetadataSchemaVariable):
 
 
 @dataclass(kw_only=True)
-class MetadataItem:
+class MetadataItemConfig:
     machine_name: str
-    human_name: str
     field_type: str
     value: str
     type: str
+    human_name: str | None = None
+    unit: str | None = None
 
 
 def build_metadata_variables(
@@ -117,7 +165,7 @@ class MetadataSchema:
     selector: str | dict
     order: int
     variables: dict[str, MetadataSchemaVariable]
-    schema: dict[str, MetadataItem]
+    schema: dict[str, MetadataItemConfig]
 
     @classmethod
     def from_dict(cls, schema: dict) -> "MetadataSchema":
@@ -126,7 +174,7 @@ class MetadataSchema:
                 **schema,
                 "variables": build_metadata_variables(schema["variables"]),
                 "schema": {
-                    item_name: MetadataItem(
+                    item_name: MetadataItemConfig(
                         **{
                             "human_name": item["machine_name"],
                             # if the human name is not provided, use the machine name
@@ -140,7 +188,7 @@ class MetadataSchema:
 
     @classmethod
     def from_file(cls, schema_file_name: pathlib.Path) -> "MetadataSchema":
-        return cls.from_dict(_load_json_schema(schema_file_name))
+        return cls.from_dict(_load_schema_file(schema_file_name))
 
 
 def render_variable_value(var_value: Any, variable_registry: dict) -> str:
@@ -238,3 +286,87 @@ def select_applicable_schema(
             return schema
 
     raise Exception("No applicable metadata schema configuration found!!")
+
+
+def _parse_args() -> argparse.Namespace:
+    arg_parser = argparse.ArgumentParser(
+        description="Validate the metadata schema files."
+    )
+    arg_parser.add_argument(
+        type=str,
+        help="Schema file/directory path (imsc) to validate. If a directory is passed, "
+        "all schema files in the directory will be validated.",
+        dest="schema_file",
+    )
+    return arg_parser.parse_args()
+
+
+def _collect_target_files(
+    schema_file: pathlib.Path, logger: logging.Logger
+) -> list[pathlib.Path]:
+    if not schema_file.exists():
+        raise FileNotFoundError(f"Schema file(location) {schema_file} does not exist.")
+    elif schema_file.is_dir():
+        logger.info("Collecting schema files from the directory `%s`...", schema_file)
+        schema_files = list_schema_file_names(schema_file)
+        if not schema_files:
+            raise FileNotFoundError(
+                f"No schema files found in the directory {schema_file}."
+            )
+        file_list = '\n - '.join([file_path.name for file_path in schema_files])
+        logger.info("Found %d schema files.\n - %s", len(schema_files), file_list)
+    else:
+        schema_files = [schema_file]
+
+    return schema_files
+
+
+def _validate_file(schema_file: pathlib.Path, logger: logging.Logger) -> bool:
+    # Check if it is a json file
+    if _is_json_file(schema_file.read_text()):
+        logger.warning(
+            "Schema file [yellow]%s[/yellow] is in "
+            "[bold yellow]JSON[/bold yellow] format. "
+            "It is recommended to use [bold yellow]YAML[/bold yellow] format for new schema files.",
+            schema_file,
+        )
+        return False
+    # Try building the `MetadataSchema` from the file.
+    try:
+        MetadataSchema.from_file(schema_file)
+        msg = "Schema file [green]%s[/ green] is [bold green]VALID[/bold green]."
+        logger.info(msg, schema_file)
+    except Exception as e:
+        msg = "Schema file [red]%s[/red] is [bold red]INVALID[/bold red]: %s"
+        logger.error(msg, schema_file.name, e)
+        return False
+
+    return True
+
+
+def validate_schema() -> None:
+    """Validate the schema file."""
+    from pathlib import Path
+
+    from scicat_logging import build_devtool_logger
+
+    # Parse command line arguments
+    args = _parse_args()
+    # Build a logger
+    logger = build_devtool_logger("validate-schema-file")
+    logger.info("Scicat ingestor metadata schema files validation test.")
+    logger.info("It only validates if the schema file has a valid structure.")
+
+    # Collect schema files
+    schema_files = _collect_target_files(Path(args.schema_file), logger)
+    logger.info("Validating %d schema files...", len(schema_files))
+
+    # Collect validities of all files first
+    # to avoid stopping on the first invalid file.
+    validities = [_validate_file(schema_file, logger) for schema_file in schema_files]
+    if all(validities):
+        logger.info("All schema files are valid.")
+    else:
+        error_msg = "One or more schema files are invalid. Please check the logs."
+        logger.error(error_msg)
+        raise ValueError(error_msg)

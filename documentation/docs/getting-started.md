@@ -24,7 +24,7 @@ pip install -e .  # It will allow you to use entry-points of the scripts,
 ## Configuration
 
 You can use a json file to configure options.<br>
-There is a template, ``resources/config.sample.json`` you can copy/paste to make your own configuration file.
+There is a template, ``resources/config.sample.yml`` you can copy/paste to make your own configuration file.
 
 !!! tip
 
@@ -78,7 +78,7 @@ scicat_background_ingestor \
     --logging.verbose \
     -c PATH_TO_CONFIGURATION_FILE.yaml \
     --nexus-file PATH_TO_THE_NEXUS_FILE.nxs \
-    --done-writing-message-file PATH_TO_THE_MESSAGE_FILE.json
+    --done-writing-message-file PATH_TO_THE_MESSAGE_FILE.yml
 ```
 
 ### Dry run
@@ -94,6 +94,6 @@ scicat_background_ingestor \
     --logging.verbose \
     -c PATH_TO_CONFIGURATION_FILE.yaml \
     --nexus-file PATH_TO_THE_NEXUS_FILE.nxs \
-    --done-writing-message-file PATH_TO_THE_MESSAGE_FILE.json \
+    --done-writing-message-file PATH_TO_THE_MESSAGE_FILE.yml \
     --ingestion.dry-run
 ```

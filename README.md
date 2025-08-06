@@ -46,7 +46,7 @@ scicat_background_ingestor \
     --logging.verbose \
     -c PATH_TO_CONFIGURATION_FILE.yaml \
     --nexus-file PATH_TO_THE_NEXUS_FILE.nxs \
-    --done-writing-message-file PATH_TO_THE_MESSAGE_FILE.json
+    --done-writing-message-file PATH_TO_THE_MESSAGE_FILE.yml
 ```
 
 ### Dry run
@@ -62,20 +62,20 @@ scicat_background_ingestor \
     --logging.verbose \
     -c PATH_TO_CONFIGURATION_FILE.yaml \
     --nexus-file PATH_TO_THE_NEXUS_FILE.nxs \
-    --done-writing-message-file PATH_TO_THE_MESSAGE_FILE.json \
+    --done-writing-message-file PATH_TO_THE_MESSAGE_FILE.yml \
     --ingestion.dry-run
 ```
 
 ## Configuration
 
 You can use a json file to configure options.
-There is a template, ``resources/config.sample.json`` you can copy/paste to make your own configuration file.
+There is a template, ``resources/config.sample.yml`` you can copy/paste to make your own configuration file.
 
 In order to update the configurations, you should update it the ``scicat_configuration`` module.
 
 The template file can be synchronized automatically by ``scicat_synchronize_config`` command.
 
-**There is a unit test that checks if the online ingestor configuration dataclass is in sync with the ``resources/config.sample.json``.**
+**There is a unit test that checks if the online ingestor configuration dataclass is in sync with the ``resources/config.sample.yml``.**
 
 ### Configuration Validator
 

@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 import argparse
+import json
 import logging
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field, is_dataclass
@@ -11,15 +12,44 @@ from types import MappingProxyType
 from typing import Any, TypeVar, get_origin
 from urllib.parse import urljoin
 
+import yaml
+
+
+def _is_json_file(text: str) -> bool:
+    """Check if the text is a valid JSON file."""
+    try:
+        json.loads(text)
+        return True
+    except json.JSONDecodeError:
+        return False
+
 
 def _load_config(config_file: Path) -> dict:
     """Load configuration from the configuration file path."""
-    import json
+    import warnings
 
     if config_file.is_file():
-        return json.loads(config_file.read_text())
+        text = config_file.read_text()
+        if _is_json_file(text):
+            # If it is a JSON file, load it as JSON.
+            # We cannot use try-except here since `yaml.safe_load`
+            # can also load JSON strings.
+            warnings.warn(
+                "The json configuration file format is deprecated. Please use YAML format.\n"
+                "You can dump the configuration to YAML using `scicat-json-to-yaml` command."
+                "This warning will be removed from future versions.",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+        loaded_config = yaml.safe_load(text)
     else:
         raise FileNotFoundError(f"Configuration file not found: {config_file}")
+
+    if not isinstance(loaded_config, dict):
+        raise ValueError(
+            f"Dictionary configuration was expected but got {type(loaded_config).__name__}."
+        )
+    return loaded_config
 
 
 def _insert_item(d: dict, key: str, value: Any) -> None:
@@ -416,7 +446,7 @@ def _validate_config_file(target_type: type[T], config_file: Path) -> T:
 
 def validate_config_file() -> None:
     """Validate the configuration file."""
-    import logging
+    from .scicat_logging import build_devtool_logger
 
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument(
@@ -424,9 +454,7 @@ def validate_config_file() -> None:
     )
     config_file = Path(arg_parser.parse_args().config_file)
 
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)  # Always debug level since it is for validation
-    logger.addHandler(logging.StreamHandler())
+    logger = build_devtool_logger("json-to-yaml")
     logger.info("Scicat file ingestor configuration file validation test.")
     logger.info("Note that it does not validate type of the field.")
     logger.debug("It only validate the file for %s.", OnlineIngestorConfig)
@@ -445,11 +473,56 @@ def synchronize_config_file() -> None:
     """Synchronize the configurations from the dataclass and json file."""
     import json
 
-    config_file_from_repo = Path("resources/config.sample.json")
+    config_file_from_repo = Path("resources/config.sample.yml")
     default_config = OnlineIngestorConfig(config_file="")
 
     target_file = Path(__file__).parent.parent / config_file_from_repo
     target_file.write_text(json.dumps(default_config.to_dict(), indent=2) + "\n")
+
+
+def json_to_yaml() -> None:
+    import argparse
+    import json
+    from pathlib import Path
+
+    import yaml
+
+    from scicat_logging import build_devtool_logger
+
+    logger = build_devtool_logger("json-to-yaml")
+
+    parser = argparse.ArgumentParser(description="Convert JSON to YAML.")
+    parser.add_argument(
+        "--input-file", type=str, help="Input JSON file.", required=True
+    )
+    parser.add_argument(
+        "--output-file",
+        type=str,
+        help="Output YAML file. If not specified, "
+        "output file path will be the path of the input file "
+        "with `.json` replaced by `.yml.`",
+        default=None,
+    )
+
+    args = parser.parse_args()
+
+    output_file_path = args.output_file
+    if output_file_path is None:
+        output_file_path = args.input_file.replace(".json", ".yml")
+
+    if (output_file_path := Path(output_file_path)).exists():
+        answer = input(
+            f"Output file {output_file_path} already exists. Do you want to overwrite it? (y/n): "
+        )
+        if answer.lower() != "y":
+            logger.info("Operation cancelled.")
+            return
+
+    with Path(args.input_file).open("r") as json_file:
+        json_data = json.load(json_file)
+
+    with output_file_path.open("w") as yaml_file:
+        yaml.dump(json_data, yaml_file, sort_keys=False)
 
 
 if __name__ == "__main__":
