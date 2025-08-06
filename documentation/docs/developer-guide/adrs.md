@@ -168,4 +168,3 @@ scicat_json_to_yaml --input-file PATH/TO/THE/JSON/FILE
 ```
 
 It can be used for any configuration or schema files.
-
