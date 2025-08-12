@@ -267,7 +267,7 @@ def _select_applicable_schema(
 ) -> bool:
     if isinstance(selector, str):
         # filename:starts_with:/ess/data/coda
-        if (selector_args := selector.split(":")) != 3:
+        if len(selector_args := selector.split(":")) != 3:
             return False
         select_target_name, select_function_name, select_argument = selector_args
         if select_target_name in ["filename"]:
