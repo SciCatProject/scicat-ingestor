@@ -2,7 +2,7 @@ order: 1
 id: supposedly-long-uuid
 name: Metadata Schema For Testing
 instrument: scicat-ingestor
-selector: ''
+selector: 'file_name:starts_with:/'
 variables:
   # NXS variables
   pid:

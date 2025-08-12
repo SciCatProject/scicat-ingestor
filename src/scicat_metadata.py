@@ -267,7 +267,9 @@ def _select_applicable_schema(
 ) -> bool:
     if isinstance(selector, str):
         # filename:starts_with:/ess/data/coda
-        select_target_name, select_function_name, select_argument = selector.split(":")
+        if (selector_args := selector.split(":")) != 3:
+            return False
+        select_target_name, select_function_name, select_argument = selector_args
         if select_target_name in ["filename"]:
             select_target_value = filename
         else:
@@ -345,6 +347,47 @@ def _collect_target_files(
     return schema_files
 
 
+def _validate_mandatory_machine_names(
+    schema: MetadataSchema, file_name: str, logger: logging.Logger
+) -> bool:
+    MANDATORY_MACHINE_NAMES = {
+        'datasetName',
+        'principalInvestigator',
+        'creationLocation',
+        'owner',
+        'ownerEmail',
+        'sourceFolder',
+        'contactEmail',
+        'creationTime',
+    }
+    machine_names = {field.machine_name for field in schema.schema.values()}
+    if not MANDATORY_MACHINE_NAMES.issubset(machine_names):
+        missing = MANDATORY_MACHINE_NAMES - machine_names
+        logger.error(
+            "Schema file [red]%s[/red] is missing mandatory fields: [yellow]%s[/yellow]",
+            file_name,
+            '[/yellow], [yellow]'.join(missing),
+        )
+        return False
+    return True
+
+
+def _validate_schema_selector(selector: str | dict, logger: logging.Logger) -> bool:
+    if isinstance(selector, str):
+        if len(selector.split(":")) != 3:
+            logger.error(
+                "Invalid selector format: '[yellow]%s[/yellow]' "
+                "Selector should be <bold>field:fiter_type:value</bold>",
+                selector,
+            )
+            return False
+    elif isinstance(selector, dict):
+        for conditions in selector.values():
+            return all(_validate_schema_selector(item, logger) for item in conditions)
+
+    return True
+
+
 def _validate_file(schema_file: pathlib.Path, logger: logging.Logger) -> bool:
     # Check if it is a json file
     if _is_json_file(schema_file.read_text()):
@@ -369,24 +412,9 @@ def _validate_file(schema_file: pathlib.Path, logger: logging.Logger) -> bool:
     # Manually check mandatory machine names
     # They are part of fields of `scicat_dataset.ScicatDataset` dataclass.
     # Some of the mandatory arguments are not filled by schema definition.
-    MANDATORY_MACHINE_NAMES = {
-        'datasetName',
-        'principalInvestigator',
-        'creationLocation',
-        'owner',
-        'ownerEmail',
-        'sourceFolder',
-        'contactEmail',
-        'creationTime',
-    }
-    machine_names = {field.machine_name for field in schema.schema.values()}
-    if not MANDATORY_MACHINE_NAMES.issubset(machine_names):
-        missing = MANDATORY_MACHINE_NAMES - machine_names
-        logger.error(
-            "Schema file [red]%s[/red] is missing mandatory fields: [yellow]%s[/yellow]",
-            schema_file.name,
-            '[/yellow], [yellow]'.join(missing),
-        )
+    if not _validate_mandatory_machine_names(schema, schema_file.name, logger):
+        return False
+    if not _validate_schema_selector(schema.selector, logger):
         return False
 
     return True
