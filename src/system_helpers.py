@@ -63,7 +63,7 @@ def handle_daemon_loop_exceptions(
             ignored_err,
         )
     except Exception as e:
-        logger.error("An exception occurred: %s", e)
+        logger.exception("An exception occurred: %s", e)
         exit(logger, unexpected=True)
     else:
         logger.error("Loop finished unexpectedly.")
@@ -82,7 +82,7 @@ def handle_exceptions(
     try:
         yield
     except Exception as e:
-        logger.error("An exception occurred: %s", e)
+        logger.exception("An exception occurred: %s", e)
         exit(logger, unexpected=True)
     else:
         exit(logger, unexpected=False)
