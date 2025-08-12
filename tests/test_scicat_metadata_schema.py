@@ -1,13 +1,17 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 from collections import OrderedDict
+from collections.abc import Generator
 from pathlib import Path
 
+import h5py
 import pytest
 import yaml
 
+from scicat_configuration import OfflineIngestorConfig
 from scicat_metadata import (
     MetadataSchema,
+    MetadataVariableValueSpec,
     build_metadata_variables,
     collect_schemas,
     list_schema_file_names,
@@ -147,3 +151,191 @@ def test_metadata_schema_selection_wrong_selector_function_name_raises() -> None
                 }
             ),
         )
+
+
+@pytest.fixture(scope="module")
+def example_nexus_file_for_schema_test(tmp_path_factory: pytest.TempdirFactory) -> Path:
+    tmp_path = Path(tmp_path_factory.mktemp("example_nexus_file_for_schema_tests"))
+    example_file = tmp_path / "nexus_for_testing.h5"
+    with h5py.File(example_file, "w") as f:
+        entry_gr = f.create_group("/entry")
+        entry_gr.create_dataset("entry_identifier_uuid", data=["supposedly-long-uuid"])
+        entry_gr.create_dataset("experiment_identifier", data=["123456"])
+        instrument_gr = entry_gr.create_group("instrument")
+        instrument_gr.create_dataset("name", data=["Test Instrument"])
+        detectors = instrument_gr.create_group("detectors")
+        det_1 = detectors.create_group('detector_1')
+        det_2 = detectors.create_group('detector_2')
+        det_3 = detectors.create_group('zdet_3')  # Purposely not matching pattern
+        for i, det in enumerate((det_1, det_2, det_3)):
+            det.create_dataset("name", data=[f"Detector Name {i + 1}"])
+
+        sample_gr = entry_gr.create_group("sample")
+        temperature = sample_gr.create_dataset("temperature", data=[300.0])
+        temperature.attrs["units"] = "K"
+
+    return example_file
+
+
+@pytest.fixture(scope="module")
+def nexus_file(
+    example_nexus_file_for_schema_test: Path,
+) -> Generator[h5py.File, None, None]:
+    with h5py.File(example_nexus_file_for_schema_test, "r") as f:
+        yield f
+
+
+@pytest.fixture(scope="module")
+def example_schema() -> MetadataSchema:
+    import logging
+    from typing import cast
+
+    import yaml
+
+    from scicat_metadata import _validate_file
+
+    # Turn this yaml string into a stream
+    _example_schema = Path(__file__).parent / "resources/example_schema.imsc.yml"
+    # Check if the example schema is valid first
+    if not _validate_file(_example_schema, logger=logging.getLogger(__name__)):
+        raise ValueError(
+            "Invalid example schema. "
+            "Use ``scicat_validate_metadata_schema`` to validate it first."
+        )
+
+    return MetadataSchema.from_dict(
+        cast(dict, yaml.safe_load(_example_schema.read_text()))
+    )
+
+
+@pytest.fixture(scope="module")
+def offline_config(example_nexus_file_for_schema_test: Path) -> OfflineIngestorConfig:
+    config = OfflineIngestorConfig(
+        nexus_file=example_nexus_file_for_schema_test.as_posix(),
+        done_writing_message_file="",
+        config_file="",
+        id="",
+    )
+    config.ingestion.file_handling.ingestor_files_directory = (
+        example_nexus_file_for_schema_test.parent.as_posix()
+    )
+    return config
+
+
+def test_metadata_variable_default_variables(
+    nexus_file: h5py.File,
+    offline_config: OfflineIngestorConfig,
+) -> None:
+    import datetime
+    import uuid
+
+    from scicat_dataset import extract_variables_values
+
+    example_id = uuid.uuid4().hex
+    variable_values = extract_variables_values(
+        variables={},  # Empty variable configuration maps
+        h5file=nexus_file,
+        schema_id=example_id,
+        config=offline_config,
+    )
+    nexus_file_path = Path(offline_config.nexus_file)
+    assert isinstance(variable_values['ingestor_run_id'].value, str)
+    assert variable_values['data_file_path'].value == nexus_file_path.as_posix()
+    assert variable_values['data_file_name'].value == nexus_file_path.name
+    # Just check if it can be parsed as a datetime
+    datetime.datetime.fromisoformat(variable_values['now'].value)
+    assert (
+        variable_values['ingestor_files_directory'].value
+        == nexus_file_path.parent.as_posix()
+    )
+    assert variable_values['ingestor_metadata_schema_id'].value == example_id
+    assert all(
+        isinstance(value, MetadataVariableValueSpec)
+        for value in variable_values.values()
+    )
+
+
+def test_metadata_variable_nexus(
+    nexus_file: h5py.File,
+    example_schema: MetadataSchema,
+    offline_config: OfflineIngestorConfig,
+) -> None:
+    from scicat_dataset import extract_variables_values
+
+    variable_values = extract_variables_values(
+        variables=example_schema.variables,
+        h5file=nexus_file,
+        schema_id=example_schema.id,
+        config=offline_config,
+    )
+    assert variable_values['pid'] == MetadataVariableValueSpec(
+        value='supposedly-long-uuid'
+    )
+    assert variable_values['proposal_id'] == MetadataVariableValueSpec(value="123456")
+    assert variable_values['instrument_name'] == MetadataVariableValueSpec(
+        value='Test Instrument'
+    )
+    assert variable_values['detector_names_list'] == MetadataVariableValueSpec(
+        value=["Detector Name 1", "Detector Name 2"]
+    )
+    assert variable_values['detector_names_all'] == MetadataVariableValueSpec(
+        value=["Detector Name 1", "Detector Name 2", "Detector Name 3"]
+    )
+    assert variable_values['sample_temperature'] == MetadataVariableValueSpec(
+        value=300.0, unit="K"
+    )
+
+
+def test_metadata_variable_raw_values(
+    nexus_file: h5py.File,
+    example_schema: MetadataSchema,
+    offline_config: OfflineIngestorConfig,
+) -> None:
+    from scicat_dataset import extract_variables_values
+
+    variable_values = extract_variables_values(
+        variables=example_schema.variables,
+        h5file=nexus_file,
+        schema_id=example_schema.id,
+        config=offline_config,
+    )
+    assert variable_values['detector_names'] == MetadataVariableValueSpec(
+        value="Detector Name 1, Detector Name 2"
+    )
+    assert variable_values['access_groups'] == MetadataVariableValueSpec(
+        value=["dmsc-staff", "ess_proposal_123456"]
+    )
+
+
+def test_metadata_schema_items(
+    nexus_file: h5py.File,
+    example_schema: MetadataSchema,
+    offline_config: OfflineIngestorConfig,
+) -> None:
+    """This test is techniqually about creating ScicatDataset instance
+    but currently we do not build schema items separately before
+    creating a dataset.
+
+    Therefore we test if the schema items are rendered correctly by
+    building ``ScicatDataset`` instance.
+    """
+    import logging
+
+    from scicat_dataset import create_scicat_dataset_instance, extract_variables_values
+
+    variable_values = extract_variables_values(
+        variables=example_schema.variables,
+        h5file=nexus_file,
+        schema_id=example_schema.id,
+        config=offline_config,
+    )
+    dataset = create_scicat_dataset_instance(
+        metadata_schema=example_schema.schema,
+        variable_map=variable_values,
+        data_file_list=[],
+        config=offline_config.dataset,
+        logger=logging.getLogger(__name__),
+    )
+    assert dataset.pid == 'supposedly-long-uuid'
+    assert dataset.scientificMetadata['sample_temperature']['value'] == '300.0'
+    assert dataset.scientificMetadata['sample_temperature']['unit'] == 'K'

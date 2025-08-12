@@ -1,0 +1,115 @@
+order: 1
+id: supposedly-long-uuid
+name: Metadata Schema For Testing
+instrument: scicat-ingestor
+selector: ''
+variables:
+  # NXS variables
+  pid:
+    source: NXS
+    path: /entry/entry_identifier_uuid
+    value_type: string
+  proposal_id:
+    source: NXS
+    path: /entry/experiment_identifier
+    value_type: string
+  instrument_name:
+    source: NXS
+    path: /entry/instrument/name
+    value_type: string
+  detector_names_all:
+    source: NXS
+    path: /entry/instrument/detectors/*/name
+    value_type: string[]
+  detector_names_list:
+    source: NXS
+    path: /entry/instrument/detectors/detector_*/name
+    value_type: string[]
+  sample_temperature:
+    source: NXS
+    path: /entry/sample/temperature
+    value_type: float
+  # VALUE type variables
+  detector_names:
+    source: VALUE
+    operator: join_with_space
+    value: <detector_names_list>
+    value_type: string
+  access_groups:
+    source: VALUE
+    value:
+    - dmsc-staff
+    - ess_proposal_<proposal_id>
+    value_type: string[]
+schema:
+  pid:
+    field_type: high_level
+    machine_name: pid
+    value: <pid>
+    type: string
+  proposal_id:
+    field_type: high_level
+    machine_name: proposalId
+    value: <proposal_id>
+    type: string
+  detector_names:
+    field_type: scientific_metadata
+    machine_name: detector_names
+    human_name: Detector Names
+    value: <detector_names>
+    type: string
+  sample_temperature:
+    field_type: scientific_metadata
+    machine_name: sample_temperature
+    human_name: Sample Temperature
+    value: <sample_temperature>
+    type: string
+  # Mandatory schema items (machine name)
+  source_folder:
+    field_type: high_level
+    machine_name: sourceFolder
+    human_name: Source Folder
+    value: ''
+    type: string
+  principal_investigator:
+    field_type: high_level
+    machine_name: principalInvestigator
+    human_name: Principal Investigator
+    value: ''
+    type: string
+  owner:
+    field_type: high_level
+    machine_name: owner
+    human_name: Owner
+    value: ''
+    type: string
+  creation_location:
+    field_type: high_level
+    machine_name: creationLocation
+    human_name: Creation Location
+    value: ''
+    type: string
+  creation_time:
+    field_type: high_level
+    machine_name: creationTime
+    human_name: Creation Time
+    value: ''
+    type: string
+  owner_email:
+    field_type: high_level
+    machine_name: ownerEmail
+    human_name: Owner Email
+    value: ''
+    type: string
+  dataset_name:
+    field_type: high_level
+    machine_name: datasetName
+    human_name: Dataset Name
+    value: ''
+    type: string
+  contact_email:
+    field_type: high_level
+    machine_name: contactEmail
+    human_name: Contact Email
+    value: ''
+    type: string

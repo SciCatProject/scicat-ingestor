@@ -89,20 +89,34 @@ def _load_schema_file(schema_file_name: pathlib.Path) -> dict:
 
 
 @dataclass(kw_only=True)
-class MetadataSchemaVariable:
-    source: str
-    value_type: str
+class MetadataVariableValueSpec:
+    """Value and unit retrieved according to `MetadataVariableConfig`."""
+
+    value: Any
+    unit: str = ""
 
 
 @dataclass(kw_only=True)
-class NexusFileMetadataVariable(MetadataSchemaVariable):
+class MetadataVariableConfig:
+    source: str
+    value_type: str
+    unit: str = ""
+    """Hardcoded unit for metadata variable.
+
+    We are not using ``None`` since scicat understands
+    ``None`` and an empty string as same units.
+    """
+
+
+@dataclass(kw_only=True)
+class VariableConfigNexusFile(MetadataVariableConfig):
     """Metadata variable that is extracted from the nexus file."""
 
     path: str
 
 
 @dataclass(kw_only=True)
-class ScicatMetadataVariable(MetadataSchemaVariable):
+class VariableConfigScicat(MetadataVariableConfig):
     """Metadata variable that is extracted from the scicat backend."""
 
     url: str
@@ -110,7 +124,7 @@ class ScicatMetadataVariable(MetadataSchemaVariable):
 
 
 @dataclass(kw_only=True)
-class ValueMetadataVariable(MetadataSchemaVariable):
+class VariableConfigValue(MetadataVariableConfig):
     """Metadata variable that is from the variable map."""
 
     operator: str = ""
@@ -133,19 +147,19 @@ class MetadataItemConfig:
 
 def build_metadata_variables(
     variables: dict[str, dict[str, str]],
-) -> dict[str, MetadataSchemaVariable]:
+) -> dict[str, MetadataVariableConfig]:
     """
     Return a dictionary of metadata variables from the ``variables`` dictionary.
     """
 
-    def _build_metadata_variable(variable: dict[str, str]) -> MetadataSchemaVariable:
+    def _build_metadata_variable(variable: dict[str, str]) -> MetadataVariableConfig:
         match variable["source"]:
             case "NXS":
-                return NexusFileMetadataVariable(**variable)
+                return VariableConfigNexusFile(**variable)
             case "SC":
-                return ScicatMetadataVariable(**variable)
+                return VariableConfigScicat(**variable)
             case "VALUE":
-                return ValueMetadataVariable(**variable)
+                return VariableConfigValue(**variable)
             case _:
                 raise ValueError(
                     f"Invalid source name: {variable['source']} for variable {variable}"
@@ -164,7 +178,7 @@ class MetadataSchema:
     instrument: str
     selector: str | dict
     order: int
-    variables: dict[str, MetadataSchemaVariable]
+    variables: dict[str, MetadataVariableConfig]
     schema: dict[str, MetadataItemConfig]
 
     @classmethod
@@ -191,21 +205,31 @@ class MetadataSchema:
         return cls.from_dict(_load_schema_file(schema_file_name))
 
 
-def render_variable_value(var_value: Any, variable_registry: dict) -> str:
+def _maybe_single_variable(val: str) -> bool:
+    return val.startswith("<") and val.endswith(">")
+
+
+def render_variable_value(
+    var_value: str | dict | float,
+    variable_registry: dict[str, MetadataVariableValueSpec],
+) -> MetadataVariableValueSpec:
     # if input is not a string it converts it to string
     output_value = var_value if isinstance(var_value, str) else json.dumps(var_value)
 
     # If it is only one variable, then it is a simple replacement
     if (
-        var_key := output_value.removesuffix(">").removeprefix("<")
-    ) in variable_registry:
+        _maybe_single_variable(output_value)
+        and (var_key := output_value.removesuffix(">").removeprefix("<"))
+        in variable_registry
+    ):
         return variable_registry[var_key]
 
     # If it is a complex variable, then it is a combination of variables
     # similar to f-string in python
+    # In this case, we do not forward unit
     for reg_var_name, reg_var_value in variable_registry.items():
         output_value = output_value.replace(
-            "<" + reg_var_name + ">", str(reg_var_value)
+            "<" + reg_var_name + ">", str(reg_var_value.value)
         )
 
     if "<" in output_value and ">" in output_value:
@@ -214,7 +238,7 @@ def render_variable_value(var_value: Any, variable_registry: dict) -> str:
     output_value = (
         output_value if isinstance(var_value, str) else json.loads(output_value)
     )
-    return output_value
+    return MetadataVariableValueSpec(value=output_value)
 
 
 def collect_schemas(dir_path: pathlib.Path) -> OrderedDict[str, MetadataSchema]:
@@ -333,12 +357,36 @@ def _validate_file(schema_file: pathlib.Path, logger: logging.Logger) -> bool:
         return False
     # Try building the `MetadataSchema` from the file.
     try:
-        MetadataSchema.from_file(schema_file)
+        schema = MetadataSchema.from_file(schema_file)
         msg = "Schema file [green]%s[/ green] is [bold green]VALID[/bold green]."
         logger.info(msg, schema_file)
     except Exception as e:
         msg = "Schema file [red]%s[/red] is [bold red]INVALID[/bold red]: %s"
         logger.error(msg, schema_file.name, e)
+        return False
+
+    # Validate schema
+    # Manually check mandatory machine names
+    # They are part of fields of `scicat_dataset.ScicatDataset` dataclass.
+    # Some of the mandatory arguments are not filled by schema definition.
+    MANDATORY_MACHINE_NAMES = {
+        'datasetName',
+        'principalInvestigator',
+        'creationLocation',
+        'owner',
+        'ownerEmail',
+        'sourceFolder',
+        'contactEmail',
+        'creationTime',
+    }
+    machine_names = {field.machine_name for field in schema.schema.values()}
+    if not MANDATORY_MACHINE_NAMES.issubset(machine_names):
+        missing = MANDATORY_MACHINE_NAMES - machine_names
+        logger.error(
+            "Schema file [red]%s[/red] is missing mandatory fields: [yellow]%s[/yellow]",
+            schema_file.name,
+            '[/yellow], [yellow]'.join(missing),
+        )
         return False
 
     return True
