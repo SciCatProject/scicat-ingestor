@@ -83,9 +83,23 @@ _SHORTENED_ARG_NAMES = MappingProxyType(
     }
 )
 
+file_handling_help = {
+    "data-file-open-max-tries": "How many times to try opening a data file before giving up.",
+    "data-file-open-retry-delay": "A list of retry delays for opening a data file. "
+    "If a shorter list is provided than ``data-file-open-max-retries``, "
+    "the last value will be used for all remaining retries. "
+    "If the list is empty, the default value of 3 seconds will be used for all retries. "
+    "Retry delay should be between 1 and 15 seconds. "
+    "Any number outside this range will be clamped to the nearest boundary.",
+}
+
 _HELP_TEXT = {
     "config-file": "Path to the configuration file.",
     "ingestion.dry-run": "Dry run mode. No data will be sent to SciCat.",
+    **{
+        "ingestion.file-handling." + key: value
+        for key, value in file_handling_help.items()
+    },
 }
 
 
@@ -250,6 +264,20 @@ class FileHandlingOptions:
     message_to_file: bool = True
     message_file_extension: str = "message.json"
     file_path_type: str = "relative"  # allowed values: absolute and relative
+    data_file_open_max_tries: int = 3
+    """How many times to try opening a data file before giving up."""
+    data_file_open_retry_delay: list[int] = field(default_factory=lambda: [])
+    """A list of retry delays for opening a data file.
+
+    It is a list of numbers, each representing a different retry delay per retry.
+    If the list is shorter than the number of retries,
+    the last value will be used for all remaining retries.
+    If the list is longer, the excess values will be ignored.
+
+    If the list is empty, the default value of 3 seconds will be used for all retries.
+    Maximum retry delay is 15 seconds, and minimum is 1 second.
+    Any number outside this range will be clamped to the nearest boundary.
+    """
 
 
 def default_offline_ingestor_executable() -> list[str]:
@@ -471,13 +499,13 @@ def validate_config_file() -> None:
 
 def synchronize_config_file() -> None:
     """Synchronize the configurations from the dataclass and json file."""
-    import json
 
     config_file_from_repo = Path("resources/config.sample.yml")
     default_config = OnlineIngestorConfig(config_file="")
 
     target_file = Path(__file__).parent.parent / config_file_from_repo
-    target_file.write_text(json.dumps(default_config.to_dict(), indent=2) + "\n")
+    with target_file.open("w") as f_stream:
+        yaml.safe_dump(default_config.to_dict(), stream=f_stream, sort_keys=False)
 
 
 def json_to_yaml() -> None:
