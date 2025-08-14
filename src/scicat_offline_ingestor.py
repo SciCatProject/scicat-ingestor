@@ -142,6 +142,12 @@ def _open_h5file(
     import time
 
     try:
+        # Instead of using context manager,
+        # we are opening the file and close them manually.
+        # It is because entering the context manager
+        # as opening the file conflicts with the try-except block
+        # that can result non-stopped generator error.
+        # It happens when it doesn't fail opening the file but fails after.
         opened_file = h5py.File(file_path, 'r')
     except BlockingIOError as e:
         if len(retry_delays) > 0:
@@ -182,6 +188,7 @@ def open_h5file(
 ) -> Generator[h5py.File, None, None]:
     _MAX_RETRY_DELAYS = 15
     _MIN_RETRY_DELAYS = 1
+    _DEFAULT_DELAY = 3
 
     def _wrap_retry_delay(delay: int) -> int:
         return max(_MIN_RETRY_DELAYS, min(_MAX_RETRY_DELAYS, delay))
@@ -191,7 +198,7 @@ def open_h5file(
     retry_delays = tuple(_wrap_retry_delay(delay) for delay in retry_delays)
 
     if len(retry_delays) == 0:
-        retry_delays = (3,) * max_retries
+        retry_delays = (_DEFAULT_DELAY,) * max_retries
     elif len(retry_delays) < max_retries:
         # If the list of retry delays is shorter than the number of retries,
         # extend it with the last value.
