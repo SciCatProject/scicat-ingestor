@@ -31,6 +31,8 @@ ingestion:
     message_to_file: true
     message_file_extension: message.json
     file_path_type: relative
+    data_file_open_max_tries: 3
+    data_file_open_retry_delay: []
 kafka:
   topics: KAFKA_TOPIC_1,KAFKA_TOPIC_2
   group_id: GROUP_ID
