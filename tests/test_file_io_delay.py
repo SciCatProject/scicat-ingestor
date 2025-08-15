@@ -22,6 +22,11 @@ class FakeLogger(logging.Logger):
         self._logged_msg: list = []
         self.level = logging.ERROR
 
+    def info(self, msg, *args) -> None:
+        # render the message with args
+        msg = msg % args
+        self._logged_msg.append(msg)
+
     def error(self, msg, *args) -> None:
         # render the message with args
         msg = msg % args

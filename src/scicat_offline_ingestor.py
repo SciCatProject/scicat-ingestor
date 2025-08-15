@@ -152,7 +152,7 @@ def _open_h5file(
     except BlockingIOError as e:
         if len(retry_delays) > 0:
             cur_retry, next_retries = retry_delays[0], retry_delays[1:]
-            logger.error(
+            logger.info(
                 "Error opening HDF5 file %s at attempt #[%d]. Retrying in %d seconds",
                 file_path,
                 _retried + 1,
