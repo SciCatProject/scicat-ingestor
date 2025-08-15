@@ -15,6 +15,7 @@ from types import MappingProxyType
 from typing import Any
 
 import h5py
+import numpy as np
 
 from scicat_communication import render_full_url, retrieve_value_from_scicat
 from scicat_configuration import (
@@ -27,10 +28,11 @@ from scicat_metadata import (
     SCIENTIFIC_METADATA_TYPE,
     VALID_METADATA_TYPES,
     MetadataItemConfig,
-    MetadataSchemaVariable,
-    NexusFileMetadataVariable,
-    ScicatMetadataVariable,
-    ValueMetadataVariable,
+    MetadataVariableConfig,
+    MetadataVariableValueSpec,
+    VariableConfigNexusFile,
+    VariableConfigScicat,
+    VariableConfigValue,
     render_variable_value,
 )
 
@@ -117,12 +119,99 @@ def convert_to_type(input_value: Any, dtype_desc: str) -> Any:
     return converter(input_value)
 
 
+def _do_nothing(
+    value: MetadataVariableValueSpec, recipe: MetadataVariableConfig
+) -> MetadataVariableValueSpec:
+    """Do nothing operator."""
+    _ = recipe  # Unused in this operator
+    return value
+
+
+def _join_with_space(
+    value: MetadataVariableValueSpec, recipe: MetadataVariableConfig
+) -> MetadataVariableValueSpec:
+    """Join with space operator."""
+    _ = recipe  # Unused in this operator
+    _orig = value.value
+    _value = ", ".join(ast.literal_eval(_orig) if isinstance(_orig, str) else _orig)
+    return MetadataVariableValueSpec(value=_value)
+
+
+def _filename(
+    value: MetadataVariableValueSpec, recipe: MetadataVariableConfig
+) -> MetadataVariableValueSpec:
+    """Filename operator."""
+    _ = recipe  # Unused in this operator
+    return MetadataVariableValueSpec(value=os.path.basename(value.value))
+
+
+def _dirname(
+    value: MetadataVariableValueSpec, recipe: MetadataVariableConfig
+) -> MetadataVariableValueSpec:
+    """Dirname operator."""
+    _ = recipe  # Unused in this operator
+    return MetadataVariableValueSpec(value=os.path.dirname(value.value))
+
+
+def _grandparents_dirname(
+    value: MetadataVariableValueSpec, recipe: MetadataVariableConfig
+) -> MetadataVariableValueSpec:
+    """Grandparents dirname operator."""
+    _ = recipe  # Unused in this operator
+    return MetadataVariableValueSpec(
+        value=os.path.dirname(os.path.dirname(value.value))
+    )
+
+
+def _getitem_from_variable_value(
+    value: MetadataVariableValueSpec, recipe: VariableConfigValue
+) -> MetadataVariableValueSpec:
+    """Getitem operator."""
+    _ = recipe  # Unused in this operator
+    return MetadataVariableValueSpec(value=value.value[recipe.field])
+
+
+def _str_replace(
+    value: MetadataVariableValueSpec, recipe: VariableConfigValue
+) -> MetadataVariableValueSpec:
+    """String replace operator."""
+    _ = recipe  # Unused in this operator
+    if recipe.pattern is None or recipe.replacement is None:
+        return MetadataVariableValueSpec(value=value.value)
+    else:
+        return MetadataVariableValueSpec(
+            value=str(value.value).replace(recipe.pattern, recipe.replacement)
+        )
+
+
+def _url_safe(
+    value: MetadataVariableValueSpec, recipe: VariableConfigValue
+) -> MetadataVariableValueSpec:
+    """URL safe operator."""
+    _ = recipe  # Unused in this operator
+    return MetadataVariableValueSpec(value=urllib.parse.quote_plus(value.value))
+
+
+def _to_lower(
+    value: MetadataVariableValueSpec, recipe: VariableConfigValue
+) -> MetadataVariableValueSpec:
+    """Convert to lower case operator."""
+    _ = recipe  # Unused in this operator
+    return MetadataVariableValueSpec(value=str(value.value).lower())
+
+
+def _to_upper(
+    value: MetadataVariableValueSpec, recipe: VariableConfigValue
+) -> MetadataVariableValueSpec:
+    """Convert to upper case operator."""
+    _ = recipe  # Unused in this operator
+    return MetadataVariableValueSpec(value=str(value.value).upper())
+
+
 _OPERATOR_REGISTRY = MappingProxyType(
     {
-        "DO_NOTHING": lambda value, recipe: value,
-        "join_with_space": lambda value, recipe: ", ".join(
-            ast.literal_eval(value) if isinstance(value, str) else value
-        ),
+        "DO_NOTHING": _do_nothing,
+        "join_with_space": _join_with_space,
         # "evaluate": lambda value: ast.literal_eval(value),
         # We are not adding the evaluate function here since
         # ``evaluate`` function should be avoided if possible.
@@ -131,24 +220,31 @@ _OPERATOR_REGISTRY = MappingProxyType(
         # It is better to use the specific converters for the types.
         # However, if it is the only way to go, you can add it here.
         # Please add a comment to explain why it is needed.
-        "filename": lambda value, recipe: os.path.basename(value),
-        "dirname": lambda value, recipe: os.path.dirname(value),
-        "dirname-2": lambda value, recipe: os.path.dirname(os.path.dirname(value)),
-        "getitem": lambda value, recipe: value[
-            recipe.field
-        ],  # The only operator that takes an argument
-        "str-replace": lambda value, recipe: str(value).replace(
-            recipe.pattern, recipe.replacement
-        ),
-        "urlsafe": lambda value, recipe: urllib.parse.quote_plus(value),
-        "to-lower": lambda value, recipe: str(value).lower(),
-        "to-upper": lambda value, recipe: str(value).upper(),
+        "filename": _filename,
+        "dirname": _dirname,
+        "dirname-2": _grandparents_dirname,
+        "getitem": _getitem_from_variable_value,
+        "str-replace": _str_replace,
+        "urlsafe": _url_safe,
+        "to-lower": _to_lower,
+        "to-upper": _to_upper,
     }
 )
+"""Operator should accept ``MetadataVariableValueSpec`` and ``VariableConfigValue`` as arguments.
+
+It is for propagating unit information.
+For example, if we add a new operator that might affect unit,
+it should also take care of the unit conversion.
+
+"""
 
 
-def _get_operator(operator: str | None) -> Callable:
-    return _OPERATOR_REGISTRY.get(operator or "DO_NOTHING", lambda _: _)
+def _get_operator(
+    operator: str | None,
+) -> Callable[
+    [MetadataVariableValueSpec, VariableConfigValue], MetadataVariableValueSpec
+]:
+    return _OPERATOR_REGISTRY.get(operator or "DO_NOTHING", _do_nothing)
 
 
 def _retrieve_as_string(
@@ -157,67 +253,104 @@ def _retrieve_as_string(
     return h5file[path][...].item().decode(encoding)
 
 
+def _retrieve_unit(h5file: h5py.File, path: str) -> str:
+    return h5file[path].attrs.get("units", None)
+
+
 def _retrieve_values_from_file(
-    variable_recipe: NexusFileMetadataVariable, h5file: h5py.File
-) -> Any:
-    if "*" in variable_recipe.path:  # Selectors are used
+    variable_recipe: VariableConfigNexusFile, h5file: h5py.File
+) -> MetadataVariableValueSpec:
+    _vt = variable_recipe.value_type
+    if _vt == "string[]" and ("*" in variable_recipe.path):  # Selectors are used
         path = variable_recipe.path.split("/")[1:]
-        path[0] += "/"
         paths = extract_paths_from_h5_file(h5file, path)
         value = [_retrieve_as_string(h5file, p) for p in paths]
+        unit = None  # No unit retrieval for a value from a selector
     else:
-        value = _retrieve_as_string(h5file, variable_recipe.path)
-    return value
+        if _vt == "string":
+            value = _retrieve_as_string(h5file, variable_recipe.path)
+        else:
+            value = h5file[variable_recipe.path][...]
+
+        unit = _retrieve_unit(h5file, variable_recipe.path)
+
+    if unit is None:
+        # Overwrite hardcoded unit with variable configuration unit
+        unit = variable_recipe.unit
+
+    if (
+        "[]" not in variable_recipe.value_type
+        and isinstance(value, list | np.ndarray | tuple)
+        and len(value) == 1
+    ):  # Supposed to be scalar value
+        value = value[0]
+
+    return MetadataVariableValueSpec(value=value, unit=unit)
 
 
-@dataclass(kw_only=True)
-class MetadataValueSpec:
-    value: Any
-    type: str
-    machine_name: str
-    human_name: str
-    unit: str | None = None
-    unit_hardcoded: bool | None = None
+def _build_default_variable_map(
+    *,
+    nexus_file_path: pathlib.Path,
+    ingestor_file_dir: str,
+    schema_id: str,
+) -> dict[str, MetadataVariableValueSpec]:
+    from functools import partial
+
+    value_spec_no_unit = partial(MetadataVariableValueSpec, unit="")
+    return {
+        "ingestor_run_id": value_spec_no_unit(value=uuid.uuid4().hex),
+        "data_file_path": value_spec_no_unit(value=nexus_file_path.as_posix()),
+        "data_file_name": value_spec_no_unit(value=str(nexus_file_path.name)),
+        "now": value_spec_no_unit(
+            value=datetime.datetime.now(tz=datetime.UTC).isoformat()
+        ),
+        "ingestor_files_directory": value_spec_no_unit(value=ingestor_file_dir),
+        "ingestor_metadata_schema_id": value_spec_no_unit(value=schema_id),
+    }
 
 
 def extract_variables_values(
-    variables: dict[str, MetadataSchemaVariable],
+    variables: dict[str, MetadataVariableConfig],
     h5file: h5py.File,
     config: OfflineIngestorConfig,
     schema_id: str,
-) -> dict:
-    nexus_file = pathlib.Path(config.nexus_file)
-    variable_map = {
-        "ingestor_run_id": str(uuid.uuid4()),
-        "data_file_path": str(nexus_file),
-        "data_file_name": str(nexus_file.name),
-        "now": datetime.datetime.now(tz=datetime.UTC).isoformat(),
-        "ingestor_files_directory": config.ingestion.file_handling.ingestor_files_directory,
-        "ingestor_metadata_schema_id": schema_id,
-    }
+) -> dict[str, MetadataVariableValueSpec]:
+    variable_map: dict[str, MetadataVariableValueSpec] = _build_default_variable_map(
+        nexus_file_path=pathlib.Path(config.nexus_file),
+        ingestor_file_dir=config.ingestion.file_handling.ingestor_files_directory,
+        schema_id=schema_id,
+    )
     for variable_name, variable_recipe in variables.items():
-        source = variable_recipe.source
-        if isinstance(variable_recipe, NexusFileMetadataVariable):
+        if isinstance(variable_recipe, VariableConfigNexusFile):
             value = _retrieve_values_from_file(variable_recipe, h5file)
-        elif isinstance(variable_recipe, ScicatMetadataVariable):
-            full_endpoint_url = render_full_url(
-                render_variable_value(variable_recipe.url, variable_map),
-                config.scicat,
-            )
-            value = retrieve_value_from_scicat(
+        elif isinstance(variable_recipe, VariableConfigScicat):
+            url_template = render_variable_value(
+                variable_recipe.url, variable_map
+            ).value
+            if not isinstance(url_template, str):
+                raise ValueError(f"Invalid URL template: {url_template}")
+
+            full_endpoint_url = render_full_url(url_template, config.scicat)
+            _value = retrieve_value_from_scicat(
                 config=config.scicat,
                 scicat_endpoint_url=full_endpoint_url,
                 field_name=variable_recipe.field,
             )
-        elif isinstance(variable_recipe, ValueMetadataVariable):
-            value = variable_recipe.value
-            value = render_variable_value(value, variable_map)
+            # Unit is not retrieved from scicat
+            value = MetadataVariableValueSpec(value=_value)
+        elif isinstance(variable_recipe, VariableConfigValue):
+            value = render_variable_value(variable_recipe.value, variable_map)
             _operator = _get_operator(variable_recipe.operator)
             value = _operator(value, variable_recipe)
 
         else:
-            raise Exception("Invalid variable source: ", source)
-        variable_map[variable_name] = convert_to_type(value, variable_recipe.value_type)
+            raise Exception("Invalid variable source: ", variable_recipe.source)
+
+        # Convert dtype to match the target value_type.
+        variable_map[variable_name] = MetadataVariableValueSpec(
+            value=convert_to_type(value.value, variable_recipe.value_type),
+            unit=value.unit,
+        )
 
     return variable_map
 
@@ -229,7 +362,11 @@ def extract_paths_from_h5_file(
     master_key = _path.pop(0)
     output_paths = []
     if "*" in master_key:
-        temp_keys = [k2 for k2 in _h5_object.keys() if re.search(master_key, k2)]
+        temp_keys = [
+            k2
+            for k2 in _h5_object.keys()
+            if master_key == "*" or re.search(master_key, k2)
+        ]
         for key in temp_keys:
             output_paths += [
                 key + "/" + subkey
@@ -478,8 +615,10 @@ def _filter_by_field_type(
     return [field for field in schemas if field.field_type == field_type]
 
 
-def _render_variable_as_type(value: Any, variable_map: dict, dtype: str) -> Any:
-    return convert_to_type(render_variable_value(value, variable_map), dtype)
+def _render_variable_as_type(
+    value: Any, variable_map: dict[str, MetadataVariableValueSpec], dtype: str
+) -> Any:
+    return convert_to_type(render_variable_value(value, variable_map).value, dtype)
 
 
 @dataclass(kw_only=True)
@@ -488,23 +627,26 @@ class MetadataItemValueSpec:
     type: str
     human_name: str
     unit: str
-    unit_hardcoded: bool
 
-
-def _retrieve_metadata_value_spec(
-    *,
-    variable_map: dict,
-    item_config: MetadataItemConfig,
-) -> MetadataItemValueSpec:
-    return MetadataItemValueSpec(
-        _render_variable_as_type(item_config.value, variable_map, item_config.type)
-    )
+    @classmethod
+    def from_metadata_item_config(
+        cls,
+        item_config: MetadataItemConfig,
+        variable_map: dict[str, MetadataVariableValueSpec],
+    ) -> "MetadataItemValueSpec":
+        value = render_variable_value(item_config.value, variable_map)
+        return cls(
+            value=convert_to_type(value.value, item_config.type),
+            unit=item_config.unit or value.unit,
+            human_name=item_config.human_name or item_config.machine_name,
+            type=item_config.type,
+        )
 
 
 def _create_scientific_metadata(
     *,
     sm_schemas: list[MetadataItemConfig],
-    variable_map: dict,
+    variable_map: dict[str, MetadataVariableValueSpec],
 ) -> dict:
     """Create scientific metadata from the metadata schema configuration.
 
@@ -518,15 +660,13 @@ def _create_scientific_metadata(
         The variable map to render the scientific metadata values.
 
     """
-    return {
-        field.machine_name: {
-            "value": _render_variable_as_type(field.value, variable_map, field.type),
-            "unit": field.unit or "",
-            "human_name": field.human_name or field.machine_name,
-            "type": field.type,
-        }
-        for field in sm_schemas
+    metadatas = {
+        item_config.machine_name: MetadataItemValueSpec.from_metadata_item_config(
+            item_config, variable_map
+        )
+        for item_config in sm_schemas
     }
+    return {name: asdict(meta) for name, meta in metadatas.items()}
 
 
 def _validate_metadata_schemas(
@@ -550,7 +690,7 @@ def _validate_metadata_schemas(
 def create_scicat_dataset_instance(
     *,
     metadata_schema: dict[str, MetadataItemConfig],  # metadata-schema["schema"]
-    variable_map: dict,
+    variable_map: dict[str, MetadataVariableValueSpec],
     data_file_list: list[DataFileListItem],
     config: DatasetOptions,
     logger: logging.Logger,

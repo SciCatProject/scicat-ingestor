@@ -30,7 +30,11 @@ from scicat_dataset import (
     scicat_dataset_to_dict,
 )
 from scicat_logging import build_logger
-from scicat_metadata import collect_schemas, select_applicable_schema
+from scicat_metadata import (
+    MetadataVariableValueSpec,
+    collect_schemas,
+    select_applicable_schema,
+)
 from scicat_path_helpers import compose_ingestor_directory
 from system_helpers import exit, handle_exceptions
 
@@ -116,6 +120,14 @@ def _check_if_dataset_exists_by_metadata(
     return False
 
 
+def _retrieve_source_folder(
+    variable_map: dict[str, MetadataVariableValueSpec],
+) -> str | None:
+    """Retrieve the source folder from the variable map."""
+    value = variable_map.get("source_folder", None)
+    return value.value if isinstance(value, MetadataVariableValueSpec) else None
+
+
 def main() -> None:
     """Main entry point of the app."""
     tmp_config = build_offline_config()
@@ -159,7 +171,7 @@ def main() -> None:
             nexus_file=nexus_file_path,
             ingestor_directory=ingestor_directory,
             config=fh_options,
-            source_folder=variable_map["source_folder"],
+            source_folder=_retrieve_source_folder(variable_map),
             logger=logger,
             # TODO: add done_writing_message_file and nexus_structure_file
         )
