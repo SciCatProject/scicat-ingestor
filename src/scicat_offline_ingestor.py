@@ -236,7 +236,11 @@ def main() -> None:
         ingestor_directory = compose_ingestor_directory(fh_options, nexus_file_path)
 
         # open nexus file with h5py
-        with h5py.File(nexus_file_path) as h5file:
+        with open_h5file(
+            nexus_file_path,
+            file_handling_config=config.ingestion.file_handling,
+            logger=logger,
+        ) as h5file:
             # load instrument metadata configuration
             metadata_schema = select_applicable_schema(nexus_file_path, schemas)
             logger.info(
