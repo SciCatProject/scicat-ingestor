@@ -9,7 +9,7 @@
 <link href="../documentation/" rel="prev"/>
 <link href="../configuration/" rel="next"/>
 <link href="../../assets/images/favicon.png" rel="icon"/>
-<meta content="mkdocs-1.6.1, mkdocs-material-9.6.13" name="generator"/>
+<meta content="mkdocs-1.6.1, mkdocs-material-9.6.14" name="generator"/>
 <title>ADRs - Scicat Ingestor</title>
 <link href="../../assets/stylesheets/main.342714a4.min.css" rel="stylesheet"/>
 <link href="../../assets/stylesheets/palette.06af60db.min.css" rel="stylesheet"/>
@@ -429,6 +429,38 @@
 </ul>
 </nav>
 </li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#adr-002-use-yaml-instead-of-json-for-metadata-schema-and-ingestor-configuration">
+<span class="md-ellipsis">
+      ADR-002: Use yaml instead of json for metadata schema and ingestor configuration.
+    </span>
+</a>
+<nav aria-label="ADR-002: Use yaml instead of json for metadata schema and ingestor configuration." class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#reason">
+<span class="md-ellipsis">
+      Reason
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#downside">
+<span class="md-ellipsis">
+      Downside
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#supporting-tool-for-transition">
+<span class="md-ellipsis">
+      Supporting Tool for Transition
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
 </ul>
 </nav>
 </li>
@@ -585,6 +617,38 @@
 </ul>
 </nav>
 </li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#adr-002-use-yaml-instead-of-json-for-metadata-schema-and-ingestor-configuration">
+<span class="md-ellipsis">
+      ADR-002: Use yaml instead of json for metadata schema and ingestor configuration.
+    </span>
+</a>
+<nav aria-label="ADR-002: Use yaml instead of json for metadata schema and ingestor configuration." class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#reason">
+<span class="md-ellipsis">
+      Reason
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#downside">
+<span class="md-ellipsis">
+      Downside
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#supporting-tool-for-transition">
+<span class="md-ellipsis">
+      Supporting Tool for Transition
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
 </ul>
 </nav>
 </div>
@@ -731,6 +795,30 @@ Especially it makes the auto generator of json configuration file much more diff
 However we decided to keep it only as a string, and if multiple brokers are needed, user should write them joined by comma(,).
 On the other hand, access group option is always <code>list</code> even if there may be only one access group.</p>
 </div>
+<h2 id="adr-002-use-yaml-instead-of-json-for-metadata-schema-and-ingestor-configuration">ADR-002: Use <code>yaml</code> instead of <code>json</code> for metadata schema and ingestor configuration.</h2>
+<blockquote>
+<p>Use <code>yaml</code> for human-interacting configuration files and <code>json</code> for communication between processes or services.</p>
+</blockquote>
+<h3 id="reason">Reason</h3>
+<p><code>Yaml</code> has better human readability compared to <code>json</code> and allows <code>comments</code>.<br/>
+It will be much easier with commenting allowed to share configuration details and context with other maintainers.</p>
+<p>We decided to make schema files modular.<br/>
+It means service maintainers can build complicated metadata schema without duplicating schema files.<br/>
+That means it should be easy to track intention/context of each module.<br/>
+So <code>comments</code> feature of configuration file was prioritized to the robustness/performance of parsing the configuration.</p>
+<h3 id="downside">Downside</h3>
+<p>Parsing <code>Yaml</code> can be much slower than <code>json</code> if we have too complex structure.<br/>
+However, we will avoid such structure of configuration as it is mainly written by human.</p>
+<p>Another downside is that <code>Yaml</code> is less secure than <code>json</code> due to its flexibility.<br/>
+Service maintainers are expected to keep these configuration/schema files in a secured isolated environment<br/>
+and we implement extra safety/validation layers of configuration/schema files in the relevant places.<br/>
+For example, <code>yaml</code> must be loaded with <code>safe_load</code> method.</p>
+<h3 id="supporting-tool-for-transition">Supporting Tool for Transition</h3>
+<p>We were already using <code>json</code> in our production environment so to make the transition smoother,<br/>
+we implemented a tool that can translate <code>json</code> to <code>yaml</code> easily.</p>
+<div class="highlight"><pre><span></span><code>scicat_json_to_yaml<span class="w"> </span>--input-file<span class="w"> </span>PATH/TO/THE/JSON/FILE
+</code></pre></div>
+<p>It can be used for any configuration or schema files.</p>
 </article>
 </div>
 <script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>

@@ -18,7 +18,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.13">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.14">
     
     
       
@@ -959,7 +959,7 @@ pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </s
 </code></pre></div>
 <h2 id="configuration">Configuration</h2>
 <p>You can use a json file to configure options.<br>
-There is a template, <code>resources/config.sample.json</code> you can copy/paste to make your own configuration file.</p>
+There is a template, <code>resources/config.sample.yml</code> you can copy/paste to make your own configuration file.</p>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 <p>Once you write your configuration file, you can validate it before using it to start an ingestor.
@@ -995,7 +995,7 @@ and also the path to the <code>done_writing_message_file</code> as a json file.<
 <span class="w">    </span>--logging.verbose<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>-c<span class="w"> </span>PATH_TO_CONFIGURATION_FILE.yaml<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--nexus-file<span class="w"> </span>PATH_TO_THE_NEXUS_FILE.nxs<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--done-writing-message-file<span class="w"> </span>PATH_TO_THE_MESSAGE_FILE.json
+<span class="w">    </span>--done-writing-message-file<span class="w"> </span>PATH_TO_THE_MESSAGE_FILE.yml
 </code></pre></div>
 <h3 id="dry-run">Dry run</h3>
 <p>You can add <code>--ingestion.dry-run</code> flag for dry-run testings.</p>
@@ -1005,7 +1005,7 @@ and also the path to the <code>done_writing_message_file</code> as a json file.<
 <span class="w">    </span>--logging.verbose<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>-c<span class="w"> </span>PATH_TO_CONFIGURATION_FILE.yaml<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--nexus-file<span class="w"> </span>PATH_TO_THE_NEXUS_FILE.nxs<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--done-writing-message-file<span class="w"> </span>PATH_TO_THE_MESSAGE_FILE.json<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--done-writing-message-file<span class="w"> </span>PATH_TO_THE_MESSAGE_FILE.yml<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--ingestion.dry-run
 </code></pre></div>
 
