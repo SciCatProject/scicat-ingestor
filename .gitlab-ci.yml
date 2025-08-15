@@ -1,0 +1,67 @@
+# GITLAB CI tests are only for integration test.
+# Other tests are in GITHUB CI.
+stages:          # List of stages for jobs, and their order of execution
+  - mirror
+  - integration-test
+
+variables:
+  MIRRORING: "false"
+  MIRROR_ORGANIZATION: "ScicatProject"
+  MIRROR_REPO: "scicat-ingestor"
+  MIRROR_BRANCH: "main"
+  GITHUB_API_OUTPUT_FILE_NAME: "github_repo_branch_status.json"
+
+default:
+  tags:
+    - python311 # Allows to choose specific gitlab runner with this tag.
+                # It is needed to choose the runner with python installed.
+  before_script:
+    # Make every job run in its own venv because ehy otherwise would share the global
+    # env of the runner; even across pipelines.
+    - source ~/.bashrc
+    - which python
+    - python --version
+  # If we need virtual environment for testing later, uncomment these lines below.
+  #   - python -m venv ".venv-${CI_JOB_ID}"
+  #   - source ".venv-${CI_JOB_ID}"/bin/activate
+  #   - which python
+  #   - python --version
+  # after_script:
+  #   - rm -rf ".venv-${CI_JOB_ID}"
+
+mirror-github:
+  variables:
+    GIT_STRATEGY: "clone"
+  rules:
+    - if: '$MIRRORING != "true"'
+      when: never  # Skip the mirroring unless it is scheduled or triggered mirroring
+    - when: always  # Run the job if is triggered for mirroring
+  stage: mirror
+  script:
+    - echo "Mirroring started..."
+    - |
+      curl -L \
+      -H "Accept: application/vnd.github+json" \
+      -H "Authorization: Bearer ${GITHUB_PUBLIC_REPO_ACCESS_TOKEN}" \
+      -H "X-GitHub-Api-Version: 2022-11-28" \
+      "https://api.github.com/repos/${MIRROR_ORGANIZATION}/${MIRROR_REPO}/branches/${MIRROR_BRANCH}" >> ${GITHUB_API_OUTPUT_FILE_NAME}
+    # Parse the latest commit of the github repo main branch
+    - export GITHUB_COMMIT_HEAD=$(python -c "import json;import pathlib;print(json.loads(pathlib.Path('${GITHUB_API_OUTPUT_FILE_NAME}').read_text())['commit']['sha'])")
+    # Get the latest commit of the local repo main branch
+    - export LOCAL_COMMIT_HEAD=$(git log -n 1 --pretty=format:"%H")
+    # Check if the github repo's last commit is included in the local repository history
+    - echo "Github repo commit head - ${GITHUB_COMMIT_HEAD}\nLocal repo commit head - ${LOCAL_COMMIT_HEAD}"
+    - git show ${GITHUB_COMMIT_HEAD} -q && export UPTODATE="true" || export UPTODATE="false" # Test to see if it fails
+    - echo ${UPTODATE}
+    - git checkout ${CI_COMMIT_REF_NAME}
+    - if [[ ${UPTODATE} = "true" ]];then git pull https://github.com/${MIRROR_ORGANIZATION}/${MIRROR_REPO}.git ${MIRROR_BRANCH} --rebase --verbose;fi
+    - git push https://MIRROR_FROM_GITHUB:${GITLAB_PUSH_TOKEN}@git.esss.dk/integration/scicat-ingestor.git ${CI_COMMIT_REF_NAME}:${CI_COMMIT_REF_NAME}
+
+integration-test:
+  rules:
+    - if: '$MIRRORING == "true"'
+      when: never
+    - when: always # Run the job unless it is triggered for mirroring
+  stage: integration-test
+  script:
+    - echo "Placeholder for integration test"
