@@ -278,21 +278,13 @@ def _retrieve_values_from_file(
         # Overwrite hardcoded unit with variable configuration unit
         unit = variable_recipe.unit
 
-    if (
-        "[]" not in variable_recipe.value_type
-    ):
-        if (
-            isinstance(value, np.ndarray)
-            and value.ndim == 0
-            and value.size == 1
-        ):
+    if "[]" not in variable_recipe.value_type:
+        if isinstance(value, np.ndarray) and value.ndim == 0 and value.size == 1:
             value = value.item()
         elif (
-            isinstance(value, list | np.ndarray | tuple)
-            and len(value) == 1
+            isinstance(value, list | np.ndarray | tuple) and len(value) == 1
         ):  # Supposed to be scalar value
             value = value[0]
-
 
     return MetadataVariableValueSpec(value=value, unit=unit)
 
