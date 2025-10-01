@@ -5,7 +5,6 @@
 #
 #    pip-compile-multi
 #
--r base.txt
 babel==2.17.0
     # via mkdocs-material
 backrefs==5.9
@@ -14,16 +13,36 @@ beautifulsoup4==4.13.4
     # via mkdocs-mermaid2-plugin
 bracex==2.6
     # via wcmatch
-click==8.2.1
+certifi==2025.6.15
+    # via requests
+charset-normalizer==3.4.2
+    # via requests
+click==8.1.8
     # via mkdocs
 colorama==0.4.6
     # via mkdocs-material
+confluent-kafka==2.10.1
+    # via -r base.in
 editorconfig==0.17.1
     # via jsbeautifier
+ess-streaming-data-types==0.27.0
+    # via -r base.in
+flatbuffers==25.2.10
+    # via ess-streaming-data-types
 ghp-import==2.1.0
     # via mkdocs
+graypy==2.1.0
+    # via -r base.in
+h5py==3.14.0
+    # via -r base.in
+idna==3.10
+    # via requests
 importlib-metadata==8.7.0
-    # via mike
+    # via
+    #   markdown
+    #   mike
+    #   mkdocs
+    #   mkdocs-get-deps
 importlib-resources==6.5.2
     # via mike
 jinja2==3.1.6
@@ -33,15 +52,21 @@ jinja2==3.1.6
     #   mkdocs-material
 jsbeautifier==1.15.4
     # via mkdocs-mermaid2-plugin
+kafka-python==2.2.14
+    # via -r base.in
 markdown==3.8.2
     # via
     #   mkdocs
     #   mkdocs-material
     #   pymdown-extensions
+markdown-it-py==3.0.0
+    # via rich
 markupsafe==3.0.2
     # via
     #   jinja2
     #   mkdocs
+mdurl==0.1.2
+    # via markdown-it-py
 mergedeep==1.3.4
     # via
     #   mkdocs
@@ -62,8 +87,12 @@ mkdocs-material==9.6.14
     # via -r docs.in
 mkdocs-material-extensions==1.3.1
     # via mkdocs-material
-mkdocs-mermaid2-plugin==1.2.1
+mkdocs-mermaid2-plugin==1.2.2
     # via -r docs.in
+numpy==2.0.2
+    # via
+    #   ess-streaming-data-types
+    #   h5py
 packaging==25.0
     # via mkdocs
 paginate==0.5.7
@@ -72,6 +101,10 @@ pathspec==0.12.1
     # via mkdocs
 platformdirs==4.3.8
     # via mkdocs-get-deps
+pygments==2.19.2
+    # via
+    #   mkdocs-material
+    #   rich
 pymdown-extensions==10.16
     # via
     #   mkdocs-material
@@ -91,6 +124,13 @@ pyyaml-env-tag==1.1
     # via
     #   mike
     #   mkdocs
+requests==2.32.4
+    # via
+    #   -r base.in
+    #   mkdocs-material
+    #   mkdocs-mermaid2-plugin
+rich==14.0.0
+    # via -r base.in
 six==1.17.0
     # via
     #   jsbeautifier
@@ -98,7 +138,11 @@ six==1.17.0
 soupsieve==2.7
     # via beautifulsoup4
 typing-extensions==4.14.0
-    # via beautifulsoup4
+    # via
+    #   beautifulsoup4
+    #   rich
+urllib3==2.5.0
+    # via requests
 verspec==0.1.0
     # via mike
 watchdog==6.0.0
@@ -106,7 +150,9 @@ watchdog==6.0.0
 wcmatch==10.1
     # via mkdocs-include-markdown-plugin
 zipp==3.23.0
-    # via importlib-metadata
+    # via
+    #   importlib-metadata
+    #   importlib-resources
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
