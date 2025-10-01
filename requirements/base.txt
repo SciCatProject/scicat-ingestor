@@ -9,7 +9,7 @@ certifi==2025.6.15
     # via requests
 charset-normalizer==3.4.2
     # via requests
-confluent-kafka==2.10.1
+confluent-kafka==2.11.1
     # via -r base.in
 ess-streaming-data-types==0.27.0
     # via -r base.in
@@ -27,7 +27,7 @@ markdown-it-py==3.0.0
     # via rich
 mdurl==0.1.2
     # via markdown-it-py
-numpy==2.3.1
+numpy==2.0.2
     # via
     #   ess-streaming-data-types
     #   h5py
@@ -37,5 +37,7 @@ requests==2.32.4
     # via -r base.in
 rich==14.0.0
     # via -r base.in
+typing-extensions==4.15.0
+    # via rich
 urllib3==2.5.0
     # via requests
