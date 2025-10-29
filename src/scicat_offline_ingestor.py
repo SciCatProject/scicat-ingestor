@@ -5,6 +5,7 @@ import logging
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
+import json
 
 import h5py
 
@@ -149,9 +150,9 @@ def _open_h5file(
         # that can result non-stopped generator error.
         # It happens when it doesn't fail opening the file but fails after.
         opened_file = h5py.File(file_path, 'r')
-    except BlockingIOError as e:
+    except Exception as e:
         if len(retry_delays) > 0:
-            cur_retry, next_retries = retry_delays[0], retry_delays[1:]
+            cur_retry = retry_delays[0]
             logger.info(
                 "Error opening HDF5 file %s at attempt #[%d]. Retrying in %d seconds",
                 file_path,
@@ -164,7 +165,7 @@ def _open_h5file(
 
             with _open_h5file(
                 file_path=file_path,
-                retry_delays=next_retries,
+                retry_delays=retry_delays[1:],
                 logger=logger,
                 _retried=_retried + 1,
             ) as h5file:
@@ -186,7 +187,7 @@ def open_h5file(
     file_handling_config: FileHandlingOptions,
     logger: logging.Logger,
 ) -> Generator[h5py.File, None, None]:
-    _MAX_RETRY_DELAYS = 15
+    _MAX_RETRY_DELAYS = 120
     _MIN_RETRY_DELAYS = 1
     _DEFAULT_DELAY = 3
 
