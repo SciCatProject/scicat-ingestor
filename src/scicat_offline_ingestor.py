@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 
+import json
 import logging
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-import json
 
 import h5py
 
