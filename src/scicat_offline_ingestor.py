@@ -336,10 +336,10 @@ def main() -> None:
 
             # if we get here, both dataset and origdatablock have been created successfully
             logger.info(
-                "Dataset ingestion successful. "
-                + "\nData file: %s. "
-                + "\nScicat dataset pid: %s. \n"
-                + "SciCat origdatablock id: %s",
+                "Dataset ingestion successful. \n"
+                "Data file: %s. \n"
+                "Scicat dataset pid: %s. \n"
+                "SciCat origdatablock id: %s",
                 nexus_file_path,
                 scicat_dataset.get('pid'),
                 scicat_origdatablock.get('_id'),
