@@ -70,7 +70,9 @@ def create_scicat_dataset(
             data_file_path,
             result.get("error", {}),
         )
-        raise ScicatDatasetAPIError(f"Error creating new dataset for file {data_file_path}: \n{dataset}")
+        raise ScicatDatasetAPIError(
+            f"Error creating new dataset for file {data_file_path}: \n{dataset}"
+        )
 
     logger.info(
         "Dataset created successfully. \nData file: %s. \nDataset pid: %s",

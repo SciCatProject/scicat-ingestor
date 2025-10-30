@@ -310,7 +310,7 @@ def main() -> None:
                 dataset=local_dataset,
                 config=config.scicat,
                 logger=logger,
-                data_file_path=nexus_file_path
+                data_file_path=nexus_file_path,
             )
 
             # create origdatablock in scicat
@@ -318,7 +318,7 @@ def main() -> None:
                 origdatablock=local_origdatablock,
                 config=config.scicat,
                 logger=logger,
-                data_file_path=nexus_file_path
+                data_file_path=nexus_file_path,
             )
 
             # check one more time if we successfully created the entries in scicat
@@ -330,7 +330,9 @@ def main() -> None:
                     scicat_dataset,
                     scicat_origdatablock,
                 )
-                raise RuntimeError(f"Failed to create dataset or origdatablock for file {nexus_file_path}")
+                raise RuntimeError(
+                    f"Failed to create dataset or origdatablock for file {nexus_file_path}"
+                )
 
             # if we get here, both dataset and origdatablock have been created successfully
             logger.info(
@@ -344,7 +346,9 @@ def main() -> None:
                 logger,
                 unexpected=not (bool(scicat_dataset) and bool(scicat_origdatablock)),
             )
-            raise RuntimeError(f"Error on existing offline ingestor for file {nexus_file_path}.")
+            raise RuntimeError(
+                f"Error on existing offline ingestor for file {nexus_file_path}."
+            )
 
 
 if __name__ == "__main__":
