@@ -47,7 +47,11 @@ def _post_to_scicat(*, url: str, posting_obj: dict, headers: dict, timeout: int)
 
 
 def create_scicat_dataset(
-    *, dataset: dict, config: SciCatOptions, logger: logging.Logger
+    *,
+    dataset: dict,
+    config: SciCatOptions,
+    logger: logging.Logger,
+    data_file_path: str = None,
 ) -> dict:
     """
     Execute a POST request to scicat to create a dataset
@@ -62,13 +66,15 @@ def create_scicat_dataset(
     result: dict = response.json()
     if not response.ok:
         logger.error(
-            "Failed to create new dataset. \nError message from scicat backend: \n%s",
+            "Failed to create new dataset. \nData file %s. \nError message from scicat backend: \n%s",
+            data_file_path,
             result.get("error", {}),
         )
-        raise ScicatDatasetAPIError(f"Error creating new dataset: \n{dataset}")
+        raise ScicatDatasetAPIError(f"Error creating new dataset for file {data_file_path}: \n{dataset}")
 
     logger.info(
-        "Dataset created successfully. Dataset pid: %s",
+        "Dataset created successfully. \nData file: %s. \nDataset pid: %s",
+        data_file_path,
         result.get("pid"),
     )
     return result
@@ -79,7 +85,11 @@ class ScicatOrigDatablockAPIError(Exception):
 
 
 def create_scicat_origdatablock(
-    *, origdatablock: dict, config: SciCatOptions, logger: logging.Logger
+    *,
+    origdatablock: dict,
+    config: SciCatOptions,
+    logger: logging.Logger,
+    data_file_path: str = None,
 ) -> dict:
     """
     Execute a POST request to scicat to create a new origdatablock
@@ -94,16 +104,17 @@ def create_scicat_origdatablock(
     result: dict = response.json()
     if not response.ok:
         logger.error(
-            "Failed to create new origdatablock. "
-            "Error message from scicat backend: \n%s",
+            "Failed to create new origdatablock. \nData file %s. \nError message from scicat backend: \n%s",
+            data_file_path,
             result.get("error", {}),
         )
         raise ScicatOrigDatablockAPIError(
-            f"Error creating new origdatablock: \n{origdatablock}"
+            f"Error creating new origdatablock for file {data_file_path}: \n{origdatablock}"
         )
 
     logger.info(
-        "Origdatablock created successfully. Origdatablock pid: %s",
+        "Origdatablock created successfully. \nData file: %s. \nOrigdatablock pid: %s",
+        data_file_path,
         result['_id'],
     )
     return result
