@@ -51,7 +51,7 @@ def create_scicat_dataset(
     dataset: dict,
     config: SciCatOptions,
     logger: logging.Logger,
-    data_file_path: str = None,
+    data_file_path: str,
 ) -> dict:
     """
     Execute a POST request to scicat to create a dataset
@@ -91,7 +91,7 @@ def create_scicat_origdatablock(
     origdatablock: dict,
     config: SciCatOptions,
     logger: logging.Logger,
-    data_file_path: str = None,
+    data_file_path: str,
 ) -> dict:
     """
     Execute a POST request to scicat to create a new origdatablock
