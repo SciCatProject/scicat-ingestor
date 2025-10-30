@@ -60,7 +60,7 @@ def to_date(value: Any) -> str | None:
         return datetime.datetime.fromisoformat(value).isoformat()
     elif isinstance(value, int | float):
         return datetime.datetime.fromtimestamp(value, tz=datetime.UTC).isoformat()
-    if isinstance(value, bytes):
+    elif isinstance(value, bytes):
         return datetime.datetime.fromisoformat(value.decode()).isoformat()
     return None
 
