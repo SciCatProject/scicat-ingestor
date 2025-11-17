@@ -60,6 +60,8 @@ def to_date(value: Any) -> str | None:
         return datetime.datetime.fromisoformat(value).isoformat()
     elif isinstance(value, int | float):
         return datetime.datetime.fromtimestamp(value, tz=datetime.UTC).isoformat()
+    elif isinstance(value, bytes):
+        return datetime.datetime.fromisoformat(value.decode()).isoformat()
     return None
 
 
@@ -299,7 +301,7 @@ def _build_default_variable_map(
 
     value_spec_no_unit = partial(MetadataVariableValueSpec, unit="")
     return {
-        "ingestor_run_id": value_spec_no_unit(value=uuid.uuid4().hex),
+        "ingestor_run_id": value_spec_no_unit(value=str(uuid.uuid4())),
         "data_file_path": value_spec_no_unit(value=nexus_file_path.as_posix()),
         "data_file_name": value_spec_no_unit(value=str(nexus_file_path.name)),
         "now": value_spec_no_unit(
