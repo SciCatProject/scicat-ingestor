@@ -4,11 +4,12 @@
 #
 # Script to set up SciCat test environment: authenticate, generate config, create instrument and proposal
 
+import json
 import os
 import sys
-import json
-import requests
 from datetime import datetime, timedelta
+
+import requests
 
 # Configuration
 BACKEND_URL = "http://localhost:3000/api/v3"
