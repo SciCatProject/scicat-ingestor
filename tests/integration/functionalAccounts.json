@@ -1,0 +1,9 @@
+[
+  {
+    "username": "admin",
+    "email": "admin@scicat.project",
+    "password": "pwd",
+    "role": "admin",
+    "global": true
+  }
+]

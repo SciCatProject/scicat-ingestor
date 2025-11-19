@@ -1,10 +1,4 @@
-version: "3.6"
-
 services:
-# Kafka and file-writer services are copied from
-# https://gitlab.esss.lu.se/ecdc/ess-dmsc/kafka-to-nexus/-/blob/main/integration-tests/docker-compose.yml
-# Currently github-ci fails to run the original docker-compose.yml file in the ecdc repository
-# so we copied and modified the file here.
   kafka:
     container_name: file-writer-kafka
     hostname: file-writer-kafka
@@ -19,7 +13,7 @@ services:
     ports:
       - "9093:9093"
     networks:
-      - frontend
+      - scicat-network
     environment:
       KAFKA_ZOOKEEPER_CONNECT: file-writer-zookeeper:2181
       KAFKA_BROKER_ID: 0
@@ -29,14 +23,14 @@ services:
       KAFKA_MESSAGE_MAX_BYTES: 300000000
       KAFKA_SOCKET_REQUEST_MAX_BYTES: 300000000
       KAFKA_REPLICA_FETCH_MAX_BYTES: 300000000
-      KAFKA_LOG_RETENTION_MS: -1  # keep data forever, required for tests involving fake "historical" data
+      KAFKA_LOG_RETENTION_MS: -1 # keep data forever, required for tests involving fake "historical" data
       ## listeners
       KAFKA_LISTENERS: INSIDE://:9092,OUTSIDE://:9093
       KAFKA_ADVERTISED_LISTENERS: INSIDE://file-writer-kafka:9092,OUTSIDE://localhost:9093
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
     healthcheck:
-      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      test: [ "CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -55,79 +49,77 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     networks:
-      - frontend
+      - scicat-network
 
-  filewriter:
-    container_name: file-writer-file-writer
-    image: registry.esss.lu.se/ecdc/ess-dmsc/docker-centos7-build-node:latest
-    depends_on:
-      kafka:
-        condition: service_healthy
-    tty: true
-    networks:
-      - frontend
+  #filewriter:
+  #  container_name: file-writer-file-writer
+  #  image: registry.esss.lu.se/ecdc/ess-dmsc/docker-centos7-build-node:latest
+  #  depends_on:
+  #    kafka:
+  #      condition: service_healthy
+  #  tty: true
+  #  networks:
+  #    - frontend
 
-  # Graylog setup
-  # MongoDB: https://hub.docker.com/_/mongo/
+  # =============================================================================
+  # MongoDB - Database for SciCat Backend
+  # =============================================================================
   mongodb:
+    container_name: scicat-mongodb
+    hostname: scicat-mongodb
     image: mongo:6.0.14
-    networks:
-      - frontend
-
-  opensearch:
-    image: "opensearchproject/opensearch:2.12.0"
-    environment:
-      - "OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g"
-      - "bootstrap.memory_lock=true"
-      - "discovery.type=single-node"
-      - "action.auto_create_index=false"
-      - "plugins.security.ssl.http.enabled=false"
-      - "plugins.security.disabled=true"
-      # Can generate a password for `OPENSEARCH_INITIAL_ADMIN_PASSWORD` using a linux device via:
-      # tr -dc A-Z-a-z-0-9_@#%^-_=+ < /dev/urandom  | head -c${1:-32}
-      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=+_8r#wliY3Pv5-HMIf4qzXImYzZf-M=M
-    ulimits:
-      memlock:
-        hard: -1
-        soft: -1
-      nofile:
-        soft: 65536
-        hard: 65536
-    restart: "on-failure"
-    networks:
-        - frontend
-
-  # Graylog: https://hub.docker.com/r/graylog/graylog/
-  graylog:
-    image: graylog/graylog:5.2
-    environment:
-    - GRAYLOG_NODE_ID_FILE=/usr/share/graylog/data/config/node-id
-    - GRAYLOG_HTTP_BIND_ADDRESS=0.0.0.0:9000
-    - GRAYLOG_ELASTICSEARCH_HOSTS=http://opensearch:9200
-    - GRAYLOG_MONGODB_URI=mongodb://mongodb:27017/graylog
-    # CHANGE ME (must be at least 16 characters)!
-    - GRAYLOG_PASSWORD_SECRET=somepasswordpepper
-    # Password: admin
-    - GRAYLOG_ROOT_PASSWORD_SHA2=8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918
-    - GRAYLOG_HTTP_EXTERNAL_URI=http://127.0.0.1:9000/
-    entrypoint: /usr/bin/tini -- wait-for-it elasticsearch:9200 --  /docker-entrypoint.sh
-    networks:
-      - frontend
-    restart: always
-    depends_on:
-      - mongodb
-      - opensearch
+    restart: unless-stopped
     ports:
-      # Graylog web interface and REST API
-      - 9000:9000
-      # Syslog TCP
-      - 1514:1514
-      # Syslog UDP
-      - 1514:1514/udp
-      # GELF TCP
-      - 12201:12201
-      # GELF UDP
-      - 12201:12201/udp
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin
+      MONGO_INITDB_DATABASE: scicat
+    networks:
+      - scicat-network
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # =============================================================================
+  # SciCat Backend - Data Catalog API
+  # =============================================================================
+  scicat-backend:
+    container_name: scicat-backend
+    hostname: scicat-backend
+    image: ghcr.io/scicatproject/backend-next:v4.25.1
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    networks:
+      - scicat-network
+    environment:
+      # MongoDB Configuration
+      MONGODB_URI: mongodb://admin:admin@scicat-mongodb:27017/scicat?authSource=admin
+      # JWT Configuration
+      JWT_SECRET: a_scicat_secret
+      JWT_EXPIRES_IN: 36000
+      # Admin Configuration
+      ADMIN_GROUPS: admin,ingestor
+      CREATE_DATASET_GROUPS: admin,ingestor
+      CREATE_DATASET_WITH_PID_GROUPS: admin,ingestor
+      # Logging
+      LOG_LEVEL: debug
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/explorer" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    volumes:
+      # Mount functional accounts configuration
+      - ./integration/functionalAccounts.json:/home/node/app/functionalAccounts.json:ro
 
 networks:
-  frontend:
+  scicat-network:
+    driver: bridge
