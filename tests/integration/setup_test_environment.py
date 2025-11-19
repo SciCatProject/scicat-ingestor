@@ -4,11 +4,13 @@
 #
 # Script to set up SciCat test environment: authenticate, generate config, create instrument and proposal
 
+import json
+import logging
 import os
 import sys
-import json
+from datetime import UTC, datetime, timedelta
+
 import requests
-from datetime import datetime, timedelta
 
 # Configuration
 BACKEND_URL = "http://localhost:3000/api/v3"
@@ -22,13 +24,13 @@ SCHEMA_OUTPUT = os.path.join(PROJECT_ROOT, "resources", "small-coda.imsc.yml")
 
 
 def get_admin_credentials() -> tuple[str, str]:
-    with open(FUNCTIONAL_ACCOUNTS_FILE, "r") as f:
+    with open(FUNCTIONAL_ACCOUNTS_FILE) as f:
         accounts = json.load(f)
         for account in accounts:
             if account.get("username") == "admin":
                 return account.get("username"), account.get("password")
 
-    print("✗ Admin credentials not found in functional accounts file")
+    logging.error("✗ Admin credentials not found in functional accounts file")
     sys.exit(1)
 
 
@@ -36,24 +38,26 @@ USERNAME, PASSWORD = get_admin_credentials()
 
 
 def login_user():
-    print(f"Logging in as {USERNAME}...")
+    logging.info("Logging in as %s...", USERNAME)
     url = f"{BACKEND_URL}/auth/login"
     payload = {"username": USERNAME, "password": PASSWORD}
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         if response.ok:
-            print("✓ Logged in successfully")
+            logging.info("✓ Logged in successfully")
             return response.json().get("id")
         else:
-            print(f"✗ Login failed (HTTP {response.status_code}): {response.text}")
+            logging.error(
+                "✗ Login failed (HTTP %s): %s", response.status_code, response.text
+            )
             return None
     except Exception as e:
-        print(f"✗ Login failed with exception: {e}")
+        logging.error("✗ Login failed with exception: %s", e)
         return None
 
 
 def create_test_instrument(token):
-    print("Creating CODA instrument...")
+    logging.info("Creating CODA instrument...")
     url = f"{BACKEND_URL}/instruments"
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
     payload = {
@@ -63,53 +67,55 @@ def create_test_instrument(token):
     }
 
     try:
-        response = requests.post(url, json=payload, headers=headers)
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
         if response.ok:
             data = response.json()
             pid = data.get("pid")
-            print(f"✓ Instrument created: {pid}")
-            print("Instrument details:")
-            print(json.dumps(data, indent=2))
+            logging.info("✓ Instrument created: %s", pid)
+            logging.info("Instrument details:")
+            logging.info("%s", json.dumps(data, indent=2))
             return True
         else:
-            print(
-                f"✗ Failed to create instrument (HTTP {response.status_code}): {response.text}"
+            logging.error(
+                "✗ Failed to create instrument (HTTP %s): %s",
+                response.status_code,
+                response.text,
             )
             return False
     except Exception as e:
-        print(f"✗ Failed to create instrument with exception: {e}")
+        logging.error("✗ Failed to create instrument with exception: %s", e)
         return False
 
 
 def get_proposal(token, proposal_id):
-    print(f"Checking for existing proposal with ID {proposal_id}...")
+    logging.info("Checking for existing proposal with ID %s...", proposal_id)
     url = f"{BACKEND_URL}/proposals/{proposal_id}"
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=10)
         if response.ok:
-            print(f"✓ Proposal found: {proposal_id}")
-            print("Proposal details:")
-            print(json.dumps(response.json(), indent=2))
+            logging.info("✓ Proposal found: %s", proposal_id)
+            logging.info("Proposal details:")
+            logging.info("%s", json.dumps(response.json(), indent=2))
             return True
         else:
-            print(f"✗ Proposal not found (HTTP {response.status_code})")
+            logging.error("✗ Proposal not found (HTTP %s)", response.status_code)
             return False
     except Exception as e:
-        print(f"✗ Failed to get proposal with exception: {e}")
+        logging.error("✗ Failed to get proposal with exception: %s", e)
         return False
 
 
 def create_test_proposal(token):
-    print("Creating test proposal...")
+    logging.info("Creating test proposal...")
     url = f"{BACKEND_URL}/proposals"
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
 
     # Use UTC time
-    start_time = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    start_time = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z")
     # 1 year later
-    end_time = (datetime.utcnow() + timedelta(days=365)).strftime(
+    end_time = (datetime.now(UTC) + timedelta(days=365)).strftime(
         "%Y-%m-%dT%H:%M:%S.000Z"
     )
 
@@ -142,30 +148,32 @@ def create_test_proposal(token):
     }
 
     try:
-        response = requests.post(url, json=payload, headers=headers)
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
         if response.ok:
             data = response.json()
             proposal_id = data.get("proposalId")
-            print(f"✓ Proposal created: {proposal_id}")
+            logging.info("✓ Proposal created: %s", proposal_id)
             return True
         else:
-            print(
-                f"✗ Failed to create proposal (HTTP {response.status_code}): {response.text}"
+            logging.error(
+                "✗ Failed to create proposal (HTTP %s): %s",
+                response.status_code,
+                response.text,
             )
             return False
     except Exception as e:
-        print(f"✗ Failed to create proposal with exception: {e}")
+        logging.error("✗ Failed to create proposal with exception: %s", e)
         return False
 
 
 def generate_config(token):
-    print("Generating config.test.yml...")
+    logging.info("Generating config.test.yml...")
     if not os.path.exists(CONFIG_TEMPLATE):
-        print(f"✗ Config template not found: {CONFIG_TEMPLATE}")
+        logging.error("✗ Config template not found: %s", CONFIG_TEMPLATE)
         return False
 
     try:
-        with open(CONFIG_TEMPLATE, "r") as f:
+        with open(CONFIG_TEMPLATE) as f:
             content = f.read()
 
         new_content = content.replace("token: <VALID_TOKEN_HERE>", f"token: {token}")
@@ -173,21 +181,21 @@ def generate_config(token):
         with open(CONFIG_TEST, "w") as f:
             f.write(new_content)
 
-        print(f"✓ Config file created: {CONFIG_TEST}")
+        logging.info("✓ Config file created: %s", CONFIG_TEST)
         return True
     except Exception as e:
-        print(f"✗ Failed to generate config: {e}")
+        logging.error("✗ Failed to generate config: %s", e)
         return False
 
 
 def generate_schema():
-    print("Generating small-coda.imsc.yml...")
+    logging.info("Generating small-coda.imsc.yml...")
     if not os.path.exists(SCHEMA_TEMPLATE):
-        print(f"✗ Schema template not found: {SCHEMA_TEMPLATE}")
+        logging.error("✗ Schema template not found: %s", SCHEMA_TEMPLATE)
         return False
 
     try:
-        with open(SCHEMA_TEMPLATE, "r") as f:
+        with open(SCHEMA_TEMPLATE) as f:
             content = f.read()
 
         # Replace <CURRENT_ABSOLUTE_PATH> with the project root path
@@ -196,28 +204,26 @@ def generate_schema():
         with open(SCHEMA_OUTPUT, "w") as f:
             f.write(new_content)
 
-        print(f"✓ Schema file created: {SCHEMA_OUTPUT}")
+        logging.info("✓ Schema file created: %s", SCHEMA_OUTPUT)
         return True
     except Exception as e:
-        print(f"✗ Failed to generate schema: {e}")
+        logging.error("✗ Failed to generate schema: %s", e)
         return False
 
 
 def main():
-    print("=" * 50)
-    print("SciCat Ingestor - Test Environment Setup")
-    print("=" * 50)
-    print()
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    )
+    logging.info("SciCat Ingestor - Test Environment Setup")
 
     token = login_user()
     if not token:
-        print("\n✗ Failed to authenticate")
+        logging.error("\n✗ Failed to authenticate")
         sys.exit(1)
 
-    print("\n" + "=" * 50)
-    print("Authentication Successful!")
-    print("=" * 50)
-    print(f"\nYour JWT token:\n{token}\n")
+    logging.info("Authentication Successful!")
+    logging.info("\nYour JWT token:\n%s\n", token)
 
     if not generate_config(token):
         sys.exit(1)
@@ -225,13 +231,11 @@ def main():
     if not generate_schema():
         sys.exit(1)
 
-    print()
     create_test_instrument(token)
 
-    print()
     if create_test_proposal(token):
-        print("\nTest proposal created successfully!")
-        print("  Proposal ID: 443503\n")
+        logging.info("\nTest proposal created successfully!")
+        logging.info("  Proposal ID: 443503\n")
 
     get_proposal(token, "443503")
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import logging
 import signal
 import subprocess
 import sys
@@ -20,7 +21,7 @@ TIMEOUT = 60  # seconds
 
 
 def load_config(config_path):
-    with open(config_path, "r") as f:
+    with open(config_path) as f:
         return yaml.safe_load(f)
 
 
@@ -29,15 +30,15 @@ def get_dataset_pid_from_file(file_path):
         with h5py.File(file_path, "r") as f:
             # Access the dataset directly
             if "entry/entry_identifier_uuid" in f:
-                val = f["entry/entry_identifier_uuid"][()]  # type: ignore
+                val = f["entry/entry_identifier_uuid"][()]  # type: ignore # noqa: PGH003
                 if isinstance(val, bytes):
                     return val.decode("utf-8")
                 return str(val)
             else:
-                print("entry/entry_identifier_uuid not found in file")
+                logging.error("entry/entry_identifier_uuid not found in file")
                 sys.exit(1)
     except Exception as e:
-        print(f"Error reading HDF5 file: {e}")
+        logging.error("Error reading HDF5 file: %s", e)
         sys.exit(1)
 
 
@@ -50,7 +51,7 @@ def send_kafka_message(config, file_path, job_id):
     if isinstance(topic, list):
         topic = topic[0]
 
-    print(f"Sending WRDN message to topic {topic} for file {file_path}")
+    logging.info("Sending WRDN message to topic %s for file %s", topic, file_path)
 
     message = serialise_wrdn(
         job_id=job_id,
@@ -76,15 +77,15 @@ def check_scicat_dataset(config, pid):
     start_time = time.time()
     while time.time() - start_time < TIMEOUT:
         try:
-            response = requests.get(url, headers=headers)
+            response = requests.get(url, headers=headers, timeout=10)
             if response.ok:
                 dataset = response.json()
-                print(f"✓ Dataset found: {dataset['pid']}")
+                logging.info("✓ Dataset found: %s", dataset["pid"])
                 return dataset
             elif response.status_code != 404:
-                print(f"Waiting for dataset... Status: {response.status_code}")
+                logging.info("Waiting for dataset... Status: %s", response.status_code)
         except Exception as e:
-            print(f"Error checking SciCat: {e}")
+            logging.error("Error checking SciCat: %s", e)
 
         time.sleep(2)
 
@@ -102,29 +103,32 @@ def check_origdatablock(config, dataset_pid):
     url = f"{base_url}/origdatablocks?filter={filter_str}"
 
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=10)
         if response.ok:
             blocks = response.json()
             if blocks:
-                print(f"✓ OrigDatablock found: {blocks[0]['_id']}")
+                logging.info("✓ OrigDatablock found: %s", blocks[0]["_id"])
                 return blocks[0]
     except Exception as e:
-        print(f"Error checking OrigDatablock: {e}")
+        logging.error("Error checking OrigDatablock: %s", e)
 
     return None
 
 
 def main():
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    )
     if not CONFIG_FILE.exists():
-        print(f"Config file not found: {CONFIG_FILE}")
+        logging.error("Config file not found: %s", CONFIG_FILE)
         sys.exit(1)
 
     config = load_config(CONFIG_FILE)
     pid = get_dataset_pid_from_file(DATA_FILE)
-    print(f"Target Dataset PID: {pid}")
+    logging.info("Target Dataset PID: %s", pid)
 
     # Start Online Ingestor
-    print("Starting Online Ingestor...")
+    logging.info("Starting Online Ingestor...")
     cmd = [
         sys.executable,
         "-m",
@@ -133,7 +137,7 @@ def main():
         str(CONFIG_FILE),
         "--logging.verbose",
     ]
-    process = subprocess.Popen(cmd)
+    process = subprocess.Popen(cmd)  # noqa: S603
 
     try:
         # Wait for ingestor to start
@@ -145,27 +149,27 @@ def main():
         send_kafka_message(config, DATA_FILE, job_id)
 
         # Wait for processing and check SciCat
-        print("Waiting for processing...")
+        logging.info("Waiting for processing...")
         dataset = check_scicat_dataset(config, pid)
 
         if dataset:
-            print("Dataset created successfully.")
+            logging.info("Dataset created successfully.")
             # Check OrigDatablock
             block = check_origdatablock(config, pid)
             if block:
-                print("OrigDatablock created successfully.")
-                print("Integration test PASSED")
+                logging.info("OrigDatablock created successfully.")
+                logging.info("Integration test PASSED")
             else:
-                print("OrigDatablock NOT found.")
-                print("Integration test FAILED")
+                logging.error("OrigDatablock NOT found.")
+                logging.error("Integration test FAILED")
                 sys.exit(1)
         else:
-            print("Dataset NOT found after timeout.")
-            print("Integration test FAILED")
+            logging.error("Dataset NOT found after timeout.")
+            logging.error("Integration test FAILED")
             sys.exit(1)
 
     finally:
-        print("Stopping ingestor...")
+        logging.info("Stopping ingestor...")
         process.send_signal(signal.SIGINT)
         process.wait()
 
