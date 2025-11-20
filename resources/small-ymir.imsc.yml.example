@@ -1,8 +1,8 @@
-id: 628b28d6-9c26-11ef-948d-0b2d405fc82f
-name: Test Coda Metadata Schema
-instrument: coda
-selector: filename:contains:small-coda
-order: 110
+id: bdb3dc66-9c2c-11ef-9ffb-532fdcfe4a31
+name: Ymir Metadata Schema
+instrument: ymir
+selector: filename:contains:small-ymir
+order: 100
 variables:
   job_id:
     source: NXS
@@ -16,28 +16,44 @@ variables:
     source: NXS
     path: /entry/experiment_identifier
     value_type: string
-  pi_firstname:
+  proposal_data:
     source: SC
     url: proposals/<proposal_id>
+    field: ''
+    value_type: dict
+  pi_firstname:
+    source: VALUE
+    operator: getitem
+    value: <proposal_data>
     field: pi_firstname
     value_type: string
   pi_lastname:
-    source: SC
-    url: proposals/<proposal_id>
+    source: VALUE
+    operator: getitem
+    value: <proposal_data>
     field: pi_lastname
     value_type: string
   pi_email:
-    source: SC
-    url: proposals/<proposal_id>
+    source: VALUE
+    operator: getitem
+    value: <proposal_data>
     field: pi_email
     value_type: string
-  dataset_name:
+  dataset_original_name:
     source: NXS
     path: /entry/title
     value_type: string
+  dataset_name:
+    source: VALUE
+    value: <dataset_original_name> - <ingestor_run_id>
+    value_type: string
+  instrument_name:
+    source: NXS
+    path: /entry/instrument/name
+    value_type: string
   instruments_data:
     source: SC
-    url: instruments?filter=%7B%22where%22%3A%7B%22name%22%3A%7B%22ilike%22%3A%22odin%22%7D%7D%7D
+    url: instruments?filter=%7B%22where%22%3A%7B%22name%22%3A%7B%22ilike%22%3A%22ymir%22%7D%7D%7D
     field: ''
     value_type: list
   instrument_data:
@@ -46,10 +62,6 @@ variables:
     value: <instruments_data>
     field: 0
     value_type: dict
-  instrument_name:
-    source: NXS
-    path: /entry/instrument/name
-    value_type: string
   instrument_id:
     source: VALUE
     operator: getitem
@@ -79,18 +91,30 @@ variables:
     value_type: string
   owner_group:
     source: VALUE
-    value: ess_proposal_<proposal_id>
+    value: <proposal_id>
     value_type: string
   access_groups:
     source: VALUE
     value:
     - scientific information management systems group
     value_type: string[]
-  source_folder:
+  raw_folder:
     source: VALUE
     operator: dirname-2
     value: <data_file_path>
     value_type: string
+  source_folder:
+    source: VALUE
+    operator: str-replace
+    value: <raw_folder>
+    pattern: ess/raw
+    replacement: ess/data
+    value_type: string
+  keywords:
+    source: VALUE
+    value:
+    - YMIR
+    value_type: string[]
 schema:
   pid:
     field_type: high_level
@@ -135,26 +159,41 @@ schema:
   instrument_id:
     field_type: high_level
     machine_name: instrumentId
-    value: instrument_id
+    value: <instrument_id>
     type: string
   creation_location:
     field_type: high_level
     machine_name: creationLocation
-    value: ESS:CODA
+    value: ESS:CODA:<instrument_name>
     type: string
-  start_time:
+  start_time_hl:
+    field_type: high_level
+    machine_name: startTime
+    value: <start_time>
+    type: date
+  end_time_hl:
+    field_type: high_level
+    machine_name: endTime
+    value: <end_time>
+    type: date
+  run_number_hl:
+    field_type: high_level
+    machine_name: runNumber
+    value: <run_number>
+    type: string
+  start_time_sm:
     field_type: scientific_metadata
     machine_name: start_time
     human_name: Start Time
     value: <start_time>
     type: date
-  end_time:
+  end_time_sm:
     field_type: scientific_metadata
     machine_name: end_time
     human_name: End Time
     value: <end_time>
     type: date
-  run_number:
+  run_number_sm:
     field_type: scientific_metadata
     machine_name: run_number
     human_name: Run Number
@@ -163,8 +202,14 @@ schema:
   job_id:
     field_type: scientific_metadata
     machine_name: job_id
-    human_name: Job Id
+    human_name: ESS Data Collection Job Id
     value: <job_id>
+    type: string
+  ingestor_run_id:
+    field_type: scientific_metadata
+    machine_name: ingestor_run_id
+    human_name: ESS Ingestor Run Id
+    value: <ingestor_run_id>
     type: string
   acquisition_team_members:
     field_type: scientific_metadata
@@ -192,3 +237,8 @@ schema:
     machine_name: creationTime
     value: <now>
     type: date
+  keywords:
+    field_type: high_level
+    machine_name: keywords
+    value: <keywords>
+    type: string[]
