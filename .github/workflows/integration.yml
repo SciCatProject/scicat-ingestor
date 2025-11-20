@@ -28,13 +28,13 @@ jobs:
       - run: python -m pip install -r requirements/ci.txt
       - run: python -m pip install -e .
       - run: docker compose version
-      - run: docker compose -f tests/docker-compose-file-writer.yml up -d --wait
+      - run: docker compose -f tests/docker-compose.yml up -d --wait
       # Setup test environment (creates SciCat backend user, instrument, proposal)
       - run: python tests/integration/setup_test_environment.py
       # Validate the generated config file
       - run: scicat_validate_ingestor_config tests/integration/config.test.yml
       # Validate the generated schema file
-      - run: scicat_validate_metadata_schema resources/small-coda.imsc.yml
+      - run: scicat_validate_metadata_schema resources/small-coda.imsc.yml.example
       # Run the ingestor tests
       - run: python tests/_scicat_ingestor.py
-      - run: docker compose -f tests/docker-compose-file-writer.yml down
+      - run: docker compose -f tests/docker-compose.yml down
