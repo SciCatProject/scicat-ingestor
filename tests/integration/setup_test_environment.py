@@ -4,6 +4,7 @@
 #
 # Script to set up SciCat test environment: authenticate, generate config, create instrument and proposal
 
+import argparse
 import json
 import logging
 import os
@@ -20,10 +21,8 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 FUNCTIONAL_ACCOUNTS_FILE = os.path.join(SCRIPT_DIR, "functionalAccounts.json")
 CONFIG_TEMPLATE = os.path.join(SCRIPT_DIR, "ingestor.config.yml.template")
 CONFIG_TEST = os.path.join(SCRIPT_DIR, "config.test.yml")
-SCHEMA_TEMPLATE = os.path.join(SCRIPT_DIR, "small-coda.imsc.yml.template")
 PROJECT_ROOT = os.path.dirname(os.path.dirname(SCRIPT_DIR))
-SCHEMA_OUTPUT = os.path.join(PROJECT_ROOT, "resources", "small-coda.imsc.yml")
-TEST_DATA_DIR = os.path.join(PROJECT_ROOT, "test-data")
+DEFAULT_TEST_DATA_DIR = os.path.join(PROJECT_ROOT, "test-data")
 HDF5_EXTENSION = ".hdf"
 
 
@@ -46,17 +45,29 @@ def _read_hdf5_string(h5_obj: h5py.File, path: str) -> str | None:
     return str(value).strip()
 
 
-def discover_hdf5_metadata() -> list[dict[str, str]]:
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Setup SciCat integration test environment"
+    )
+    parser.add_argument(
+        "--data-dir",
+        default=DEFAULT_TEST_DATA_DIR,
+        help="Directory containing HDF files (default: %(default)s)",
+    )
+    return parser.parse_args()
+
+
+def discover_hdf5_metadata(test_data_dir: str) -> list[dict[str, str]]:
     metadata_entries: list[dict[str, str]] = []
-    if not os.path.isdir(TEST_DATA_DIR):
-        logging.error("Test data directory not found: %s", TEST_DATA_DIR)
+    if not os.path.isdir(test_data_dir):
+        logging.error("Test data directory not found: %s", test_data_dir)
         return metadata_entries
 
-    for filename in sorted(os.listdir(TEST_DATA_DIR)):
+    for filename in sorted(os.listdir(test_data_dir)):
         if not filename.lower().endswith(HDF5_EXTENSION):
             continue
 
-        file_path = os.path.join(TEST_DATA_DIR, filename)
+        file_path = os.path.join(test_data_dir, filename)
         try:
             with h5py.File(file_path, "r") as h5_file:
                 proposal_id = _read_hdf5_string(h5_file, "entry/experiment_identifier")
@@ -257,10 +268,10 @@ def generate_config(token):
         return False
 
 
-def provision_resources_from_test_data(token: str):
-    metadata_entries = discover_hdf5_metadata()
+def provision_resources_from_test_data(token: str, test_data_dir: str):
+    metadata_entries = discover_hdf5_metadata(test_data_dir)
     if not metadata_entries:
-        logging.error("No HDF5 files found in %s", TEST_DATA_DIR)
+        logging.error("No HDF5 files found in %s", test_data_dir)
         sys.exit(1)
 
     created_instruments: set[str] = set()
@@ -288,6 +299,9 @@ def main():
     )
     logging.info("SciCat Ingestor - Test Environment Setup")
 
+    args = parse_args()
+    test_data_dir = os.path.abspath(args.data_dir)
+
     token = login_user()
     if not token:
         logging.error("\n✗ Failed to authenticate")
@@ -299,7 +313,7 @@ def main():
     if not generate_config(token):
         sys.exit(1)
 
-    provision_resources_from_test_data(token)
+    provision_resources_from_test_data(token, test_data_dir)
 
 
 if __name__ == "__main__":
