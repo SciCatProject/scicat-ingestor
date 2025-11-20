@@ -114,6 +114,55 @@ def test_metadata_schema_selection() -> None:
     )
 
 
+def test_metadata_schema_selection_contains() -> None:
+    schemas = OrderedDict(
+        {
+            "schema1": MetadataSchema(
+                order=1,
+                id="schema1",
+                name="Schema 1",
+                instrument="",
+                selector="filename:contains:wrong_part",
+                variables={},
+                schema={},
+            ),
+            "schema2": MetadataSchema(
+                order=2,
+                id="schema2",
+                name="Schema 2",
+                instrument="",
+                selector="filename:contains:right_part",
+                variables={},
+                schema={},
+            ),
+        }
+    )
+    assert (
+        select_applicable_schema(Path("some_right_part_in_name.nxs"), schemas)
+        == schemas["schema2"]
+    )
+
+
+def test_metadata_schema_selection_contains_no_match() -> None:
+    schemas = OrderedDict(
+        {
+            "schema1": MetadataSchema(
+                order=1,
+                id="schema1",
+                name="Schema 1",
+                instrument="",
+                selector="filename:contains:missing_part",
+                variables={},
+                schema={},
+            ),
+        }
+    )
+    with pytest.raises(
+        Exception, match="No applicable metadata schema configuration found!!"
+    ):
+        select_applicable_schema(Path("some_file.nxs"), schemas)
+
+
 def test_metadata_schema_selection_wrong_selector_target_name_raises() -> None:
     with pytest.raises(ValueError, match="Invalid target name"):
         select_applicable_schema(
