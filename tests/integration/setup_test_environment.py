@@ -68,35 +68,40 @@ def discover_hdf5_metadata(test_data_dir: str) -> list[dict[str, str]]:
         logging.error("Test data directory not found: %s", test_data_dir)
         return metadata_entries
 
-    for filename in sorted(os.listdir(test_data_dir)):
-        if not filename.lower().endswith(HDF5_EXTENSION):
-            continue
-
-        file_path = os.path.join(test_data_dir, filename)
-        try:
-            with h5py.File(file_path, "r") as h5_file:
-                proposal_id = _read_hdf5_string(h5_file, "entry/experiment_identifier")
-                instrument_name = _read_hdf5_string(h5_file, "entry/instrument/name")
-
-            if not proposal_id or not instrument_name:
-                logging.warning(
-                    "Skipping %s due to missing metadata (proposal=%s, instrument=%s)",
-                    filename,
-                    proposal_id,
-                    instrument_name,
-                )
+    for root, _, files in os.walk(test_data_dir):
+        for filename in sorted(files):
+            if not filename.lower().endswith(HDF5_EXTENSION):
                 continue
 
-            metadata_entries.append(
-                {
-                    "file_path": file_path,
-                    "file_name": filename,
-                    "proposal_id": proposal_id,
-                    "instrument_name": instrument_name,
-                }
-            )
-        except OSError as err:
-            logging.warning("Failed to read %s: %s", filename, err)
+            file_path = os.path.join(root, filename)
+            try:
+                with h5py.File(file_path, "r") as h5_file:
+                    proposal_id = _read_hdf5_string(
+                        h5_file, "entry/experiment_identifier"
+                    )
+                    instrument_name = _read_hdf5_string(
+                        h5_file, "entry/instrument/name"
+                    )
+
+                if not proposal_id or not instrument_name:
+                    logging.warning(
+                        "Skipping %s due to missing metadata (proposal=%s, instrument=%s)",
+                        file_path,
+                        proposal_id,
+                        instrument_name,
+                    )
+                    continue
+
+                metadata_entries.append(
+                    {
+                        "file_path": file_path,
+                        "file_name": filename,
+                        "proposal_id": proposal_id,
+                        "instrument_name": instrument_name,
+                    }
+                )
+            except OSError as err:
+                logging.warning("Failed to read %s: %s", file_path, err)
 
     return metadata_entries
 

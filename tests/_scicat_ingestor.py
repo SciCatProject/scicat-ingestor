@@ -43,9 +43,7 @@ def discover_hdf_files(data_dir: Path) -> list[Path]:
         return []
 
     data_files = sorted(
-        file_path
-        for file_path in data_dir.iterdir()
-        if file_path.suffix.lower() == ".hdf"
+        file_path for file_path in data_dir.rglob("*.hdf") if file_path.is_file()
     )
     if not data_files:
         logging.error("No .hdf files found in %s", data_dir)
