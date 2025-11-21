@@ -275,8 +275,13 @@ def _select_applicable_schema(
         else:
             raise ValueError(f"Invalid target name {select_target_name}")
 
+        if select_target_value is None:
+            return False
+
         if select_function_name == "starts_with":
             return select_target_value.startswith(select_argument)
+        elif select_function_name == "contains":
+            return select_argument in select_target_value
         else:
             raise ValueError(f"Invalid function name {select_function_name}")
 
