@@ -96,24 +96,25 @@ def discover_hdf5_metadata(test_data_dir: str) -> list[dict[str, str]]:
     return metadata_entries
 
 
-def get_admin_credentials() -> tuple[str, str]:
+def _get_account_credentials(username: str) -> tuple[str, str]:
     with open(FUNCTIONAL_ACCOUNTS_FILE) as f:
         accounts = json.load(f)
         for account in accounts:
-            if account.get("username") == "admin":
+            if account.get("username") == username:
                 return account.get("username"), account.get("password")
 
-    logging.error("✗ Admin credentials not found in functional accounts file")
+    logging.error("✗ %s credentials not found in functional accounts file", username)
     sys.exit(1)
 
 
-USERNAME, PASSWORD = get_admin_credentials()
+ADMIN_USERNAME, ADMIN_PASSWORD = _get_account_credentials("admin")
+INGESTOR_USERNAME, INGESTOR_PASSWORD = _get_account_credentials("ingestor")
 
 
-def login_user():
-    logging.info("Logging in as %s...", USERNAME)
+def login_user(username: str, password: str) -> str | None:
+    logging.info("Logging in as %s...", username)
     url = f"{BACKEND_URL}/auth/login"
-    payload = {"username": USERNAME, "password": PASSWORD}
+    payload = {"username": username, "password": password}
     try:
         response = requests.post(url, json=payload, timeout=10)
         if response.ok:
@@ -246,7 +247,7 @@ def create_proposal(
         return False
 
 
-def generate_config(token):
+def generate_config(token: str):
     logging.info("Generating config.test.yml...")
     if not os.path.exists(CONFIG_TEMPLATE):
         logging.error("✗ Config template not found: %s", CONFIG_TEMPLATE)
@@ -302,18 +303,23 @@ def main():
     args = parse_args()
     test_data_dir = os.path.abspath(args.data_dir)
 
-    token = login_user()
-    if not token:
-        logging.error("\n✗ Failed to authenticate")
+    admin_token = login_user(ADMIN_USERNAME, ADMIN_PASSWORD)
+    if not admin_token:
+        logging.error("\n✗ Failed to authenticate with admin user")
         sys.exit(1)
 
     logging.info("Authentication Successful!")
-    logging.info("\nYour JWT token:\n%s\n", token)
+    logging.info("\nAdmin JWT token:\n%s\n", admin_token)
 
-    if not generate_config(token):
+    ingestor_token = login_user(INGESTOR_USERNAME, INGESTOR_PASSWORD)
+    if not ingestor_token:
+        logging.error("\n✗ Failed to authenticate with ingestor user")
         sys.exit(1)
 
-    provision_resources_from_test_data(token, test_data_dir)
+    if not generate_config(ingestor_token):
+        sys.exit(1)
+
+    provision_resources_from_test_data(admin_token, test_data_dir)
 
 
 if __name__ == "__main__":
