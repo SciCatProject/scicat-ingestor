@@ -307,30 +307,51 @@ def main() -> None:
             exit(logger, unexpected=False)
         else:
             scicat_dataset = create_scicat_dataset(
-                dataset=local_dataset, config=config.scicat, logger=logger
+                dataset=local_dataset,
+                config=config.scicat,
+                logger=logger,
+                data_file_path=nexus_file_path,
             )
 
             # create origdatablock in scicat
             scicat_origdatablock = create_scicat_origdatablock(
-                origdatablock=local_origdatablock, config=config.scicat, logger=logger
+                origdatablock=local_origdatablock,
+                config=config.scicat,
+                logger=logger,
+                data_file_path=nexus_file_path,
             )
 
             # check one more time if we successfully created the entries in scicat
             if not ((len(scicat_dataset) > 0) and (len(scicat_origdatablock) > 0)):
                 logger.error(
-                    "Failed to create dataset or origdatablock in scicat.\n"
+                    "Failed to create dataset or origdatablock in scicat for file %s.\n"
                     "SciCat dataset: %s\nSciCat origdatablock: %s",
+                    nexus_file_path,
                     scicat_dataset,
                     scicat_origdatablock,
                 )
-                raise RuntimeError("Failed to create dataset or origdatablock.")
+                raise RuntimeError(
+                    f"Failed to create dataset or origdatablock for file {nexus_file_path}"
+                )
 
-            # check one more time if we successfully created the entries in scicat
+            # if we get here, both dataset and origdatablock have been created successfully
+            logger.info(
+                "Dataset ingestion successful. \n"
+                "Data file: %s. \n"
+                "Scicat dataset pid: %s. \n"
+                "SciCat origdatablock id: %s",
+                nexus_file_path,
+                scicat_dataset.get('pid'),
+                scicat_origdatablock.get('_id'),
+            )
+
             exit(
                 logger,
                 unexpected=not (bool(scicat_dataset) and bool(scicat_origdatablock)),
             )
-            raise RuntimeError("Failed to create dataset or origdatablock.")
+            raise RuntimeError(
+                f"Error on existing offline ingestor for file {nexus_file_path}."
+            )
 
 
 if __name__ == "__main__":
