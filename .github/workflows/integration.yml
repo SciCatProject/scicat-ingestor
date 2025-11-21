@@ -6,18 +6,20 @@ on:
   workflow_dispatch:
     inputs:
       python-version:
+        description: "Python version to run tests"
         type: string
   workflow_call:
     inputs:
       python-version:
+        description: "Python version to run tests"
         type: string
 
 jobs:
   tests:
     name: Integration Tests
-    runs-on: 'ubuntu-22.04'
+    runs-on: ubuntu-latest
     steps:
-      - run: sudo apt install --yes docker-compose
+      - uses: docker/setup-compose-action@v1
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
@@ -25,8 +27,12 @@ jobs:
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -r requirements/ci.txt
       - run: python -m pip install -e .
-      - run: scicat_validate_ingestor_config resources/config.sample.yml
-      - run: docker-compose version
-      - run: docker-compose -f tests/docker-compose-file-writer.yml up -d
-      - run: python tests/_scicat_ingestor.py -c resources/config.sample.yml --logging.verbose
-      - run: docker-compose -f tests/docker-compose-file-writer.yml down
+      - run: docker compose version
+      - run: docker compose -f tests/docker-compose.yml up -d --wait
+      # Setup test environment (creates SciCat backend user, instrument, proposal)
+      - run: python tests/integration/setup_test_environment.py --data-dir test-data
+      # Validate the generated config file
+      - run: scicat_validate_ingestor_config tests/integration/config.test.yml
+      # Run the ingestor tests
+      - run: python tests/_scicat_ingestor.py --config tests/integration/config.test.yml --data-dir test-data
+      - run: docker compose -f tests/docker-compose.yml down

@@ -44,3 +44,23 @@ with h5py.File('copied_ymir.hdf', 'r+') as f:
         f.copy('entry', new_f)
 
 ```
+
+# Integration Test
+
+Start the SciCat docker environment with:
+
+```bash
+docker compose -f tests/docker-compose.yml up --wait
+```
+
+Setup the test environment with:
+
+```bash
+python tests/integration/setup_test_environment.py
+```
+
+Run the integration tests with:
+
+```bash
+python tests/_scicat_ingestor.py
+```

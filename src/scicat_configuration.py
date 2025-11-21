@@ -474,7 +474,7 @@ def _validate_config_file(target_type: type[T], config_file: Path) -> T:
 
 def validate_config_file() -> None:
     """Validate the configuration file."""
-    from .scicat_logging import build_devtool_logger
+    from scicat_logging import build_devtool_logger
 
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument(

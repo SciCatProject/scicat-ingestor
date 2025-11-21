@@ -1,0 +1,16 @@
+[
+  {
+    "username": "admin",
+    "email": "admin@scicat.project",
+    "password": "pwd",
+    "role": "admin",
+    "global": true
+  },
+  {
+    "username": "ingestor",
+    "email": "scicatingestor@your.site",
+    "password": "pwd",
+    "role": "ingestor",
+    "global": true
+  }
+]
