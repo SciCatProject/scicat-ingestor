@@ -8,4 +8,5 @@ graypy
 h5py
 kafka-python
 requests
+pyyaml>=6.0.2
 rich
