@@ -89,7 +89,7 @@ services:
   scicat-backend:
     container_name: scicat-backend
     hostname: scicat-backend
-    image: ghcr.io/scicatproject/backend-next:v4.26.0
+    image: ghcr.io/scicatproject/backend-next:stable
     restart: unless-stopped
     depends_on:
       mongodb:
