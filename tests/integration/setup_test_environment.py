@@ -54,6 +54,11 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_TEST_DATA_DIR,
         help="Directory containing HDF files (default: %(default)s)",
     )
+    parser.add_argument(
+        "--schemas-dir",
+        default="resources",
+        help="Directory containing schema files relative to project root (default: %(default)s)",
+    )
     return parser.parse_args()
 
 
@@ -247,7 +252,7 @@ def create_proposal(
         return False
 
 
-def generate_config(token: str):
+def generate_config(token: str, schemas_dir: str):
     logging.info("Generating config.test.yml...")
     if not os.path.exists(CONFIG_TEMPLATE):
         logging.error("✗ Config template not found: %s", CONFIG_TEMPLATE)
@@ -258,6 +263,7 @@ def generate_config(token: str):
             content = f.read()
 
         new_content = content.replace("token: <VALID_TOKEN_HERE>", f"token: {token}")
+        new_content = new_content.replace("<SCHEMAS_DIRECTORY>", schemas_dir)
 
         with open(CONFIG_TEST, "w") as f:
             f.write(new_content)
@@ -302,6 +308,11 @@ def main():
 
     args = parse_args()
     test_data_dir = os.path.abspath(args.data_dir)
+    schemas_dir_arg = args.schemas_dir
+    if os.path.isabs(schemas_dir_arg):
+        schemas_dir = schemas_dir_arg
+    else:
+        schemas_dir = os.path.join(PROJECT_ROOT, schemas_dir_arg)
 
     admin_token = login_user(ADMIN_USERNAME, ADMIN_PASSWORD)
     if not admin_token:
@@ -316,7 +327,7 @@ def main():
         logging.error("\n✗ Failed to authenticate with ingestor user")
         sys.exit(1)
 
-    if not generate_config(ingestor_token):
+    if not generate_config(ingestor_token, schemas_dir):
         sys.exit(1)
 
     provision_resources_from_test_data(admin_token, test_data_dir)

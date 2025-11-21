@@ -20,7 +20,7 @@ ingestion:
   - scicat_background_ingestor
   max_offline_ingestors: 10
   offline_ingestors_wait_time: 10
-  schemas_directory: resources
+  schemas_directory: <SCHEMAS_DIRECTORY>
   check_if_dataset_exists_by_pid: true
   check_if_dataset_exists_by_metadata: false
   check_if_dataset_exists_by_metadata_key: job_id
