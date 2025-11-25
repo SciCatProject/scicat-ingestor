@@ -221,6 +221,12 @@ class LoggingOptions:
 
 
 @dataclass(kw_only=True)
+class HealthCheckOptions:
+    host: str = "0.0.0.0"  # noqa: S104
+    port: int = 8080
+
+
+@dataclass(kw_only=True)
 class KafkaOptions:
     """
     KafkaOptions dataclass to store the configuration options.
@@ -264,6 +270,7 @@ class FileHandlingOptions:
     message_to_file: bool = True
     message_file_extension: str = "message.json"
     file_path_type: str = "relative"  # allowed values: absolute and relative
+    data_directory: str = ""
     data_file_open_max_tries: int = 3
     """How many times to try opening a data file before giving up."""
     data_file_open_retry_delay: list[int] = field(default_factory=lambda: [])
@@ -338,6 +345,7 @@ class SciCatOptions:
     timeout: int = 0
     stream: bool = True
     verify: bool = False
+    health_endpoint: str = "health"
     api_endpoints: ScicatEndpoints = field(default_factory=ScicatEndpoints)
 
     @property
@@ -363,6 +371,15 @@ class SciCatOptions:
         """Return the host address ready to be used."""
         return self.host.removesuffix('/') + "/"
 
+    @property
+    def health_url(self) -> str:
+        """Return the health-check URL, allowing either relative or absolute values."""
+
+        endpoint = self.health_endpoint
+        if endpoint.startswith(("http://", "https://")):
+            return endpoint
+        return urljoin(self.host_address, endpoint.lstrip("/"))
+
 
 @dataclass(kw_only=True)
 class OnlineIngestorConfig:
@@ -378,6 +395,7 @@ class OnlineIngestorConfig:
     kafka: KafkaOptions = field(default_factory=KafkaOptions)
     logging: LoggingOptions = field(default_factory=LoggingOptions)
     scicat: SciCatOptions = field(default_factory=SciCatOptions)
+    health_check: HealthCheckOptions = field(default_factory=HealthCheckOptions)
 
     def to_dict(self) -> dict:
         """Return the configuration as a dictionary."""

@@ -31,6 +31,7 @@ ingestion:
     message_to_file: true
     message_file_extension: message.json
     file_path_type: relative
+    data_directory: ''
     data_file_open_max_tries: 3
     data_file_open_retry_delay: []
 kafka:
@@ -65,8 +66,12 @@ scicat:
   timeout: 0
   stream: true
   verify: false
+  health_endpoint: health
   api_endpoints:
     datasets: datasets
     proposals: proposals
     origdatablocks: origdatablocks
     instruments: instruments
+health_check:
+  host: 0.0.0.0
+  port: 8080

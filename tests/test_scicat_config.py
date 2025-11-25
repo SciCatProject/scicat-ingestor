@@ -7,6 +7,7 @@ from scicat_configuration import (
     IngestionOptions,
     OfflineIngestorConfig,
     OnlineIngestorConfig,
+    SciCatOptions,
     _load_config,
     _validate_config_file,
     build_dataclass,
@@ -86,7 +87,7 @@ def test_arg_types_match_offline_ingestor_config(template_config_file: Path) -> 
             **{
                 key: value
                 for key, value in _load_config(template_config_file).items()
-                if key not in ("kafka")
+                if key not in ("kafka", "health_check")
             },
             "config_file": template_config_file.as_posix(),
             "nexus_file": '',
@@ -96,3 +97,16 @@ def test_arg_types_match_offline_ingestor_config(template_config_file: Path) -> 
     )
     for name, tp in get_type_hints(OfflineIngestorConfig).items():
         assert isinstance(getattr(config_obj, name), tp)
+
+
+def test_scicat_health_url_relative_path() -> None:
+    options = SciCatOptions(host="https://example.org/api/v3", health_endpoint="health")
+    assert options.health_url == "https://example.org/api/v3/health"
+
+
+def test_scicat_health_url_absolute_url() -> None:
+    options = SciCatOptions(
+        host="https://example.org/api/v3",
+        health_endpoint="https://status.example.org/healthz",
+    )
+    assert options.health_url == "https://status.example.org/healthz"

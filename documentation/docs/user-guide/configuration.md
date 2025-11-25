@@ -133,6 +133,9 @@ This section is specific for the offline ingestor and contains all the options t
   Available options:
   - absolute: use absolute paths
   - ...
+- data_directory: _string_
+  This option provides the full path to the base data directory where all the data files are located. It is used for testing the mount points.
+  Example: "/ess/data/"
 
 ## Kafka (kafka)
 
@@ -214,6 +217,15 @@ This section is used by both programs and it specify how and where to send the l
   It is suggested to pick a meaningful string that can be used when selecting entries in graylog interface and queries
   Example: "scicat_ingestor"
 
+## Health Check (health_check)
+
+The online ingestor exposes a small HTTP endpoint that external monitors can query to verify Kafka, storage, and SciCat connectivity. This section controls where that endpoint listens.
+
+- host: _string_
+  IP address or hostname the embedded HTTP server should bind to. Use `0.0.0.0` (default) to listen on every interface, or `127.0.0.1` to restrict access to the local machine.
+- port: _integer_
+  TCP port for the health endpoint. The default is `8080`, but you can change it to match your infrastructure or to avoid collisions with other services.
+
 ## SciCat (scicat)
 
 This section is used by the offline ingestor and it contains the info about url where the relevant scicat instance is reachable and also the token that needs to be used for authentication purposes.
@@ -221,6 +233,8 @@ This section is used by the offline ingestor and it contains the info about url 
 - host: _valid url as string_
   URL of the SciCat instance of reference where we want to create the dataset records.
   Example: "https://scicat.ess.eu/api/v3",
+- health_endpoint: _string_
+  Relative path (e.g. `health` or `api/v3/health`) or full URL that the health server should query to verify SciCat availability. Defaults to `health` which is appended to the configured host.
 - token: _string_
   Valid JWT token used to connect to SciCat with the proper permissions to query and create datasets.
 - timeout: _integer_ or _null_

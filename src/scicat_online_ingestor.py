@@ -23,6 +23,7 @@ from scicat_configuration import (
     build_dataclass,
     merge_config_and_input_args,
 )
+from scicat_health_check import start_health_server
 from scicat_kafka import (
     WritingFinished,
     build_consumer,
@@ -124,6 +125,9 @@ def main() -> None:
         # Kafka consumer
         if (consumer := build_consumer(config.kafka, logger)) is None:
             raise RuntimeError("Failed to build the Kafka consumer")
+
+        # Start health server without affecting the online ingestor loop
+        start_health_server(config, consumer, logger)
 
         # this is the dictionary that contains the list of offline ingestor running
         offline_ingestors: dict = {}

@@ -257,7 +257,7 @@ def create_proposal(
         return False
 
 
-def generate_config(token: str, schemas_dir: str):
+def generate_config(token: str, schemas_dir: str, data_dir: str):
     logging.info("Generating config.test.yml...")
     if not os.path.exists(CONFIG_TEMPLATE):
         logging.error("✗ Config template not found: %s", CONFIG_TEMPLATE)
@@ -269,6 +269,7 @@ def generate_config(token: str, schemas_dir: str):
 
         new_content = content.replace("token: <VALID_TOKEN_HERE>", f"token: {token}")
         new_content = new_content.replace("<SCHEMAS_DIRECTORY>", schemas_dir)
+        new_content = new_content.replace("<DATA_DIRECTORY>", data_dir)
 
         with open(CONFIG_TEST, "w") as f:
             f.write(new_content)
@@ -332,7 +333,7 @@ def main():
         logging.error("\n✗ Failed to authenticate with ingestor user")
         sys.exit(1)
 
-    if not generate_config(ingestor_token, schemas_dir):
+    if not generate_config(ingestor_token, schemas_dir, test_data_dir):
         sys.exit(1)
 
     provision_resources_from_test_data(admin_token, test_data_dir)
