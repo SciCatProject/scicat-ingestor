@@ -150,7 +150,7 @@ def _open_h5file(
         # that can result non-stopped generator error.
         # It happens when it doesn't fail opening the file but fails after.
         opened_file = h5py.File(file_path, 'r')
-    except Exception as e:
+    except (OSError, BlockingIOError) as e:
         if len(retry_delays) > 0:
             cur_retry = retry_delays[0]
             logger.info(
