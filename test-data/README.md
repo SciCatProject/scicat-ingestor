@@ -64,3 +64,9 @@ Run the integration tests with:
 ```bash
 python tests/_scicat_ingestor.py
 ```
+
+Run the stress tests with:
+
+```bash
+python tests/_scicat_stress_test.py
+```

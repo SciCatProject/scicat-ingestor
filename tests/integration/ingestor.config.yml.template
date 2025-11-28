@@ -5,7 +5,7 @@ id: ''
 
 dataset:
   allow_dataset_pid: true
-  generate_dataset_pid: false
+  generate_dataset_pid: true
   dataset_pid_prefix: 20.500.12269
   default_instrument_id: TEST_INSTRUMENT
   default_proposal_id: TEST_PROPOSAL
