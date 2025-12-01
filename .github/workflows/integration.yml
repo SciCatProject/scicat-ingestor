@@ -35,4 +35,6 @@ jobs:
       - run: scicat_validate_ingestor_config tests/integration/config.test.yml
       # Run the ingestor tests
       - run: python tests/_scicat_ingestor.py --config tests/integration/config.test.yml --data-dir test-data
+      # Run the health check tests
+      - run: python tests/_scicat_healthcheck.py --config tests/integration/config.test.yml
       - run: docker compose -f tests/docker-compose.yml down

@@ -54,6 +54,7 @@ def build_offline_config(logger: logging.Logger | None = None) -> OfflineIngesto
     # It is because ``OfflineIngestorConfig`` shares the template config file
     # with ``OnlineIngestorConfig``.
     del merged_configuration["kafka"]
+    del merged_configuration["health_check"]
 
     config = build_dataclass(
         tp=OfflineIngestorConfig, data=merged_configuration, logger=logger, strict=False
