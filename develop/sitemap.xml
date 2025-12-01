@@ -2,74 +2,74 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://scicatproject.github.io/scicat-ingestor/develop/</loc>
-         <lastmod>2025-08-15</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://scicatproject.github.io/scicat-ingestor/develop/CODE_OF_CONDUCT/</loc>
-         <lastmod>2025-08-15</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://scicatproject.github.io/scicat-ingestor/develop/getting-started/</loc>
-         <lastmod>2025-08-15</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://scicatproject.github.io/scicat-ingestor/develop/_mermaid_charts/_file_ingestion_sequence/</loc>
-         <lastmod>2025-08-15</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://scicatproject.github.io/scicat-ingestor/develop/_mermaid_charts/_file_writer_sequence/</loc>
-         <lastmod>2025-08-15</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://scicatproject.github.io/scicat-ingestor/develop/_mermaid_charts/_infra_structure/</loc>
-         <lastmod>2025-08-15</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://scicatproject.github.io/scicat-ingestor/develop/_mermaid_charts/_ingestor_flow_details/</loc>
-         <lastmod>2025-08-15</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://scicatproject.github.io/scicat-ingestor/develop/_mermaid_charts/_metadata_retrieval_flow/</loc>
-         <lastmod>2025-08-15</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://scicatproject.github.io/scicat-ingestor/develop/developer-guide/adrs/</loc>
-         <lastmod>2025-08-15</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://scicatproject.github.io/scicat-ingestor/develop/developer-guide/configuration/</loc>
-         <lastmod>2025-08-15</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://scicatproject.github.io/scicat-ingestor/develop/developer-guide/documentation/</loc>
-         <lastmod>2025-08-15</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://scicatproject.github.io/scicat-ingestor/develop/developer-guide/getting-started/</loc>
-         <lastmod>2025-08-15</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://scicatproject.github.io/scicat-ingestor/develop/developer-guide/release-deploy/</loc>
-         <lastmod>2025-08-15</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://scicatproject.github.io/scicat-ingestor/develop/user-guide/configuration/</loc>
-         <lastmod>2025-08-15</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://scicatproject.github.io/scicat-ingestor/develop/user-guide/metadata-schemas/</loc>
-         <lastmod>2025-08-15</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://scicatproject.github.io/scicat-ingestor/develop/user-guide/offline-ingestor/</loc>
-         <lastmod>2025-08-15</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://scicatproject.github.io/scicat-ingestor/develop/user-guide/online-ingestor/</loc>
-         <lastmod>2025-08-15</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
     <url>
          <loc>https://scicatproject.github.io/scicat-ingestor/develop/user-guide/overview/</loc>
-         <lastmod>2025-08-15</lastmod>
+         <lastmod>2025-12-01</lastmod>
     </url>
 </urlset>
