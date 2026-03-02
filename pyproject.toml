@@ -154,15 +154,18 @@ scicat-ingestor = { path = ".", editable = true }
 [tool.pixi.environments]
 default = { solve-group = "default" }
 test = { features = ["test"], solve-group = "default" }
+lint = { features = ["lint"], solve-group = "default" }
 cilegacy = { features = ["cilegacy"], solve-group = "default" }
 
 [tool.pixi.feature.test.tasks]
 test = { cmd = "pytest tests/" }
+
+[tool.pixi.feature.lint.tasks]
+lint = { cmd = "prek run ruff-format -a" }
 
 [tool.pixi.feature.cilegacy.tasks]
 tox = { cmd = "tox" }
 
 [tool.pixi.feature.cilegacy.dependencies]
 tox = ">=4.47.0,<5"
-
 
