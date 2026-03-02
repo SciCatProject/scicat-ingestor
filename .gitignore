@@ -53,3 +53,6 @@ config.*.yml
 
 # Documentation
 documentation/site/*
+# pixi environments
+.pixi/*
+!.pixi/config.toml

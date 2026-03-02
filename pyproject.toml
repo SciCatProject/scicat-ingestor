@@ -28,7 +28,7 @@ requires-python = ">=3.12"
 # Run 'tox -e deps' after making changes here. This will update requirement files.
 # Make sure to list one dependency per line.
 dependencies = [
-  "confluent_kafka",
+  "confluent-kafka",
   "ess-streaming-data-types",
   "graypy",
   "h5py",
@@ -143,3 +143,26 @@ ignore-words-list = [
     "wtH",
     "nd",
 ]
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[tool.pixi.pypi-dependencies]
+scicat-ingestor = { path = ".", editable = true }
+
+[tool.pixi.environments]
+default = { solve-group = "default" }
+test = { features = ["test"], solve-group = "default" }
+cilegacy = { features = ["cilegacy"], solve-group = "default" }
+
+[tool.pixi.feature.test.tasks]
+test = { cmd = "pytest tests/" }
+
+[tool.pixi.feature.cilegacy.tasks]
+tox = { cmd = "tox" }
+
+[tool.pixi.feature.cilegacy.dependencies]
+tox = ">=4.47.0,<5"
+
+
