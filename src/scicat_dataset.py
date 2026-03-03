@@ -10,7 +10,8 @@ import re
 import urllib
 import uuid
 from collections.abc import Callable, Iterable
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
+from inspect import signature
 from types import MappingProxyType
 from typing import Any
 
@@ -466,6 +467,17 @@ class ScicatDataset:
     runNumber: str | None = None
     keywords: list[str] | None = None
 
+    @classmethod
+    def mandatory_fields(cls) -> tuple[str, ...]:
+        """Return all arguments without default or default factory."""
+        scicat_dataset_sig = signature(cls)
+
+        return [
+            param.name
+            for param in scicat_dataset_sig.parameters.values()
+            if param.default is param.empty
+        ]
+
 
 @dataclass(kw_only=True)
 class DataFileListItem:
@@ -857,11 +869,40 @@ def create_scicat_dataset_instance(
     )
 
     _report_failures(logger=logger, failures=failure_list)
+    high_level_fields['size'] = sum(
+        [file.size for file in data_file_list if file.size is not None]
+    )
+    high_level_fields['numberOfFiles'] = len(data_file_list)
+
+    mandatory_fields = ScicatDataset.mandatory_fields()
+    missing_mandatory_fields = [
+        field_name
+        for field_name in mandatory_fields
+        if field_name not in high_level_fields
+    ]
+    if missing_mandatory_fields:
+        logger.error(
+            "Missing mandatory fields for scicat dataset: %s",
+            ', '.join(missing_mandatory_fields),
+        )
+
+    expected_fields_name = [field_spec.name for field_spec in fields(ScicatDataset)]
+    unexpected_fields = [
+        field_name
+        for field_name in high_level_fields
+        if field_name not in expected_fields_name
+    ]
+    if unexpected_fields:
+        logger.error(
+            "Found unexpected metadata fields for scicat dataset: %s.\n"
+            "Unexpected metadata fields will be ignored.",
+            ', '.join(unexpected_fields),
+        )
+    for unused_field_name in unexpected_fields:
+        high_level_fields.pop(unused_field_name)
 
     # Create the dataset instance
     scicat_dataset = ScicatDataset(
-        size=sum([file.size for file in data_file_list if file.size is not None]),
-        numberOfFiles=len(data_file_list),
         isPublished=False,
         scientificMetadata=scientific_metadata,
         **high_level_fields,
