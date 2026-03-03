@@ -16,6 +16,7 @@ from scicat_metadata import (
     collect_schemas,
     list_schema_file_names,
     select_applicable_schema,
+    validate_schema,
 )
 
 ALL_SCHEMA_EXAMPLES = list_schema_file_names(
@@ -389,3 +390,21 @@ def test_metadata_schema_items(
     assert dataset.pid == 'supposedly-long-uuid'
     assert dataset.scientificMetadata['sample_temperature']['value'] == '300.0'
     assert dataset.scientificMetadata['sample_temperature']['unit'] == 'K'
+
+
+def test_metadata_schema_validator_invalid_field_type(
+    example_schema: MetadataSchema, tmp_path: Path, fake_logger
+) -> None:
+    from copy import deepcopy
+
+    invalid_schema_path = tmp_path / "invalid_field_type.imsc.yml"
+
+    invalid_schema = deepcopy(example_schema)
+    first_field_key = next(iter(invalid_schema.schema.keys()))
+    invalid_schema.schema[
+        first_field_key
+    ].field_type = 'high-five-level'  # Random invalid type
+    invalid_schema.save_file(invalid_schema_path)
+
+    with pytest.raises(ValueError, match='One or more schema files are invalid'):
+        validate_schema(schema_path=invalid_schema_path, logger=fake_logger)
