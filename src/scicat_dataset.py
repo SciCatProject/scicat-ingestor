@@ -672,24 +672,6 @@ def _create_scientific_metadata(
     return {name: asdict(meta) for name, meta in metadatas.items()}
 
 
-def _validate_metadata_schemas(
-    metadata_schema: dict[str, MetadataItemConfig],
-) -> None:
-    invalid_types = [
-        field.field_type
-        for field in metadata_schema.values()
-        if field.field_type not in VALID_METADATA_TYPES
-    ]
-
-    if any(invalid_types):
-        raise ValueError(
-            "Invalid metadata schema types found. Valid types are: ",
-            VALID_METADATA_TYPES,
-            "Got: ",
-            invalid_types,
-        )
-
-
 def create_scicat_dataset_instance(
     *,
     metadata_schema: dict[str, MetadataItemConfig],  # metadata-schema["schema"]
@@ -715,7 +697,22 @@ def create_scicat_dataset_instance(
         Logger instance.
 
     """
-    _validate_metadata_schemas(metadata_schema)
+    # Check metadata item configurations
+    # Avoid failing even if the metadata schema is invalid.
+    invalid_types = [
+        field.field_type
+        for field in metadata_schema.values()
+        if field.field_type not in VALID_METADATA_TYPES
+    ]
+
+    if any(invalid_types):
+        logger.warning(
+            "Invalid metadata schema types found: %s .\nValid types are: %s. "
+            "Metadata items with invalid types will be ignored.",
+            VALID_METADATA_TYPES,
+            invalid_types,
+        )
+
     # Create the dataset instance
     scicat_dataset = ScicatDataset(
         size=sum([file.size for file in data_file_list if file.size is not None]),
