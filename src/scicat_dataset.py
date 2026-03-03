@@ -95,6 +95,13 @@ def to_list(value: Any) -> list:
         raise TypeError()
 
 
+def return_none(value: Any) -> None:
+    if value is not None:
+        raise TypeError('`None` type value should be `None`.')
+
+    return None
+
+
 _DtypeConvertingMap = MappingProxyType(
     {
         "string": to_string,
@@ -106,6 +113,7 @@ _DtypeConvertingMap = MappingProxyType(
         "list": to_list,
         "email": to_string,
         "link": to_string,
+        "none": return_none,
         # TODO: Add email converter
     }
 )
@@ -115,7 +123,7 @@ def convert_to_type(input_value: Any, dtype_desc: str) -> Any:
     if (converter := _DtypeConvertingMap.get(dtype_desc)) is None:
         raise ValueError(
             "Invalid dtype description. Must be one of: ",
-            "string, string[], integer, float, date.",
+            ','.join(_DtypeConvertingMap.keys()),
             f"Got: {dtype_desc}",
         )
     return converter(input_value)
@@ -646,10 +654,19 @@ class MetadataItemValueSpec:
         )
 
 
-def _create_scientific_metadata(
+@dataclass
+class _Failure:
+    target_config: MetadataItemConfig
+    error: Exception
+
+
+def _create_highlevel_metadata_dict(
     *,
-    sm_schemas: list[MetadataItemConfig],
+    metadata_schema: dict[str, MetadataItemConfig],
     variable_map: dict[str, MetadataVariableValueSpec],
+    dataset_options: DatasetOptions,
+    failure_container: list[_Failure],
+    logger: logging.Logger,
 ) -> dict:
     """Create scientific metadata from the metadata schema configuration.
 
@@ -661,15 +678,89 @@ def _create_scientific_metadata(
         The scientific metadata schema configuration.
     variable_map:
         The variable map to render the scientific metadata values.
+    failure_container:
+        Append failure report into.
 
     """
-    metadatas = {
-        item_config.machine_name: MetadataItemValueSpec.from_metadata_item_config(
-            item_config, variable_map
+    result = {}
+    hl_field_configs = _filter_by_field_type(
+        metadata_schema.values(), HIGH_LEVEL_METADATA_TYPE
+    )
+    for hl_field in hl_field_configs:
+        try:
+            result[hl_field.machine_name] = _render_variable_as_type(
+                hl_field.value, variable_map, hl_field.type
+            )
+        except Exception as err:
+            failure_container.append(_Failure(hl_field, err))
+
+    # Auto generate or assign ``pid`` if needed
+    # It has to be done before constructing `ScicatDataset` because
+    # ``pid`` is a mandatory argument.
+    if not dataset_options.allow_dataset_pid and ('pid' in result):
+        logger.info(
+            "PID is not allowed in the dataset by configuration. "
+            "Setting it to `None` in the dataset."
         )
-        for item_config in sm_schemas
-    }
-    return {name: asdict(meta) for name, meta in metadatas.items()}
+        result['pid'] = None
+    elif dataset_options.generate_dataset_pid:
+        logger.info("Auto generating PID for the dataset based on the configuration.")
+        result['pid'] = uuid.uuid4().hex
+
+    return result
+
+
+def _create_scientific_metadata(
+    *,
+    metadata_schema: dict[str, MetadataItemConfig],
+    variable_map: dict[str, MetadataVariableValueSpec],
+    failure_container: list[_Failure],
+) -> dict:
+    """Create scientific metadata from the metadata schema configuration.
+
+    Params
+    ------
+    metadata_schema_id:
+        The ID of the metadata schema configuration.
+    sm_schemas:
+        The scientific metadata schema configuration.
+    variable_map:
+        The variable map to render the scientific metadata values.
+    failure_container:
+        Append failure report into.
+
+    """
+    result = {}
+    sm_schemas = _filter_by_field_type(
+        metadata_schema.values(), SCIENTIFIC_METADATA_TYPE
+    )
+    for item_config in sm_schemas:
+        try:
+            name = item_config.machine_name
+            value_spec = MetadataItemValueSpec.from_metadata_item_config(
+                item_config, variable_map
+            )
+            value_dict = asdict(value_spec)
+            result[name] = value_dict
+        except Exception as err:
+            failure_container.append(_Failure(item_config, err))
+
+    return result
+
+
+def _report_failures(*, logger: logging.Logger, failures: list[_Failure]) -> None:
+    if failures:
+        names = '\n  - '.join(
+            f"human_name: {failure.target_config.human_name}\n"
+            f"machine_name: {failure.target_config.machine_name}\n"
+            f"original_message: '{failure.error}'"
+            for failure in failures
+        )
+        logger.warning(
+            "%d metadata fields failed to be constructed and ignored:\n  - %s.",
+            len(failures),
+            names,
+        )
 
 
 def create_scicat_dataset_instance(
@@ -713,35 +804,37 @@ def create_scicat_dataset_instance(
             invalid_types,
         )
 
+    # Container to collect all failures.
+    failure_list: list[_Failure] = []
+
+    # High Level Schema Fields
+    high_level_fields = _create_highlevel_metadata_dict(
+        metadata_schema=metadata_schema,
+        variable_map=variable_map,
+        dataset_options=config,
+        failure_container=failure_list,
+        logger=logger,
+    )
+
+    # Scientific Metadata Schema Fields
+    scientific_metadata = _create_scientific_metadata(
+        metadata_schema=metadata_schema,
+        variable_map=variable_map,
+        failure_container=failure_list,
+    )
+
+    _report_failures(logger=logger, failures=failure_list)
+
     # Create the dataset instance
     scicat_dataset = ScicatDataset(
         size=sum([file.size for file in data_file_list if file.size is not None]),
         numberOfFiles=len(data_file_list),
         isPublished=False,
-        scientificMetadata=_create_scientific_metadata(
-            sm_schemas=_filter_by_field_type(
-                metadata_schema.values(), SCIENTIFIC_METADATA_TYPE
-            ),  # Scientific metadata schemas
-            variable_map=variable_map,
-        ),
-        **{
-            field.machine_name: _render_variable_as_type(
-                field.value, variable_map, field.type
-            )
-            for field in _filter_by_field_type(
-                metadata_schema.values(), HIGH_LEVEL_METADATA_TYPE
-            )
-            # High level schemas
-        },
+        scientificMetadata=scientific_metadata,
+        **high_level_fields,
     )
 
     # Auto generate or assign default values if needed
-    if not config.allow_dataset_pid and scicat_dataset.pid:
-        logger.info("PID is not allowed in the dataset by configuration.")
-        scicat_dataset.pid = None
-    elif config.generate_dataset_pid:
-        logger.info("Auto generating PID for the dataset based on the configuration.")
-        scicat_dataset.pid = uuid.uuid4().hex
     if scicat_dataset.instrumentId is None:
         scicat_dataset.instrumentId = config.default_instrument_id
         logger.info(

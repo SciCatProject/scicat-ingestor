@@ -1,8 +1,12 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
+import re
+
 import pytest
 
-from scicat_dataset import convert_to_type
+from scicat_configuration import DatasetOptions
+from scicat_dataset import convert_to_type, create_scicat_dataset_instance
+from scicat_metadata import MetadataSchema, MetadataVariableValueSpec
 
 
 def test_dtype_string_converter() -> None:
@@ -42,5 +46,50 @@ def test_dtype_date_converter() -> None:
 
 
 def test_dtype_converter_invalid_dtype_raises() -> None:
-    with pytest.raises(ValueError, match="Invalid dtype description."):
+    with pytest.raises(ValueError, match=re.escape("Invalid dtype description.")):
         convert_to_type("test", "invalid_type")
+
+
+def test_create_scicat_dataset_instance(
+    example_schema: MetadataSchema, fake_logger
+) -> None:
+    variable_map: dict[str, MetadataVariableValueSpec] = {
+        'pid': MetadataVariableValueSpec(value='some-random-pid'),
+        'proposal_id': MetadataVariableValueSpec(value='proposal-id'),
+        'detector_names': MetadataVariableValueSpec(value='ingetsor'),
+        'sample_temperature': MetadataVariableValueSpec(value=300.0, unit='K'),
+    }
+    scicat_dataset = create_scicat_dataset_instance(
+        metadata_schema=example_schema.schema,
+        variable_map=variable_map,
+        data_file_list=[],
+        config=DatasetOptions(),
+        logger=fake_logger,
+    )
+    # Should not fail anything
+    assert not fake_logger._warning_list
+    # Check some of the fields
+    assert scicat_dataset.pid == 'some-random-pid'
+    assert scicat_dataset.ownerEmail == ''  # Empty in the schema file
+    assert scicat_dataset.scientificMetadata['sample_temperature'] == {
+        'human_name': 'Sample Temperature',
+        'value': '300.0',  # Should be converted to string
+        'unit': 'K',
+        'type': 'string',
+    }
+
+
+def test_create_scicat_dataset_instance_failure_okay(
+    example_schema: MetadataSchema, fake_logger
+) -> None:
+    variable_map: dict[str, MetadataVariableValueSpec] = {
+        'pid': MetadataVariableValueSpec(value='pid')
+    }
+    create_scicat_dataset_instance(
+        metadata_schema=example_schema.schema,
+        variable_map=variable_map,
+        data_file_list=[],
+        config=DatasetOptions(),
+        logger=fake_logger,
+    )
+    assert fake_logger._warning_list

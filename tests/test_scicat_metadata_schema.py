@@ -237,29 +237,6 @@ def nexus_file(
 
 
 @pytest.fixture(scope="module")
-def example_schema() -> MetadataSchema:
-    import logging
-    from typing import cast
-
-    import yaml
-
-    from scicat_metadata import _validate_file
-
-    # Turn this yaml string into a stream
-    _example_schema = Path(__file__).parent / "resources/example_schema.imsc.yml"
-    # Check if the example schema is valid first
-    if not _validate_file(_example_schema, logger=logging.getLogger(__name__)):
-        raise ValueError(
-            "Invalid example schema. "
-            "Use ``scicat_validate_metadata_schema`` to validate it first."
-        )
-
-    return MetadataSchema.from_dict(
-        cast(dict, yaml.safe_load(_example_schema.read_text()))
-    )
-
-
-@pytest.fixture(scope="module")
 def offline_config(example_nexus_file_for_schema_test: Path) -> OfflineIngestorConfig:
     config = OfflineIngestorConfig(
         nexus_file=example_nexus_file_for_schema_test.as_posix(),
