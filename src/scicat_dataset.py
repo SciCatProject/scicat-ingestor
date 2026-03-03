@@ -320,49 +320,82 @@ def _build_default_variable_map(
     }
 
 
+@dataclass
+class _VariableMapFailure:
+    name: str
+    recipe: MetadataVariableConfig
+    error: Exception
+
+
+def _report_variable_map_construction_failures(
+    *, logger: logging.Logger, failures: list[_VariableMapFailure]
+) -> None:
+    if failures:
+        descs = '\n  - '.join(
+            f"name: {failure.name}\n"
+            f"recipe: {failure.recipe}\n"
+            f"original_message: '{failure.error}'"
+            for failure in failures
+        )
+        logger.warning(
+            "%d variables failed to be constructed and ignored:\n  - %s.",
+            len(failures),
+            descs,
+        )
+
+
 def extract_variables_values(
+    *,
     variables: dict[str, MetadataVariableConfig],
     h5file: h5py.File,
     config: OfflineIngestorConfig,
     schema_id: str,
+    logger: logging.Logger,
 ) -> dict[str, MetadataVariableValueSpec]:
     variable_map: dict[str, MetadataVariableValueSpec] = _build_default_variable_map(
         nexus_file_path=pathlib.Path(config.nexus_file),
         ingestor_file_dir=config.ingestion.file_handling.ingestor_files_directory,
         schema_id=schema_id,
     )
+    failure_list: list[_VariableMapFailure] = []
     for variable_name, variable_recipe in variables.items():
-        if isinstance(variable_recipe, VariableConfigNexusFile):
-            value = _retrieve_values_from_file(variable_recipe, h5file)
-        elif isinstance(variable_recipe, VariableConfigScicat):
-            url_template = render_variable_value(
-                variable_recipe.url, variable_map
-            ).value
-            if not isinstance(url_template, str):
-                raise ValueError(f"Invalid URL template: {url_template}")
+        try:
+            if isinstance(variable_recipe, VariableConfigNexusFile):
+                value = _retrieve_values_from_file(variable_recipe, h5file)
+            elif isinstance(variable_recipe, VariableConfigScicat):
+                url_template = render_variable_value(
+                    variable_recipe.url, variable_map
+                ).value
+                if not isinstance(url_template, str):
+                    raise ValueError(f"Invalid URL template: {url_template}")
 
-            full_endpoint_url = render_full_url(url_template, config.scicat)
-            _value = retrieve_value_from_scicat(
-                config=config.scicat,
-                scicat_endpoint_url=full_endpoint_url,
-                field_name=variable_recipe.field,
+                full_endpoint_url = render_full_url(url_template, config.scicat)
+                _value = retrieve_value_from_scicat(
+                    config=config.scicat,
+                    scicat_endpoint_url=full_endpoint_url,
+                    field_name=variable_recipe.field,
+                )
+                # Unit is not retrieved from scicat
+                value = MetadataVariableValueSpec(value=_value)
+            elif isinstance(variable_recipe, VariableConfigValue):
+                value = render_variable_value(variable_recipe.value, variable_map)
+                _operator = _get_operator(variable_recipe.operator)
+                value = _operator(value, variable_recipe)
+
+            else:
+                raise Exception("Invalid variable source: ", variable_recipe.source)
+
+            # Convert dtype to match the target value_type.
+            converted_value = convert_to_type(value.value, variable_recipe.value_type)
+            variable_map[variable_name] = MetadataVariableValueSpec(
+                value=converted_value, unit=value.unit
             )
-            # Unit is not retrieved from scicat
-            value = MetadataVariableValueSpec(value=_value)
-        elif isinstance(variable_recipe, VariableConfigValue):
-            value = render_variable_value(variable_recipe.value, variable_map)
-            _operator = _get_operator(variable_recipe.operator)
-            value = _operator(value, variable_recipe)
+        except Exception as err:
+            failure_list.append(
+                _VariableMapFailure(variable_name, variable_recipe, err)
+            )
 
-        else:
-            raise Exception("Invalid variable source: ", variable_recipe.source)
-
-        # Convert dtype to match the target value_type.
-        variable_map[variable_name] = MetadataVariableValueSpec(
-            value=convert_to_type(value.value, variable_recipe.value_type),
-            unit=value.unit,
-        )
-
+    _report_variable_map_construction_failures(logger=logger, failures=failure_list)
     return variable_map
 
 

@@ -1,10 +1,65 @@
 import logging
 import pathlib
+from collections.abc import Generator
 from dataclasses import dataclass
 
+import h5py
 import pytest
 
+from scicat_configuration import OfflineIngestorConfig
 from scicat_metadata import MetadataSchema
+
+
+@pytest.fixture(scope="module")
+def example_nexus_file_for_schema_test(
+    tmp_path_factory: pytest.TempdirFactory,
+) -> pathlib.Path:
+    tmp_path = pathlib.Path(
+        tmp_path_factory.mktemp("example_nexus_file_for_schema_tests")
+    )
+    example_file = tmp_path / "nexus_for_testing.h5"
+    with h5py.File(example_file, "w") as f:
+        entry_gr = f.create_group("/entry")
+        entry_gr.create_dataset("entry_identifier_uuid", data=["supposedly-long-uuid"])
+        entry_gr.create_dataset("experiment_identifier", data=["123456"])
+        instrument_gr = entry_gr.create_group("instrument")
+        instrument_gr.create_dataset("name", data=["Test Instrument"])
+        detectors = instrument_gr.create_group("detectors")
+        det_1 = detectors.create_group('detector_1')
+        det_2 = detectors.create_group('detector_2')
+        det_3 = detectors.create_group('zdet_3')  # Purposely not matching pattern
+        for i, det in enumerate((det_1, det_2, det_3)):
+            det.create_dataset("name", data=[f"Detector Name {i + 1}"])
+
+        sample_gr = entry_gr.create_group("sample")
+        temperature = sample_gr.create_dataset("temperature", data=[300.0])
+        temperature.attrs["units"] = "K"
+
+    return example_file
+
+
+@pytest.fixture(scope="module")
+def nexus_file(
+    example_nexus_file_for_schema_test: pathlib.Path,
+) -> Generator[h5py.File, None, None]:
+    with h5py.File(example_nexus_file_for_schema_test, "r") as f:
+        yield f
+
+
+@pytest.fixture(scope="module")
+def offline_config(
+    example_nexus_file_for_schema_test: pathlib.Path,
+) -> OfflineIngestorConfig:
+    config = OfflineIngestorConfig(
+        nexus_file=example_nexus_file_for_schema_test.as_posix(),
+        done_writing_message_file="",
+        config_file="",
+        id="",
+    )
+    config.ingestion.file_handling.ingestor_files_directory = (
+        example_nexus_file_for_schema_test.parent.as_posix()
+    )
+    return config
 
 
 @pytest.fixture(scope="module")

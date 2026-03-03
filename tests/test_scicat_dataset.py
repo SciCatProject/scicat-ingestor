@@ -2,10 +2,15 @@
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 import re
 
+import h5py
 import pytest
 
-from scicat_configuration import DatasetOptions
-from scicat_dataset import convert_to_type, create_scicat_dataset_instance
+from scicat_configuration import DatasetOptions, OfflineIngestorConfig
+from scicat_dataset import (
+    convert_to_type,
+    create_scicat_dataset_instance,
+    extract_variables_values,
+)
 from scicat_metadata import MetadataSchema, MetadataVariableValueSpec
 
 
@@ -48,6 +53,59 @@ def test_dtype_date_converter() -> None:
 def test_dtype_converter_invalid_dtype_raises() -> None:
     with pytest.raises(ValueError, match=re.escape("Invalid dtype description.")):
         convert_to_type("test", "invalid_type")
+
+
+def test_create_scicat_extract_variables_values(
+    nexus_file: h5py.File,
+    example_schema: MetadataSchema,
+    fake_logger,
+    offline_config: OfflineIngestorConfig,
+) -> None:
+    variable_map = extract_variables_values(
+        variables=example_schema.variables,
+        h5file=nexus_file,
+        config=offline_config,
+        schema_id=example_schema.id,
+        logger=fake_logger,
+    )
+    variable_recipes = example_schema.variables
+    for nexus_str_variable in ('pid', 'proposal_id', 'instrument_name'):
+        assert (
+            variable_map[nexus_str_variable].value
+            == nexus_file[variable_recipes[nexus_str_variable].path][()][0].decode()
+        )
+    assert variable_map['sample_temperature'].value == 300.0
+    assert variable_map['sample_temperature'].unit == 'K'
+    assert variable_map['detector_names_all'].value == [
+        f"Detector Name {i + 1}" for i in range(3)
+    ]
+    assert variable_map['detector_names_list'].value == [
+        f"Detector Name {i + 1}" for i in range(2)
+    ]
+    # Should not fail at all
+    assert not fake_logger._warning_list
+
+
+def test_create_scicat_extract_variables_values_failure_okay(
+    nexus_file: h5py.File,
+    example_schema: MetadataSchema,
+    fake_logger,
+    offline_config: OfflineIngestorConfig,
+) -> None:
+    from copy import deepcopy
+
+    invalid_schema = deepcopy(example_schema)
+    invalid_schema.variables['pid'].path = '/obviously/wrong/path'
+
+    extract_variables_values(
+        variables=invalid_schema.variables,
+        h5file=nexus_file,
+        config=offline_config,
+        schema_id=invalid_schema.id,
+        logger=fake_logger,
+    )
+    # Failures should be ignored
+    assert fake_logger._warning_list
 
 
 def test_create_scicat_dataset_instance(

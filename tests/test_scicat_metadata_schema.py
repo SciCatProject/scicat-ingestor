@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 from collections import OrderedDict
-from collections.abc import Generator
 from pathlib import Path
 
 import h5py
@@ -204,55 +203,8 @@ def test_metadata_schema_selection_wrong_selector_function_name_raises() -> None
         )
 
 
-@pytest.fixture(scope="module")
-def example_nexus_file_for_schema_test(tmp_path_factory: pytest.TempdirFactory) -> Path:
-    tmp_path = Path(tmp_path_factory.mktemp("example_nexus_file_for_schema_tests"))
-    example_file = tmp_path / "nexus_for_testing.h5"
-    with h5py.File(example_file, "w") as f:
-        entry_gr = f.create_group("/entry")
-        entry_gr.create_dataset("entry_identifier_uuid", data=["supposedly-long-uuid"])
-        entry_gr.create_dataset("experiment_identifier", data=["123456"])
-        instrument_gr = entry_gr.create_group("instrument")
-        instrument_gr.create_dataset("name", data=["Test Instrument"])
-        detectors = instrument_gr.create_group("detectors")
-        det_1 = detectors.create_group('detector_1')
-        det_2 = detectors.create_group('detector_2')
-        det_3 = detectors.create_group('zdet_3')  # Purposely not matching pattern
-        for i, det in enumerate((det_1, det_2, det_3)):
-            det.create_dataset("name", data=[f"Detector Name {i + 1}"])
-
-        sample_gr = entry_gr.create_group("sample")
-        temperature = sample_gr.create_dataset("temperature", data=[300.0])
-        temperature.attrs["units"] = "K"
-
-    return example_file
-
-
-@pytest.fixture(scope="module")
-def nexus_file(
-    example_nexus_file_for_schema_test: Path,
-) -> Generator[h5py.File, None, None]:
-    with h5py.File(example_nexus_file_for_schema_test, "r") as f:
-        yield f
-
-
-@pytest.fixture(scope="module")
-def offline_config(example_nexus_file_for_schema_test: Path) -> OfflineIngestorConfig:
-    config = OfflineIngestorConfig(
-        nexus_file=example_nexus_file_for_schema_test.as_posix(),
-        done_writing_message_file="",
-        config_file="",
-        id="",
-    )
-    config.ingestion.file_handling.ingestor_files_directory = (
-        example_nexus_file_for_schema_test.parent.as_posix()
-    )
-    return config
-
-
 def test_metadata_variable_default_variables(
-    nexus_file: h5py.File,
-    offline_config: OfflineIngestorConfig,
+    nexus_file: h5py.File, offline_config: OfflineIngestorConfig, fake_logger
 ) -> None:
     import datetime
     import uuid
@@ -265,6 +217,7 @@ def test_metadata_variable_default_variables(
         h5file=nexus_file,
         schema_id=example_id,
         config=offline_config,
+        logger=fake_logger,
     )
     nexus_file_path = Path(offline_config.nexus_file)
     assert isinstance(variable_values['ingestor_run_id'].value, str)
@@ -287,6 +240,7 @@ def test_metadata_variable_nexus(
     nexus_file: h5py.File,
     example_schema: MetadataSchema,
     offline_config: OfflineIngestorConfig,
+    fake_logger,
 ) -> None:
     from scicat_dataset import extract_variables_values
 
@@ -295,6 +249,7 @@ def test_metadata_variable_nexus(
         h5file=nexus_file,
         schema_id=example_schema.id,
         config=offline_config,
+        logger=fake_logger,
     )
     assert variable_values['pid'] == MetadataVariableValueSpec(
         value='supposedly-long-uuid'
@@ -318,6 +273,7 @@ def test_metadata_variable_raw_values(
     nexus_file: h5py.File,
     example_schema: MetadataSchema,
     offline_config: OfflineIngestorConfig,
+    fake_logger,
 ) -> None:
     from scicat_dataset import extract_variables_values
 
@@ -326,6 +282,7 @@ def test_metadata_variable_raw_values(
         h5file=nexus_file,
         schema_id=example_schema.id,
         config=offline_config,
+        logger=fake_logger,
     )
     assert variable_values['detector_names'] == MetadataVariableValueSpec(
         value="Detector Name 1, Detector Name 2"
@@ -339,6 +296,7 @@ def test_metadata_schema_items(
     nexus_file: h5py.File,
     example_schema: MetadataSchema,
     offline_config: OfflineIngestorConfig,
+    fake_logger,
 ) -> None:
     """This test is techniqually about creating ScicatDataset instance
     but currently we do not build schema items separately before
@@ -356,6 +314,7 @@ def test_metadata_schema_items(
         h5file=nexus_file,
         schema_id=example_schema.id,
         config=offline_config,
+        logger=fake_logger,
     )
     dataset = create_scicat_dataset_instance(
         metadata_schema=example_schema.schema,

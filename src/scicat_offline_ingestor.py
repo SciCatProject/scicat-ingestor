@@ -252,7 +252,11 @@ def main() -> None:
 
             # define variables values
             variable_map = extract_variables_values(
-                metadata_schema.variables, h5file, config, metadata_schema.id
+                variables=metadata_schema.variables,
+                h5file=h5file,
+                config=config,
+                schema_id=metadata_schema.id,
+                logger=logger,
             )
 
         data_file_list = create_data_file_list(
