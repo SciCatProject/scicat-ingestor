@@ -100,6 +100,9 @@ _HELP_TEXT = {
         "ingestion.file-handling." + key: value
         for key, value in file_handling_help.items()
     },
+    "ingestion.fallback-schema-file-path": "Path to the fallback imsc file. "
+    "If it is not empty string, it will check if it is valid. "
+    "An empty string will be ignored. ",
 }
 
 
@@ -300,6 +303,7 @@ class IngestionOptions:
     max_offline_ingestors: int = 10
     offline_ingestors_wait_time: int = 10
     schemas_directory: str = "schemas"
+    fallback_schema_file_path: str = ''
     check_if_dataset_exists_by_pid: bool = True
     check_if_dataset_exists_by_metadata: bool = True
     check_if_dataset_exists_by_metadata_key: str = "job_id"

@@ -13,8 +13,6 @@ from typing import Any
 
 import yaml
 
-from fallback_metadata_schema import FALLBACK_SCHEMA_PATH
-
 SCIENTIFIC_METADATA_TYPE = "scientific_metadata"
 HIGH_LEVEL_METADATA_TYPE = "high_level"
 VALID_METADATA_TYPES = (SCIENTIFIC_METADATA_TYPE, HIGH_LEVEL_METADATA_TYPE)
@@ -357,13 +355,11 @@ def _select_applicable_schema(
     return False
 
 
-FALLBACK_METADATA_SCHEMA = MetadataSchema.from_file(FALLBACK_SCHEMA_PATH)
-
-
 def select_applicable_schema(
     nexus_file: pathlib.Path,
     schemas: OrderedDict[str, MetadataSchema],
     *,
+    fall_back_schema: MetadataSchema | None = None,
     logger: logging.Logger,
 ) -> MetadataSchema:
     """
@@ -375,13 +371,18 @@ def select_applicable_schema(
         if _select_applicable_schema(schema.selector, str(nexus_file), logger=logger):
             return schema
 
-    if logger:
-        logger.error(
-            "No applicable metadata schema found based on the selectors. "
-            "Fallback schema with minimum dataset fields will be used..."
+    if fall_back_schema is None:
+        raise ValueError(
+            "No applicable metadata schema is found and "
+            "no fallback schema is given. Cannot determine the schema..."
         )
 
-    return FALLBACK_METADATA_SCHEMA
+    logger.error(
+        "No applicable metadata schema found based on the selectors. "
+        "Fallback schema will be used..."
+    )
+
+    return fall_back_schema
 
 
 def _parse_args() -> argparse.Namespace:

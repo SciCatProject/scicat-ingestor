@@ -7,7 +7,7 @@ import h5py
 import pytest
 import yaml
 
-from fallback_metadata_schema import FALLBACK_SCHEMA_PATH
+from fallback_metadata_schema import get_fallback_schema
 from scicat_configuration import OfflineIngestorConfig
 from scicat_metadata import (
     MetadataSchema,
@@ -22,6 +22,13 @@ from scicat_metadata import (
 ALL_SCHEMA_EXAMPLES = list_schema_file_names(
     Path(__file__).parent.parent / Path("resources")
 )
+
+
+@pytest.fixture
+def ess_fallback_schema() -> MetadataSchema:
+    ess_fallback_schema = get_fallback_schema('ess-fallback')
+    assert ess_fallback_schema is not None
+    return ess_fallback_schema
 
 
 @pytest.fixture
@@ -78,7 +85,9 @@ def test_collect_metadata_schema() -> None:
     )
 
 
-def test_metadata_schema_selection(fake_logger) -> None:
+def test_metadata_schema_selection(
+    fake_logger, ess_fallback_schema: MetadataSchema
+) -> None:
     schemas = OrderedDict(
         {
             "schema1": MetadataSchema(
@@ -111,12 +120,19 @@ def test_metadata_schema_selection(fake_logger) -> None:
         }
     )
     assert (
-        select_applicable_schema(Path("right_name.nxs"), schemas, logger=fake_logger)
+        select_applicable_schema(
+            Path("right_name.nxs"),
+            schemas,
+            logger=fake_logger,
+            fall_back_schema=ess_fallback_schema,
+        )
         == schemas["schema2"]
     )
 
 
-def test_metadata_schema_selection_contains(fake_logger) -> None:
+def test_metadata_schema_selection_contains(
+    fake_logger, ess_fallback_schema: MetadataSchema
+) -> None:
     schemas = OrderedDict(
         {
             "schema1": MetadataSchema(
@@ -141,13 +157,18 @@ def test_metadata_schema_selection_contains(fake_logger) -> None:
     )
     assert (
         select_applicable_schema(
-            Path("some_right_part_in_name.nxs"), schemas, logger=fake_logger
+            Path("some_right_part_in_name.nxs"),
+            schemas,
+            logger=fake_logger,
+            fall_back_schema=ess_fallback_schema,
         )
         == schemas["schema2"]
     )
 
 
-def test_metadata_schema_selection_contains_no_match_log_error(fake_logger) -> None:
+def test_metadata_schema_selection_contains_no_match_log_error(
+    fake_logger, ess_fallback_schema
+) -> None:
     schemas = OrderedDict(
         {
             "schema1": MetadataSchema(
@@ -161,21 +182,33 @@ def test_metadata_schema_selection_contains_no_match_log_error(fake_logger) -> N
             ),
         }
     )
-    select_applicable_schema(Path("some_file.nxs"), schemas, logger=fake_logger)
+    select_applicable_schema(
+        Path("some_file.nxs"),
+        schemas,
+        logger=fake_logger,
+        fall_back_schema=ess_fallback_schema,
+    )
     err_msg_match = (
         "No applicable metadata schema found based on the selectors. "
-        "Fallback schema with minimum dataset fields will be used..."
+        "Fallback schema will be used..."
     )
     assert fake_logger._error_list[-1].msg == err_msg_match
 
 
-def test_metadata_schema_selection_contains_no_match_fallback(fake_logger) -> None:
-    selected = select_applicable_schema(Path("some_file.nxs"), {}, logger=fake_logger)
-    assert selected == MetadataSchema.from_file(FALLBACK_SCHEMA_PATH)
+def test_metadata_schema_selection_contains_no_match_fallback(
+    fake_logger, ess_fallback_schema
+) -> None:
+    selected = select_applicable_schema(
+        Path("some_file.nxs"),
+        {},
+        logger=fake_logger,
+        fall_back_schema=ess_fallback_schema,
+    )
+    assert selected == ess_fallback_schema
 
 
 def test_metadata_schema_selection_wrong_selector_target_log_error(
-    fake_logger,
+    fake_logger, ess_fallback_schema
 ) -> None:
     select_applicable_schema(
         Path("right_name.nxs"),
@@ -193,6 +226,7 @@ def test_metadata_schema_selection_wrong_selector_target_log_error(
             }
         ),
         logger=fake_logger,
+        fall_back_schema=ess_fallback_schema,
     )
 
     err_msg_match = "Invalid target name"
@@ -205,7 +239,7 @@ def test_metadata_schema_selection_wrong_selector_target_log_error(
 
 
 def test_metadata_schema_selection_wrong_selector_function_log_error(
-    fake_logger,
+    fake_logger, ess_fallback_schema
 ) -> None:
     select_applicable_schema(
         Path("right_name.nxs"),
@@ -222,6 +256,7 @@ def test_metadata_schema_selection_wrong_selector_function_log_error(
                 )
             }
         ),
+        fall_back_schema=ess_fallback_schema,
         logger=fake_logger,
     )
     err_msg_match = "Invalid function name"

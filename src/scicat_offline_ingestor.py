@@ -8,6 +8,7 @@ from pathlib import Path
 
 import h5py
 
+from fallback_metadata_schema import get_fallback_schema
 from scicat_communication import (
     check_dataset_by_metadata,
     check_dataset_by_pid,
@@ -34,7 +35,6 @@ from scicat_dataset import (
 )
 from scicat_logging import build_logger
 from scicat_metadata import (
-    FALLBACK_METADATA_SCHEMA,
     MetadataVariableValueSpec,
     collect_schemas,
     select_applicable_schema,
@@ -228,7 +228,11 @@ def main() -> None:
 
     # Collect all metadata schema configurations
     schemas = collect_schemas(config.ingestion.schemas_directory)
+    fallback_schema = get_fallback_schema(config.ingestion.fallback_schema_file_path)
+
     logger.info("Found %s schemas", len(schemas))
+    if fallback_schema:
+        logger.debug("Found fallback schema: %s.", fallback_schema.name)
 
     with handle_exceptions(logger):
         nexus_file_path = Path(config.nexus_file)
@@ -253,12 +257,16 @@ def main() -> None:
                 metadata_schema.id,
             )
 
-            fallback_variable_map = extract_variables_values(
-                variables=FALLBACK_METADATA_SCHEMA.variables,
-                h5file=h5file,
-                config=config,
-                schema_id=FALLBACK_METADATA_SCHEMA.id,
-                logger=logger,
+            fallback_variable_map = (
+                {}
+                if fallback_schema is None
+                else extract_variables_values(
+                    variables=fallback_schema.variables,
+                    h5file=h5file,
+                    config=config,
+                    schema_id=fallback_schema.id,
+                    logger=logger,
+                )
             )
             # define variables values
             variable_map = extract_variables_values(
@@ -282,10 +290,10 @@ def main() -> None:
         )
         # Merge fallback schema definitions and the selected schema definitinos.
         # Order is important so that the selected schema schema configuration is preferred.
-        schema_definitions = {
-            **FALLBACK_METADATA_SCHEMA.schema,
-            **metadata_schema.schema,
-        }
+        fallback_schema_definitions = (
+            {} if fallback_schema is None else fallback_schema.schema
+        )
+        schema_definitions = {**fallback_schema_definitions, **metadata_schema.schema}
 
         # Prepare scicat dataset instance(entry)
         logger.info("Preparing scicat dataset instance ...")
