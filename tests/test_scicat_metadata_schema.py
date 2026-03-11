@@ -7,6 +7,7 @@ import h5py
 import pytest
 import yaml
 
+from fallback_metadata_schema import FALLBACK_SCHEMA_PATH
 from scicat_configuration import OfflineIngestorConfig
 from scicat_metadata import (
     MetadataSchema,
@@ -77,7 +78,7 @@ def test_collect_metadata_schema() -> None:
     )
 
 
-def test_metadata_schema_selection() -> None:
+def test_metadata_schema_selection(fake_logger) -> None:
     schemas = OrderedDict(
         {
             "schema1": MetadataSchema(
@@ -110,11 +111,12 @@ def test_metadata_schema_selection() -> None:
         }
     )
     assert (
-        select_applicable_schema(Path("right_name.nxs"), schemas) == schemas["schema2"]
+        select_applicable_schema(Path("right_name.nxs"), schemas, logger=fake_logger)
+        == schemas["schema2"]
     )
 
 
-def test_metadata_schema_selection_contains() -> None:
+def test_metadata_schema_selection_contains(fake_logger) -> None:
     schemas = OrderedDict(
         {
             "schema1": MetadataSchema(
@@ -138,12 +140,14 @@ def test_metadata_schema_selection_contains() -> None:
         }
     )
     assert (
-        select_applicable_schema(Path("some_right_part_in_name.nxs"), schemas)
+        select_applicable_schema(
+            Path("some_right_part_in_name.nxs"), schemas, logger=fake_logger
+        )
         == schemas["schema2"]
     )
 
 
-def test_metadata_schema_selection_contains_no_match() -> None:
+def test_metadata_schema_selection_contains_no_match_log_error(fake_logger) -> None:
     schemas = OrderedDict(
         {
             "schema1": MetadataSchema(
@@ -157,50 +161,76 @@ def test_metadata_schema_selection_contains_no_match() -> None:
             ),
         }
     )
-    with pytest.raises(
-        Exception, match="No applicable metadata schema configuration found!!"
-    ):
-        select_applicable_schema(Path("some_file.nxs"), schemas)
+    select_applicable_schema(Path("some_file.nxs"), schemas, logger=fake_logger)
+    err_msg_match = (
+        "No applicable metadata schema found based on the selectors. "
+        "Fallback schema with minimum dataset fields will be used..."
+    )
+    assert fake_logger._error_list[-1].msg == err_msg_match
 
 
-def test_metadata_schema_selection_wrong_selector_target_name_raises() -> None:
-    with pytest.raises(ValueError, match="Invalid target name"):
-        select_applicable_schema(
-            Path("right_name.nxs"),
-            OrderedDict(
-                {
-                    "schema1": MetadataSchema(
-                        order=1,
-                        id="schema1",
-                        name="Schema 1",
-                        instrument="",
-                        selector="data_file:starts_with:wrong_name",
-                        variables={},
-                        schema={},
-                    )
-                }
-            ),
-        )
+def test_metadata_schema_selection_contains_no_match_fallback(fake_logger) -> None:
+    selected = select_applicable_schema(Path("some_file.nxs"), {}, logger=fake_logger)
+    assert selected == MetadataSchema.from_file(FALLBACK_SCHEMA_PATH)
 
 
-def test_metadata_schema_selection_wrong_selector_function_name_raises() -> None:
-    with pytest.raises(ValueError, match="Invalid function name"):
-        select_applicable_schema(
-            Path("right_name.nxs"),
-            OrderedDict(
-                {
-                    "schema1": MetadataSchema(
-                        order=1,
-                        id="schema1",
-                        name="Schema 1",
-                        instrument="",
-                        selector="filename:start_with:wrong_name",
-                        variables={},
-                        schema={},
-                    )
-                }
-            ),
-        )
+def test_metadata_schema_selection_wrong_selector_target_log_error(
+    fake_logger,
+) -> None:
+    select_applicable_schema(
+        Path("right_name.nxs"),
+        OrderedDict(
+            {
+                "schema1": MetadataSchema(
+                    order=1,
+                    id="schema1",
+                    name="Schema 1",
+                    instrument="",
+                    selector="data_file:starts_with:wrong_name",
+                    variables={},
+                    schema={},
+                )
+            }
+        ),
+        logger=fake_logger,
+    )
+
+    err_msg_match = "Invalid target name"
+    # The last message is expected to be
+    # `No applicable metadata schema found...` error message.
+    # The wrong target name error message should be the second last one.
+    # It is not to enforce the order of logging so feel free to change
+    # how it is tested if it becomes too brittle.
+    assert fake_logger._error_list[-2].msg.startswith(err_msg_match)
+
+
+def test_metadata_schema_selection_wrong_selector_function_log_error(
+    fake_logger,
+) -> None:
+    select_applicable_schema(
+        Path("right_name.nxs"),
+        OrderedDict(
+            {
+                "schema1": MetadataSchema(
+                    order=1,
+                    id="schema1",
+                    name="Schema 1",
+                    instrument="",
+                    selector="filename:start_with:wrong_name",
+                    variables={},
+                    schema={},
+                )
+            }
+        ),
+        logger=fake_logger,
+    )
+    err_msg_match = "Invalid function name"
+    # The last message is expected to be
+    # `No applicable metadata schema found...` error message.
+    # The wrong target name error message should be the second last one.
+    # It is not to enforce the order of logging so feel free to change
+    # how it is tested if it becomes too brittle.
+    assert fake_logger._error_list[-2].msg.startswith(err_msg_match)
 
 
 def test_metadata_variable_default_variables(

@@ -67,6 +67,9 @@ max = "numpy:max"
 min = "numpy:min"
 mean = "numpy:mean"
 
+[tool.setuptools]
+include-package-data = true  # For fallback metadata file.
+
 [tool.setuptools_scm]
 
 [tool.pytest.ini_options]

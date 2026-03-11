@@ -879,12 +879,17 @@ def create_scicat_dataset_instance(
         field_name
         for field_name in mandatory_fields
         if field_name not in high_level_fields
+        # scientific metadata is directly set to the constructor.
+        and field_name != 'scientificMetadata'
     ]
     if missing_mandatory_fields:
-        logger.error(
-            "Missing mandatory fields for scicat dataset: %s",
-            ', '.join(missing_mandatory_fields),
-        )
+        # Since the fallback schema definitions should have all mandatory fields,
+        # this condition should never reach.
+        # Therefore despite of the no-raise principal it should raise if this condition is met.
+        err_msg = "Missing mandatory fields for scicat dataset: %s."
+        missing_fields_str = ', '.join(missing_mandatory_fields)
+        logger.error(err_msg, missing_fields_str)
+        raise ValueError(err_msg % missing_fields_str)
 
     expected_fields_name = [field_spec.name for field_spec in fields(ScicatDataset)]
     unexpected_fields = [
@@ -893,6 +898,8 @@ def create_scicat_dataset_instance(
         if field_name not in expected_fields_name
     ]
     if unexpected_fields:
+        # Unexpected fields imply broken metadata schema.
+        # scicat-ingestor reports them but do not raise and ignore the unexpected fields.
         logger.error(
             "Found unexpected metadata fields for scicat dataset: %s.\n"
             "Unexpected metadata fields will be ignored.",

@@ -34,6 +34,7 @@ from scicat_dataset import (
 )
 from scicat_logging import build_logger
 from scicat_metadata import (
+    FALLBACK_METADATA_SCHEMA,
     MetadataVariableValueSpec,
     collect_schemas,
     select_applicable_schema,
@@ -243,13 +244,22 @@ def main() -> None:
             logger=logger,
         ) as h5file:
             # load instrument metadata configuration
-            metadata_schema = select_applicable_schema(nexus_file_path, schemas)
+            metadata_schema = select_applicable_schema(
+                nexus_file_path, schemas, logger=logger
+            )
             logger.info(
                 "Metadata Schema selected : %s (Id: %s)",
                 metadata_schema.name,
                 metadata_schema.id,
             )
 
+            fallback_variable_map = extract_variables_values(
+                variables=FALLBACK_METADATA_SCHEMA.variables,
+                h5file=h5file,
+                config=config,
+                schema_id=FALLBACK_METADATA_SCHEMA.id,
+                logger=logger,
+            )
             # define variables values
             variable_map = extract_variables_values(
                 variables=metadata_schema.variables,
@@ -258,6 +268,9 @@ def main() -> None:
                 schema_id=metadata_schema.id,
                 logger=logger,
             )
+            # Merge fallback variable map and the selected schema variable map.
+            # Order is important so that the selected schema variable configuration is preferred.
+            variable_map = {**fallback_variable_map, **variable_map}
 
         data_file_list = create_data_file_list(
             nexus_file=nexus_file_path,
@@ -267,16 +280,23 @@ def main() -> None:
             logger=logger,
             # TODO: add done_writing_message_file and nexus_structure_file
         )
+        # Merge fallback schema definitions and the selected schema definitinos.
+        # Order is important so that the selected schema schema configuration is preferred.
+        schema_definitions = {
+            **FALLBACK_METADATA_SCHEMA.schema,
+            **metadata_schema.schema,
+        }
 
         # Prepare scicat dataset instance(entry)
         logger.info("Preparing scicat dataset instance ...")
         local_dataset_instance = create_scicat_dataset_instance(
-            metadata_schema=metadata_schema.schema,
+            metadata_schema=schema_definitions,
             variable_map=variable_map,
             data_file_list=data_file_list,
             config=config.dataset,
             logger=logger,
         )
+
         # Check if dataset already exists in SciCat
         if _check_if_dataset_exists_by_pid(
             local_dataset_instance, config.ingestion, config.scicat, logger

@@ -13,6 +13,8 @@ from typing import Any
 
 import yaml
 
+from fallback_metadata_schema import FALLBACK_SCHEMA_PATH
+
 SCIENTIFIC_METADATA_TYPE = "scientific_metadata"
 HIGH_LEVEL_METADATA_TYPE = "high_level"
 VALID_METADATA_TYPES = (SCIENTIFIC_METADATA_TYPE, HIGH_LEVEL_METADATA_TYPE)
@@ -208,15 +210,23 @@ class MetadataSchema:
         self, schema_file_path: pathlib.Path, *, exist_ok: bool = False
     ) -> None:
         from dataclasses import asdict
+        from itertools import chain
 
-        schema_dict = asdict(self)
+        schema_dict = {k: v for k, v in asdict(self).items() if v is not None}
+        for _config in chain(
+            schema_dict['variables'].values(), schema_dict['schema'].values()
+        ):
+            null_keys = [vc_k for vc_k, vc_v in _config.items() if vc_v is None]
+            for null_key in null_keys:
+                _config.pop(null_key)
+
         if schema_file_path.exists() and (not exist_ok):
             raise FileExistsError(
                 schema_file_path,
                 'File already exist at the path. Set exist_ok=True to overwrite.',
             )
         with schema_file_path.open(mode='w') as file:
-            yaml.safe_dump(schema_dict, file)
+            yaml.safe_dump(schema_dict, file, sort_keys=False)
 
 
 def _maybe_single_variable(val: str) -> bool:
@@ -276,18 +286,35 @@ def collect_schemas(dir_path: pathlib.Path) -> OrderedDict[str, MetadataSchema]:
     return schemas
 
 
+_AVAILABLE_SELECTION_TARGET_NAMES = ('filename',)
+_AVAILBALE_SELECTION_FUNCTION_NAMES = ('starts_with', 'contains')
+_AVAILABLE_OPERATOR_NAMES = ('and', 'or')
+
+
 def _select_applicable_schema(
-    selector: str | dict, filename: str | None = None
+    selector: str | dict,
+    filename: str | None = None,
+    *,
+    logger: logging.Logger,
 ) -> bool:
     if isinstance(selector, str):
-        # filename:starts_with:/ess/data/coda
+        if selector == '*':
+            # Global selector. Should be applicable to any ingestions.
+            return True
+
+        # Regular selectors. i.e. filename:starts_with:/ess/data/coda
         if len(selector_args := selector.split(":")) != 3:
             return False
         select_target_name, select_function_name, select_argument = selector_args
         if select_target_name in ["filename"]:
             select_target_value = filename
         else:
-            raise ValueError(f"Invalid target name {select_target_name}")
+            logger.error(
+                "Invalid target name %s. Use one of (%s)",
+                select_target_name,
+                ', '.join(_AVAILABLE_SELECTION_TARGET_NAMES),
+            )
+            return False
 
         if select_target_value is None:
             return False
@@ -297,29 +324,47 @@ def _select_applicable_schema(
         elif select_function_name == "contains":
             return select_argument in select_target_value
         else:
-            raise ValueError(f"Invalid function name {select_function_name}")
+            logger.error(
+                "Invalid function name %s. Use one of (%s)",
+                select_function_name,
+                ', '.join(_AVAILBALE_SELECTION_FUNCTION_NAMES),
+            )
+            return False
 
     elif isinstance(selector, dict):
         output = True
         for key, conditions in selector.items():
             if key == "or":
                 output = output and any(
-                    _select_applicable_schema(item, filename) for item in conditions
+                    _select_applicable_schema(item, filename, logger=logger)
+                    for item in conditions
                 )
             elif key == "and":
                 output = output and all(
-                    _select_applicable_schema(item, filename) for item in conditions
+                    _select_applicable_schema(item, filename, logger=logger)
+                    for item in conditions
                 )
             else:
-                raise NotImplementedError("Invalid operator")
+                logger.error(
+                    "Invalid condition operator name: %s. Use one of (%s)",
+                    key,
+                    ', '.join(_AVAILABLE_OPERATOR_NAMES),
+                )
         return output
     else:
-        raise Exception(f"Invalid type for schema selector {type(selector)}")
+        logger.error("Invalid type for schema selector %s", type(selector))
+
+    return False
+
+
+FALLBACK_METADATA_SCHEMA = MetadataSchema.from_file(FALLBACK_SCHEMA_PATH)
 
 
 def select_applicable_schema(
     nexus_file: pathlib.Path,
     schemas: OrderedDict[str, MetadataSchema],
+    *,
+    logger: logging.Logger,
 ) -> MetadataSchema:
     """
     Evaluates which metadata schema configuration is applicable to ``nexus_file``.
@@ -327,10 +372,16 @@ def select_applicable_schema(
     Order of the schemas matters and first schema that is suitable is selected.
     """
     for schema in schemas.values():
-        if _select_applicable_schema(schema.selector, str(nexus_file)):
+        if _select_applicable_schema(schema.selector, str(nexus_file), logger=logger):
             return schema
 
-    raise Exception("No applicable metadata schema configuration found!!")
+    if logger:
+        logger.error(
+            "No applicable metadata schema found based on the selectors. "
+            "Fallback schema with minimum dataset fields will be used..."
+        )
+
+    return FALLBACK_METADATA_SCHEMA
 
 
 def _parse_args() -> argparse.Namespace:
