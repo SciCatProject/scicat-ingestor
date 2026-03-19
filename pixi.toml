@@ -12,7 +12,10 @@ scicat-ingestor = { path = "./", editable = true }
 # ==================== Tasks ====================
 
 [tasks]
-test = { cmd = "pytest tests/", default-environment = "test" }
+test = { cmd = [
+        "scicat_ingestor", "--help", # Minimal test of the script
+        "&&", "pytest", "tests/"
+    ], default-environment = "test" }
 lint = { cmd = "pre-commit run --all-files", default-environment = "lint" }
 docs = { cmd = "mkdocs build -v -c", default-environment = "docs", cwd = "documentation" }
 

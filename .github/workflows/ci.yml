@@ -33,3 +33,8 @@ jobs:
     uses: ./.github/workflows/test.yml
     with:
       os-variant: ${{ matrix.os }}
+
+  intergration-tests:
+    name: Integration Tests
+    needs: [tests, formatting]
+    uses: ./.github/workflows/integration.yml

@@ -4,15 +4,7 @@ name: Integration
 
 on:
   workflow_dispatch:
-    inputs:
-      python-version:
-        description: "Python version to run tests"
-        type: string
   workflow_call:
-    inputs:
-      python-version:
-        description: "Python version to run tests"
-        type: string
 
 jobs:
   tests:

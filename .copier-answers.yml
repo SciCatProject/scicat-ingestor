@@ -1,14 +1,15 @@
 # Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
-_commit: d3d4dc7
-_src_path: gh:scipp/copier_template
+_commit: 3f0216c
+_src_path: gh:petitesw/copier_pixi_template
+community_contact_email: 'TODO: Fill Community Contact Email.'
 description: A daemon that creates a raw dataset using scicat interface whenever a
     new file is written by a file-writer.
-max_python: '3.12'
+max_python: '3.13'
 min_python: '3.12'
 namespace_package: ''
 nightly_deps: ''
 orgname: ScicatProject
 prettyname: Scicat Ingestor
 projectname: scicat-ingestor
-related_projects: streaming-data-types
-year: 2025
+reponame: scicat-ingestor
+year: 2026
