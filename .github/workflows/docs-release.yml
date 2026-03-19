@@ -10,30 +10,31 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Configure Git Credentials
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-      # Find python version
-      - uses: actions/setup-python@v5
+      - uses: prefix-dev/setup-pixi@v0.9.4
         with:
-          python-version-file: '.github/workflows/python-version-ci'
+          pixi-version: v0.65.0
+          frozen: true
+          cache: true
+          environment: docs
       - run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           key: mkdocs-material-${{ env.cache_id }}
           path: .cache
           restore-keys: |
             mkdocs-material-
-      - run: pip install -r requirements/docs.txt
       - name: Build and Deploy at Release
         working-directory: ./documentation
         run: |
           VERSION=$(git describe --tags --abbrev=0)  # It will use the latest tag as the version
           echo "Deploying $VERSION"
           git fetch origin
-          mike deploy --update-alias --push $VERSION latest
-          mike set-default latest --push
+          pixi run -e docs mike deploy --update-alias --push $VERSION latest
+          pixi run -e docs mike set-default latest --push

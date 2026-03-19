@@ -19,22 +19,21 @@ jobs:
     name: Integration Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: docker/setup-compose-action@v1
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: docker/setup-compose-action@v2
+      - uses: actions/checkout@v6
+      - uses: prefix-dev/setup-pixi@v0.9.4
         with:
-          python-version: ${{ inputs.python-version }}
-      - run: python -m pip install --upgrade pip
-      - run: python -m pip install -r requirements/ci.txt
-      - run: python -m pip install -e .
+          pixi-version: v0.65.0
+          frozen: true
+          cache: true
       - run: docker compose version
       - run: docker compose -f tests/docker-compose.yml up -d --wait
       # Setup test environment (creates SciCat backend user, instrument, proposal)
-      - run: python tests/integration/setup_test_environment.py --data-dir test-data
+      - run: pixi run python tests/integration/setup_test_environment.py --data-dir test-data
       # Validate the generated config file
       - run: scicat_validate_ingestor_config tests/integration/config.test.yml
       # Run the ingestor tests
-      - run: python tests/_scicat_ingestor.py --config tests/integration/config.test.yml --data-dir test-data
+      - run: pixi run -e test python tests/_scicat_ingestor.py --config tests/integration/config.test.yml --data-dir test-data
       # Run the health check tests
-      - run: python tests/_scicat_healthcheck.py --config tests/integration/config.test.yml
+      - run: pixi run -e test python tests/_scicat_healthcheck.py --config tests/integration/config.test.yml
       - run: docker compose -f tests/docker-compose.yml down
