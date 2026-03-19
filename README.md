@@ -13,7 +13,8 @@ cd scicat-ingestor
 # It will allow you to use entry-points of the scripts,
 # defined in ``pyproject.toml``, under ``[project.scripts]`` section.
 pixi install --frozen && pixi shell
-# or
+
+# or if you don't want to use pixi at all...
 pip install -e .
 
 ```
