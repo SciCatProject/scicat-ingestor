@@ -22,7 +22,8 @@ def collect_consumer_options(options: KafkaOptions) -> dict:
     config_dict = {
         key.replace("_", "."): value
         for key, value in asdict(options).items()
-        if key not in ("topics", "individual_message_commit")
+        if key not in ("topics", "individual_message_commit") and value != ""
+        # We remove empty configurations so that we don't confuse kafka consumer API.
     }
     config_dict["enable.auto.commit"] = (
         not options.individual_message_commit
@@ -32,11 +33,6 @@ def collect_consumer_options(options: KafkaOptions) -> dict:
         config_dict["bootstrap.servers"] = ",".join(bootstrap_servers)
     else:
         config_dict["bootstrap.servers"] = bootstrap_servers
-
-    if options.security_protocol.lower() == "plaintext":
-        # No SASL configuration.
-        for sasl_config in ("sasl.mechanism", "sasl.username", "sasl.password"):
-            config_dict.pop(sasl_config)
 
     return config_dict
 
