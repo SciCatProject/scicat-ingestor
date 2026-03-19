@@ -38,6 +38,7 @@ jobs:
           pixi-version: v0.65.0
           frozen: true
           cache: true
+          environment: test
       - run: pixi run test
       - uses: actions/upload-artifact@v6
         if: ${{ inputs.coverage-report }}

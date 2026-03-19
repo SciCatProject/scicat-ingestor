@@ -18,6 +18,7 @@ jobs:
           pixi-version: v0.65.0
           frozen: true
           cache: true
+          environment: lint
       - run: pixi run lint
       - uses: pre-commit-ci/lite-action@v1.1.0
         if: always()
