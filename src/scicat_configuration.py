@@ -247,7 +247,7 @@ class KafkaOptions:
     """Kafka SASL mechanism."""
     sasl_username: str = "USERNAME"
     """Kafka SASL username."""
-    sasl_password: str = "PASSWORD"
+    sasl_password: str = ""
     """Kafka SASL password."""
     ssl_ca_location: str = "FULL_PATH_TO_CERTIFICATE_FILE"
     """Kafka SSL CA location."""
@@ -340,7 +340,8 @@ class ScicatEndpoints:
 @dataclass(kw_only=True)
 class SciCatOptions:
     host: str = "https://scicat.host"
-    token: str = "JWT_TOKEN"
+    token: str = ""
+    """JWT TOKEN"""
     additional_headers: dict = field(default_factory=dict)
     timeout: int = 0
     stream: bool = True
@@ -425,7 +426,7 @@ class OfflineIngestorConfig:
 T = TypeVar("T")
 
 
-def build_dataclass(
+def build_dataclass[T](
     *,
     tp: type[T],
     data: dict,
@@ -485,7 +486,7 @@ def merge_config_and_input_args(
     )
 
 
-def _validate_config_file(target_type: type[T], config_file: Path) -> T:
+def _validate_config_file[T](target_type: type[T], config_file: Path) -> T:
     config = {**_load_config(config_file), "config_file": config_file.as_posix()}
     return build_dataclass(tp=target_type, data=config, strict=True)
 

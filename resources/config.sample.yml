@@ -41,7 +41,7 @@ kafka:
   security_protocol: sasl_ssl
   sasl_mechanism: SCRAM-SHA-256
   sasl_username: USERNAME
-  sasl_password: PASSWORD
+  sasl_password: ''
   ssl_ca_location: FULL_PATH_TO_CERTIFICATE_FILE
   individual_message_commit: true
   enable_auto_commit: true
@@ -61,7 +61,7 @@ logging:
   graylog_facility: scicat.ingestor
 scicat:
   host: https://scicat.host
-  token: JWT_TOKEN
+  token: ''
   additional_headers: {}
   timeout: 0
   stream: true
