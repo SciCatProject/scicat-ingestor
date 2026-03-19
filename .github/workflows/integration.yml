@@ -19,7 +19,7 @@ jobs:
           frozen: true
           cache: true
           environments: test
-          actiavte-environment: true
+          activate-environment: true
       - run: docker compose version
       - run: docker compose -f tests/docker-compose.yml up -d --wait
       # Setup test environment (creates SciCat backend user, instrument, proposal)
