@@ -1,4 +1,7 @@
 # Build artifacts
+build
+dist
+html
 .tox
 *.egg-info
 # we lock dependencies with pip-compile, not uv
@@ -21,6 +24,7 @@ __pycache__/
 .pytest_cache
 .mypy_cache
 .ruff_cache
+documentation/.cahce
 
 # Editor settings
 .idea/
@@ -54,5 +58,4 @@ config.*.yml
 # Documentation
 documentation/site/*
 # pixi environments
-.pixi/*
-!.pixi/config.toml
+.pixi

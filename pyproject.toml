@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-  "setuptools>=68",
+  "setuptools>=77",
   "setuptools_scm[toml]>=8.0",
 ]
 build-backend = "setuptools.build_meta"
@@ -8,12 +8,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "scicat-ingestor"
 description = "A daemon that creates a raw dataset using scicat interface whenever a new file is written by a file-writer."
-authors = [{ name = "ScicatProject contributors" }]
-license = { file = "LICENSE" }
+authors = [{ name = "Scicatproject contributors" }]
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
 readme = "README.md"
 classifiers = [
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: BSD License",
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
@@ -25,7 +25,6 @@ classifiers = [
 requires-python = ">=3.12"
 
 # IMPORTANT:
-# Run 'tox -e deps' after making changes here. This will update requirement files.
 # Make sure to list one dependency per line.
 dependencies = [
   "confluent-kafka",
@@ -42,7 +41,19 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 test = [
-    "pytest",
+    "pytest>=8.0",
+]
+docs = [
+    # `mkdocs` version 2 will have breaking changes
+    # and `mkdocs-material` will not not compatible anymore.
+    # When that happens, we should move on to `zensical`
+    # or other documentation builder instead.
+    # But `mike` only works with `mkdocs` at the moment
+    # so we are keeping `mkdocs` for now...
+    "mkdocs-material>=9.7.1",
+    "mike",
+    "mkdocs-mermaid2-plugin>=1.2.3",
+    "mkdocs-include-markdown-plugin>=7.2.0",
 ]
 
 [project.urls]
@@ -143,29 +154,3 @@ ignore-words-list = [
     "wtH",
     "nd",
 ]
-
-[tool.pixi.workspace]
-channels = ["conda-forge"]
-platforms = ["linux-64"]
-
-[tool.pixi.pypi-dependencies]
-scicat-ingestor = { path = ".", editable = true }
-
-[tool.pixi.environments]
-default = { solve-group = "default" }
-test = { features = ["test"], solve-group = "default" }
-lint = { features = ["lint"], solve-group = "default" }
-cilegacy = { features = ["cilegacy"], solve-group = "default" }
-
-[tool.pixi.feature.test.tasks]
-test = { cmd = "pytest tests/" }
-
-[tool.pixi.feature.lint.tasks]
-lint = { cmd = "prek run ruff-format -a" }
-
-[tool.pixi.feature.cilegacy.tasks]
-tox = { cmd = "tox" }
-
-[tool.pixi.feature.cilegacy.dependencies]
-tox = ">=4.47.0,<5"
-
