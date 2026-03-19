@@ -42,7 +42,7 @@ kafka:
   topics: test-topic
   group_id: scicat-ingestor-dev
   bootstrap_servers: localhost:9093
-  security_protocol: plaintext
+  security_protocol: SASL_PLAINTEXT
   sasl_mechanism: PLAIN
   sasl_username: ""
   sasl_password: ""
