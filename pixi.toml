@@ -7,7 +7,7 @@ platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
 python = "3.12.*"
 
 [pypi-dependencies]
-scicat-ingestor = { path = "./", editable = true }
+scicat-ingestor = { path = "./", editable = true, extras = ["app"] }
 
 # ==================== Tasks ====================
 
@@ -46,6 +46,11 @@ format = "ruff format ."
 [feature.docs.pypi-dependencies]
 scicat-ingestor = { path = "./", editable = true, extras = ["test", "docs"] }
 
+# ==================== Dev feature ====================
+
+[feature.dev.pypi-dependencies]
+scicat-ingestor = { path = "./", editable = true, extras = ["test", "docs"] }
+
 # ==================== Environments ====================
 
 [environments]
@@ -53,3 +58,8 @@ scicat-ingestor = { path = "./", editable = true, extras = ["test", "docs"] }
 test = { features = ["test"], solve-group = "default" }
 docs = { features = ["docs"], solve-group = "default" }
 lint = { features = ["lint"], solve-group = "default" }
+
+# If development environment needs to quickly try later versions of dependencies.
+# It should not have the same solve group as `default`
+# to be able to install different versions of dependencies.
+dev = { features = ["dev"], solve-group = "dev" }

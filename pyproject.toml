@@ -27,14 +27,14 @@ requires-python = ">=3.12"
 # IMPORTANT:
 # Make sure to list one dependency per line.
 dependencies = [
-  "confluent-kafka",
-  "ess-streaming-data-types",
-  "graypy",
-  "h5py",
-  "kafka-python",
-  "requests",
+  "confluent-kafka>=2.13.2",
+  "ess-streaming-data-types>=0.27.0",
+  "graypy>=2.1.0",
+  "h5py>=3.16.0",
+  "kafka-python>=2.3.0",
+  "requests>=2.32.5",
   "pyyaml>=6.0.2",
-  "rich"
+  "rich>=14.3.3"
 ]
 
 dynamic = ["version"]
@@ -54,6 +54,22 @@ docs = [
     "mike",
     "mkdocs-mermaid2-plugin>=1.2.3",
     "mkdocs-include-markdown-plugin>=7.2.0",
+]
+# All dependencies are pinned since it is an application, not a library.
+# In the pixi.toml, this is included in the default environment dependencies.
+# However, pinned dependencies might make setting up development environment cumbersome
+# so we only pin these version in the `app` extra dependencies.
+# If you update the environment, pixi `dev` environment
+# will get updated with these dependencies but not the `default` ones.
+app = [
+  "confluent-kafka==2.13.2",
+  "ess-streaming-data-types==0.27.0",
+  "graypy==2.1.0",
+  "h5py==3.16.0",
+  "kafka-python==2.3.0",
+  "requests==2.32.5",
+  "pyyaml==6.0.3",
+  "rich==14.3.3"
 ]
 
 [project.urls]
