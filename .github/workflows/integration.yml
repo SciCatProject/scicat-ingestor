@@ -19,14 +19,15 @@ jobs:
           frozen: true
           cache: true
           environments: test
+          actiavte-environment: true
       - run: docker compose version
       - run: docker compose -f tests/docker-compose.yml up -d --wait
       # Setup test environment (creates SciCat backend user, instrument, proposal)
-      - run: pixi run python tests/integration/setup_test_environment.py --data-dir test-data
+      - run: python tests/integration/setup_test_environment.py --data-dir test-data
       # Validate the generated config file
       - run: scicat_validate_ingestor_config tests/integration/config.test.yml
       # Run the ingestor tests
-      - run: pixi run -e test python tests/_scicat_ingestor.py --config tests/integration/config.test.yml --data-dir test-data
+      - run: python tests/_scicat_ingestor.py --config tests/integration/config.test.yml --data-dir test-data
       # Run the health check tests
-      - run: pixi run -e test python tests/_scicat_healthcheck.py --config tests/integration/config.test.yml
+      - run: python tests/_scicat_healthcheck.py --config tests/integration/config.test.yml
       - run: docker compose -f tests/docker-compose.yml down
