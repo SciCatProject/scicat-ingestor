@@ -10,8 +10,12 @@ Scicat ingestor creates a raw dataset along with metadata using
 ```bash
 git clone https://github.com/SciCatProject/scicat-ingestor.git
 cd scicat-ingestor
-pip install -e .  # It will allow you to use entry-points of the scripts,
-                  # defined in ``pyproject.toml``, under ``[project.scripts]`` section.
+# It will allow you to use entry-points of the scripts,
+# defined in ``pyproject.toml``, under ``[project.scripts]`` section.
+pixi install --frozen && pixi shell
+# or
+pip install -e .
+
 ```
 
 ## How to RUN
