@@ -33,6 +33,11 @@ def collect_consumer_options(options: KafkaOptions) -> dict:
     else:
         config_dict["bootstrap.servers"] = bootstrap_servers
 
+    if options.security_protocol.lower() == "plaintext":
+        # No SASL configuration.
+        for sasl_config in ("sasl.mechanism", "sasl.username", "sasl.password"):
+            config_dict.pop(sasl_config)
+
     return config_dict
 
 
