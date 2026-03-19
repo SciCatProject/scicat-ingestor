@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
+import re
+
 import pytest
 
 from scicat_dataset import convert_to_type
@@ -42,5 +44,5 @@ def test_dtype_date_converter() -> None:
 
 
 def test_dtype_converter_invalid_dtype_raises() -> None:
-    with pytest.raises(ValueError, match="Invalid dtype description."):
+    with pytest.raises(ValueError, match=re.escape("Invalid dtype description.")):
         convert_to_type("test", "invalid_type")
