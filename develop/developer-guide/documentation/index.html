@@ -890,14 +890,22 @@
 <p>How to build and update documentation.</p>
 <p>We use <a href="https://www.mkdocs.org/"><code>mkdocs</code></a> to build documentation.</p>
 <h2 id="build-locally">Build Locally</h2>
-<p><code>tox -e docs</code> can build documentation locally but you can also use <code>mkdocs</code> command to serve/build the documentation.</p>
+<p><code>pixi docs</code> can build documentation locally but you can also use <code>mkdocs</code> command to serve/build the documentation.</p>
 <ul>
-<li><code>mkdocs serve</code> - Start the live-reloading docs server.</li>
-<li><code>mkdocs build</code> - Build the documentation site.</li>
+<li><code>pixi run -e docs mkdocs serve</code> - Start the live-reloading docs server.</li>
+<li><code>pixi run -e mkdocs build</code> - Build the documentation site.</li>
 </ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>CI action uses <code>mike</code> instead of using <code>mkdocs</code> directly to build and deploy the documentation site at the same time.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>You can also simply use pixi shell and run the <code>mkdocs</code> command directly like this:</p>
+<div class="highlight"><pre><span></span><code>pixi<span class="w"> </span>shell<span class="w"> </span>-e<span class="w"> </span>docs<span class="w">  </span><span class="c1"># similar to ``conda activate``.</span>
+mkdocs<span class="w"> </span>build<span class="w">  </span><span class="c1"># Now you&#39;re in the pixi `docs` environment.</span>
+mkdocs<span class="w"> </span>serve<span class="w">  </span><span class="c1"># Same as `pixi run -e docs mkdocs serve`.</span>
+</code></pre></div>
 </div>
 
 

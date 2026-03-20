@@ -743,6 +743,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Testings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#integration-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration Test
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1002,6 +1019,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Testings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#integration-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration Test
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1077,11 +1111,8 @@
 <h1 id="getting-started-development">Getting Started - Development</h1>
 <h2 id="tldr">TL;DR</h2>
 <div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>git@github.com:SciCatProject/scicat-ingestor.git
-conda<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>scicat-ingestor-dev<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.12
-conda<span class="w"> </span>activate<span class="w"> </span>scicat-ingestor-dev
-pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements/dev.txt
-pre-commit<span class="w"> </span>install
-pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
+pixi<span class="w"> </span>install
+pre-commit<span class="w"> </span>install<span class="w">  </span><span class="c1"># or prek install</span>
 </code></pre></div>
 <h2 id="git">Git</h2>
 <p>If you are not <code>scicat-ingestor</code> maintainors, <br>
@@ -1090,18 +1121,21 @@ you need to either fork the repository to your own organization of private accou
 </code></pre></div>
 <h2 id="virtual-environment">Virtual Environment</h2>
 <p><code>scicat-ingestor</code> is a python project.
-We make multiple lock files for various environments and dev tools.</p>
-<p><code>requirements/dev.txt</code> contains all dependencies for development and tools.</p>
-<div class="highlight"><pre><span></span><code>conda<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>scicat-ingestor-dev<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.12<span class="w">  </span><span class="c1"># One and only supported version by scicat ingestor.</span>
-conda<span class="w"> </span>activate<span class="w"> </span>scicat-ingestor-dev
-pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements/dev.txt
-pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
+We use pixi to organize various environments and dev tools.</p>
+<p>Pixi <code>default</code> environment has <code>scicat-ingestor</code> modules in editable mode and its dependencies.
+Therefore you can run any <code>scicat-ingestor</code> command like below:</p>
+<div class="highlight"><pre><span></span><code>pixi<span class="w"> </span>run<span class="w"> </span>scicat_synchronize_config
+pixi<span class="w"> </span>run<span class="w"> </span>scicat_ingestor
 </code></pre></div>
 <blockquote>
-<p>The rest of the instruction will assume that this virtual environment is activated.</p>
+<p>Running a pixi task for the first time may take longer if the dependencies were not already installed.</p>
 </blockquote>
 <h2 id="pre-commit-hook">Pre-commit Hook</h2>
 <div class="highlight"><pre><span></span><code>pre-commit<span class="w"> </span>install
+
+<span class="c1"># or</span>
+
+prek<span class="w"> </span>install
 </code></pre></div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -1109,31 +1143,36 @@ pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </s
 </div>
 <h2 id="testings">Testings</h2>
 <p>We have unit tests using <code>pytest</code> that can be run fast and often.</p>
-<p><code>tox -e py312</code> command will run pytest with pre-defined configuration in a virtual environment created with <code>requirements/test.txt</code>.</p>
+<p><code>pixi run test</code> command will run pytest with pre-defined configuration in a virtual environment.</p>
 <p>There are also integration test in github ci action.</p>
-<!--TODO: Fill explanation about integration test.-->
-
+<h3 id="integration-test">Integration Test</h3>
+<p>In the <code>.github/workflows/integration.yml</code> file, we set up minimum docker environment (i.e. kafka broker) and try running the <code>scicat_ingestor</code>.</p>
+<p>The test is included in the <code>ci.yml</code>, which runs for every pull request changes.</p>
 <h2 id="other-devops-routines">Other DevOps Routines</h2>
 <h3 id="copier-update">Copier Update</h3>
 <p>Copier template is already set up in <code>.copier-answers.yml</code> so you just need to update it once in a while.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Currently the python project copier template is under active modification.
+It is due to changing the dev tools from <code>tox</code> and <code>conda</code> to <code>pixi</code>.</p>
+</div>
 <div class="highlight"><pre><span></span><code>copier<span class="w"> </span>update
 </code></pre></div>
 <p>It will ask a lot of questions and most of them usually stay the same.</p>
 <p>Here are some properties of the project that should be updated by copier:</p>
-<pre><code>- python version
-- project name
+<pre><code>- pixi.toml configuration
+- pyproject.toml configuration
+- github action versions
+- project name / contact
 - CI actions
-- requirements/make_base.py file (Please report any bugs in this file to the template repository.)
+...
 </code></pre>
 <h3 id="lock-dependencies">Lock Dependencies</h3>
-<p><div class="highlight"><pre><span></span><code>tox<span class="w"> </span>-e<span class="w"> </span>deps
+<p><div class="highlight"><pre><span></span><code>pixi<span class="w"> </span>update
 </code></pre></div>
-This command will compile all <code>*.in</code> files and create corresponding <code>*.txt</code> lock files under <code>requirements</code>.</p>
-<p>Once you create the lock files, push it to the project into a separate branch and create a PR to main branch.</p>
-<p>Base dependencies are parsed from <code>pyproject.toml</code> project dependencies and written into <code>base.in</code> file.</p>
-<blockquote>
-<p>See <code>testenv:deps</code> section in <code>tox.ini</code> file to see what it does.</p>
-</blockquote>
+This command will update all environments in the <code>pixi.lock</code> file and install them in the virtual environment.</p>
+<p>Once you create the lock file, push it to the project into a separate branch and create a PR to main branch.</p>
+<p>Base and extra ependencies are parsed from <code>pyproject.toml</code> project dependencies.</p>
 <h2 id="dev-toolscommands-overview">Dev Tools/Commands Overview</h2>
 <table>
 <thead>
@@ -1145,44 +1184,34 @@ This command will compile all <code>*.in</code> files and create corresponding <
 </thead>
 <tbody>
 <tr>
-<td>pre-commit</td>
+<td><code>pre-commit</code> or <code>prek</code></td>
 <td>.pre-commit-config.yaml</td>
 <td>Pre-commit hooks including linter checks.<br>Once it's set up, it will be run automatically whenever a new commit is created. It is also run by one of CI actions.<br><details><summary>Bypass Pre Commit Check</summary>You can skip pre-commit checks with <code>--no-verify</code> flag: <code>git commit --no-verify</code>. <br>But please keep it passing as much as possible, as it is one of blocking CI tests.</details></td>
 </tr>
 <tr>
-<td>copier</td>
+<td><code>copier</code></td>
 <td>.copier-answers.yaml</td>
-<td>This project copies from <a href="https://github.com/scipp/copier_template/"><code>scipp copier template</code></a><br>You have to manually update from copier template once in a while.<br>See <a href="#copier-update">Copier Update</a> for more explanation.</td>
+<td>This project copies from a <a href="https://github.com/scipp/copier_template/"><code>pixi copier template</code></a><br>You have to manually update from copier template once in a while.<br>See <a href="#copier-update">Copier Update</a> for more explanation.</td>
 </tr>
 <tr>
-<td>tox</td>
-<td>tox.ini</td>
-<td>Multiple tox environment/commands for development and CI actions.<br>It creates virtual environments and use it for each commands.<br>The virtual environment files are saved under <code>.tox</code> directory.</td>
-</tr>
-<tr>
-<td><code>tox -e deps</code></td>
-<td>tox.ini/[testenv:deps]</td>
+<td><code>pixi update</code></td>
+<td><strong>pyproject.toml</strong><br> - [dependencies]<br> - [project.optional-dependencies]<br><strong>pixi.toml</strong><br> - [dependencies]<br> - [pypi-dependencies]<br> - [feature.test.pypi-dependencies]</td>
 <td>Create lock files with dependencies.</td>
 </tr>
 <tr>
-<td><code>tox -e static</code></td>
-<td>tox.ini/[testenv:static]</td>
-<td>Run all precommit hooks on all files.</td>
+<td><code>pixi lint</code></td>
+<td>.pre-commit-config.yaml, pyproject.toml[tool.ruff.*]</td>
+<td>Run all pre-commit hooks on all files including <code>ruff</code> linting.</td>
 </tr>
 <tr>
-<td><code>tox -e py312</code></td>
-<td>tox.ini/[testenv]</td>
-<td>Run pytests with python version 3.12.<br>You can pass more arguments to pytest.</td>
+<td><code>pixi run test</code></td>
+<td>pixi.toml</td>
+<td>Run pytests(unit tests).<br>You can pass more arguments to pytest.</td>
 </tr>
 <tr>
-<td><code>tox -e mypy</code></td>
-<td>tox.ini/[testenv:mypy]</td>
-<td>Run static type checks with <code>mypy</code>.</td>
-</tr>
-<tr>
-<td><code>tox -e docs</code></td>
-<td>tox.ini/[testenv:docs]</td>
-<td>Build documentation site. <strong>This part of the copier template is overwritten since this project does not require sphinx.</strong></td>
+<td><code>pixi run docs</code></td>
+<td>pixi.toml</td>
+<td>Build documentation site.</td>
 </tr>
 </tbody>
 </table>
