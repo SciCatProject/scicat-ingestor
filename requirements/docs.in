@@ -1,5 +1,0 @@
--r base.in
-mkdocs-material
-mike
-mkdocs-mermaid2-plugin
-mkdocs-include-markdown-plugin

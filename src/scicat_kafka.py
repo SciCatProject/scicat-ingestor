@@ -22,7 +22,8 @@ def collect_consumer_options(options: KafkaOptions) -> dict:
     config_dict = {
         key.replace("_", "."): value
         for key, value in asdict(options).items()
-        if key not in ("topics", "individual_message_commit")
+        if key not in ("topics", "individual_message_commit") and value != ""
+        # We remove empty configurations so that we don't confuse kafka consumer API.
     }
     config_dict["enable.auto.commit"] = (
         not options.individual_message_commit
