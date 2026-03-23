@@ -3,6 +3,7 @@
 import ast
 import copy
 import datetime
+import json
 import logging
 import os.path
 import pathlib
@@ -327,19 +328,22 @@ class _VariableMapFailure:
     recipe: MetadataVariableConfig
     error: Exception
 
+    def __str__(self):
+        failure_dict = {
+            'name': self.name,
+            'recipe': asdict(self.recipe),
+            'error': str(self.error.__class__.__name__) + "('" + str(self.error) + "')",
+        }
+        return json.dumps(failure_dict)
+
 
 def _report_variable_map_construction_failures(
     *, logger: logging.Logger, failures: list[_VariableMapFailure]
 ) -> None:
     if failures:
-        descs = '\n  - '.join(
-            f"name: {failure.name}\n"
-            f"recipe: {failure.recipe}\n"
-            f"original_message: '{failure.error}'"
-            for failure in failures
-        )
+        descs = ', '.join(str(failure) for failure in failures)
         logger.warning(
-            "%d variables failed to be constructed and ignored:\n  - %s.",
+            "%d variables failed to be constructed and ignored: [%s].",
             len(failures),
             descs,
         )
@@ -700,9 +704,17 @@ class MetadataItemValueSpec:
 
 
 @dataclass
-class _Failure:
+class _HighlevelMetadataFailure:
     target_config: MetadataItemConfig
     error: Exception
+
+    def __str__(self) -> str:
+        failure_dict = {
+            'human_name': self.target_config.human_name,
+            'machine_name': self.target_config.machine_name,
+            'error': str(self.error.__class__.__name__) + "('" + str(self.error) + "')",
+        }
+        return json.dumps(failure_dict)
 
 
 def _create_highlevel_metadata_dict(
@@ -710,7 +722,7 @@ def _create_highlevel_metadata_dict(
     metadata_schema: dict[str, MetadataItemConfig],
     variable_map: dict[str, MetadataVariableValueSpec],
     dataset_options: DatasetOptions,
-    failure_container: list[_Failure],
+    failure_container: list[_HighlevelMetadataFailure],
     logger: logging.Logger,
 ) -> dict:
     """Create scientific metadata from the metadata schema configuration.
@@ -737,7 +749,7 @@ def _create_highlevel_metadata_dict(
                 hl_field.value, variable_map, hl_field.type
             )
         except Exception as err:
-            failure_container.append(_Failure(hl_field, err))
+            failure_container.append(_HighlevelMetadataFailure(hl_field, err))
 
     # Auto generate or assign ``pid`` if needed
     # It has to be done before constructing `ScicatDataset` because
@@ -759,7 +771,7 @@ def _create_scientific_metadata(
     *,
     metadata_schema: dict[str, MetadataItemConfig],
     variable_map: dict[str, MetadataVariableValueSpec],
-    failure_container: list[_Failure],
+    failure_container: list[_HighlevelMetadataFailure],
 ) -> dict:
     """Create scientific metadata from the metadata schema configuration.
 
@@ -788,21 +800,18 @@ def _create_scientific_metadata(
             value_dict = asdict(value_spec)
             result[name] = value_dict
         except Exception as err:
-            failure_container.append(_Failure(item_config, err))
+            failure_container.append(_HighlevelMetadataFailure(item_config, err))
 
     return result
 
 
-def _report_failures(*, logger: logging.Logger, failures: list[_Failure]) -> None:
+def _report_highlevel_metadata_build_failures(
+    *, logger: logging.Logger, failures: list[_HighlevelMetadataFailure]
+) -> None:
     if failures:
-        names = '\n  - '.join(
-            f"human_name: {failure.target_config.human_name}\n"
-            f"machine_name: {failure.target_config.machine_name}\n"
-            f"original_message: '{failure.error}'"
-            for failure in failures
-        )
+        names = ', '.join(str(failure) for failure in failures)
         logger.warning(
-            "%d metadata fields failed to be constructed and ignored:\n  - %s.",
+            "%d metadata fields failed to be constructed and ignored: [%s].",
             len(failures),
             names,
         )
@@ -843,14 +852,14 @@ def create_scicat_dataset_instance(
 
     if any(invalid_types):
         logger.warning(
-            "Invalid metadata schema types found: %s .\nValid types are: %s. "
+            "Invalid metadata schema types found: %s. Valid types are: %s. "
             "Metadata items with invalid types will be ignored.",
             VALID_METADATA_TYPES,
             invalid_types,
         )
 
     # Container to collect all failures.
-    failure_list: list[_Failure] = []
+    failure_list: list[_HighlevelMetadataFailure] = []
 
     # High Level Schema Fields
     high_level_fields = _create_highlevel_metadata_dict(
@@ -868,7 +877,7 @@ def create_scicat_dataset_instance(
         failure_container=failure_list,
     )
 
-    _report_failures(logger=logger, failures=failure_list)
+    _report_highlevel_metadata_build_failures(logger=logger, failures=failure_list)
     high_level_fields['size'] = sum(
         [file.size for file in data_file_list if file.size is not None]
     )
@@ -885,7 +894,8 @@ def create_scicat_dataset_instance(
     if missing_mandatory_fields:
         # Since the fallback schema definitions should have all mandatory fields,
         # this condition should never reach.
-        # Therefore despite of the no-raise principal it should raise if this condition is met.
+        # Therefore despite of the no-raising policy,
+        # it should raise if this condition is met.
         err_msg = "Missing mandatory fields for scicat dataset: %s."
         missing_fields_str = ', '.join(missing_mandatory_fields)
         logger.error(err_msg, missing_fields_str)
@@ -900,8 +910,8 @@ def create_scicat_dataset_instance(
     if unexpected_fields:
         # Unexpected fields imply broken metadata schema.
         # scicat-ingestor reports them but do not raise and ignore the unexpected fields.
-        logger.error(
-            "Found unexpected metadata fields for scicat dataset: %s.\n"
+        logger.warning(
+            "Found unexpected metadata fields for scicat dataset: %s. "
             "Unexpected metadata fields will be ignored.",
             ', '.join(unexpected_fields),
         )

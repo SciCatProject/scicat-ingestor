@@ -220,11 +220,7 @@ def main() -> None:
     config = build_offline_config(logger=logger)
     fh_options = config.ingestion.file_handling
 
-    # Log the configuration as dictionary so that it is easier to read from the logs
-    logger.info(
-        'Starting the Scicat background Ingestor with the following configuration: %s',
-        config.to_dict(),
-    )
+    logger.info('Starting the Scicat background Ingestor.')
 
     # Collect all metadata schema configurations
     schemas = collect_schemas(config.ingestion.schemas_directory)
@@ -296,7 +292,7 @@ def main() -> None:
         schema_definitions = {**fallback_schema_definitions, **metadata_schema.schema}
 
         # Prepare scicat dataset instance(entry)
-        logger.info("Preparing scicat dataset instance ...")
+        logger.info("Preparing scicat dataset instance.")
         local_dataset_instance = create_scicat_dataset_instance(
             metadata_schema=schema_definitions,
             variable_map=variable_map,
@@ -357,8 +353,8 @@ def main() -> None:
             # check one more time if we successfully created the entries in scicat
             if not ((len(scicat_dataset) > 0) and (len(scicat_origdatablock) > 0)):
                 logger.error(
-                    "Failed to create dataset or origdatablock in scicat for file %s.\n"
-                    "SciCat dataset: %s\nSciCat origdatablock: %s",
+                    "Failed to create dataset or origdatablock in scicat for file %s. "
+                    "SciCat dataset: %s, SciCat origdatablock: %s",
                     nexus_file_path,
                     scicat_dataset,
                     scicat_origdatablock,
@@ -369,10 +365,10 @@ def main() -> None:
 
             # if we get here, both dataset and origdatablock have been created successfully
             logger.info(
-                "Dataset ingestion successful. \n"
-                "Data file: %s. \n"
-                "Scicat dataset pid: %s. \n"
-                "SciCat origdatablock id: %s",
+                "Dataset ingestion successful. "
+                "Data file: %s, "
+                "Scicat dataset pid: %s, "
+                "SciCat origdatablock id: .",
                 nexus_file_path,
                 scicat_dataset.get('pid'),
                 scicat_origdatablock.get('_id'),

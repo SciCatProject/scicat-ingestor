@@ -50,15 +50,17 @@ def dump_message_to_file_if_needed(
         logger.info("Message saving to file is disabled. Skipping saving message.")
         return
     elif not message_file_path.parent.exists():
-        logger.info("Message file directory not accessible. Skipping saving message.")
+        logger.warning(
+            "Message file directory not accessible. Skipping saving message."
+        )
         return
 
-    logger.info("Message will be saved in %s", message_file_path)
+    logger.info("Message will be saved in %s.", message_file_path)
     save_message_to_file(
         message=message,
         message_file_path=message_file_path,
     )
-    logger.info("Message file saved")
+    logger.info("Message file saved.")
 
 
 def _individual_message_commit(job_id, message, consumer, logger: logging.Logger):
@@ -117,9 +119,7 @@ def main() -> None:
     logger = build_logger(tmp_config)
     config = build_online_config(logger=logger)
 
-    # Log the configuration as dictionary so that it is easier to read from the logs
-    logger.info('Starting the Scicat online Ingestor with the following configuration:')
-    logger.info(config.to_dict())
+    logger.info('Starting the Scicat online Ingestor.')
 
     with handle_daemon_loop_exceptions(logger=logger):
         # Kafka consumer
@@ -183,7 +183,7 @@ def main() -> None:
                         done_writing_message_file_path,
                     ]
 
-                logger.info("Command to be run: \n\n%s\n\n", cmd)
+                logger.info("Command to be run: %s", ' '.join(cmd))
                 if config.ingestion.dry_run:
                     logger.info("Dry run mode enabled. Skipping background ingestor.")
                 else:

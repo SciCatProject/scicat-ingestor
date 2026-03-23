@@ -49,8 +49,13 @@ def collect_kafka_topics(options: KafkaOptions) -> list[str]:
 def build_consumer(kafka_options: KafkaOptions, logger: logging.Logger) -> Consumer:
     """Build a Kafka consumer and configure it according to the ``options``."""
     consumer_options = collect_consumer_options(kafka_options)
-    logger.info("Connecting to Kafka with the following parameters:")
-    logger.info(consumer_options)
+    logger.info(
+        # `KafkaOptions` has `__str__` dundermethod for logging.
+        # It explicitly choose which configurations can be printed/shown.
+        # DO NOT print/log the whole container since it may contain user credentials.
+        "Connecting to Kafka with the following parameters: %s",
+        str(consumer_options),
+    )
     consumer = Consumer(consumer_options)
     if not validate_consumer(consumer, logger):
         return None
@@ -82,7 +87,7 @@ def _validate_wrdn_message_type(message_content: bytes, logger: logging.Logger) 
         logger.info("WRDN message received.")
         return True
     else:
-        logger.info("Message of type %s ignored", message_type)
+        logger.info("Message of type %s ignored.", message_type)
         return False
 
 
@@ -91,8 +96,8 @@ def _filter_error_encountered(
 ) -> WritingFinished | None:
     """Filter out messages with the ``error_encountered`` flag set to True."""
     if deserialized_message.error_encountered:
-        logger.error(
-            "Unable to deserialize message. ``error_encountered`` is true. Skipping the message."
+        logger.info(
+            "Unable to deserialize message. `error_encountered` is true. Skipping the message."
         )
         return None
     else:
@@ -108,7 +113,12 @@ def _deserialise_wrdn(
         logger.info("Deserialising WRDN message")
         deserialized_message: WritingFinished = deserialise_wrdn(message_content)
         deserialized_message = _filter_error_encountered(deserialized_message, logger)
-        logger.info("Deserialised WRDN message: %.5000s", deserialized_message)
+        logger.info(
+            "Deserialised WRDN message with job id, %s for file %s.",
+            deserialized_message.job_id,
+            deserialized_message.file_name,
+        )
+        logger.debug("Deserialised WRDN message: %.5000s", deserialized_message)
 
     return deserialized_message
 
@@ -120,41 +130,26 @@ def wrdn_messages(
 
     Yield ``None`` if no message is received or an error is encountered.
     """
+    num_skipped = 1
     while True:
         # The decision to proceed or stop will be done by the caller.
-        message = consumer.poll(timeout=1.0)
+        timeout = 1.0
+        message = consumer.poll(timeout=timeout)
         if message is None:
-            logger.info("Received no messages")
+            num_skipped += 1
+            logger.info("Received no messages, %d [s].", timeout * num_skipped)
             yield None
         elif message.error():
+            num_skipped = 1  # Reset
             logger.error("Consumer error: %s", message.error())
             yield None
         else:
+            num_skipped = 1  # Reset
             # retrieve type of message
             message_value = message.value()
             message_type = message_value[4:8]
             logger.info("Received message. Type : %s", message_type)
             yield _deserialise_wrdn(message_value, logger)
-
-
-# def compose_message_path(
-#     *,
-#     target_dir: pathlib.Path,
-#     nexus_file_path: pathlib.Path,
-#     message_saving_options: MessageSavingOptions,
-# ) -> pathlib.Path:
-#     """Compose the message path based on the nexus file path and configuration."""
-#
-#     return target_dir / (
-#         pathlib.Path(
-#             ".".join(
-#                 (
-#                     nexus_file_path.stem,
-#                     message_saving_options.message_file_extension.removeprefix("."),
-#                 )
-#             )
-#         )
-#     )
 
 
 def save_message_to_file(
