@@ -6,6 +6,6 @@ updates:
       # Check for updates to GitHub Actions every 3 months.
       interval: "quarterly"
   - package-ecosystem: "pip"
-    file: "pixi.lock"
+    directory: "/"
     schedule:
       interval: "quarterly"  # We manually lock dependencies in the pixi.lock file so we do not need so frequent updates
