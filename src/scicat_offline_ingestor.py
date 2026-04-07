@@ -288,12 +288,6 @@ def main() -> None:
             logger=logger,
             # TODO: add done_writing_message_file and nexus_structure_file
         )
-        # Merge fallback schema definitions and the selected schema definitinos.
-        # Order is important so that the selected schema schema configuration is preferred.
-        fallback_schema_definitions = (
-            {} if fallback_schema is None else fallback_schema.schema
-        )
-        schema_definitions = {**fallback_schema_definitions, **metadata_schema.schema}
 
         # Prepare scicat dataset instance(entry)
         logger.info("Preparing scicat dataset instance ...")
