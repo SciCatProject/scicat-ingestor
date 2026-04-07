@@ -292,7 +292,7 @@ def main() -> None:
         # Prepare scicat dataset instance(entry)
         logger.info("Preparing scicat dataset instance ...")
         local_dataset_instance = create_scicat_dataset_instance(
-            metadata_schema=schema_definitions,
+            metadata_schema=metadata_schema.schema,
             variable_map=variable_map,
             data_file_list=data_file_list,
             config=config.dataset,
