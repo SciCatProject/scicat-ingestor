@@ -257,17 +257,6 @@ def main() -> None:
                 metadata_schema.id,
             )
 
-            fallback_variable_map = (
-                {}
-                if fallback_schema is None
-                else extract_variables_values(
-                    variables=fallback_schema.variables,
-                    h5file=h5file,
-                    config=config,
-                    schema_id=fallback_schema.id,
-                    logger=logger,
-                )
-            )
             # define variables values
             variable_map = extract_variables_values(
                 variables=metadata_schema.variables,
