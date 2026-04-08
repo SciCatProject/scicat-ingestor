@@ -276,9 +276,6 @@ def main() -> None:
                 schema_id=metadata_schema.id,
                 logger=logger,
             )
-            # Merge fallback variable map and the selected schema variable map.
-            # Order is important so that the selected schema variable configuration is preferred.
-            variable_map = {**fallback_variable_map, **variable_map}
 
         data_file_list = create_data_file_list(
             nexus_file=nexus_file_path,
