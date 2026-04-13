@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -48,7 +49,9 @@ def test_config_validator(template_config_file: Path) -> None:
 
 
 def test_config_validator_json_file_warns() -> None:
-    with pytest.warns(DeprecationWarning, match="deprecated. Please use YAML format"):
+    with pytest.warns(
+        DeprecationWarning, match=re.escape("deprecated. Please use YAML format")
+    ):
         _validate_config_file(
             OnlineIngestorConfig,
             Path(__file__).parent / "resources/legacy_json_config.json",
@@ -56,7 +59,9 @@ def test_config_validator_json_file_warns() -> None:
 
 
 def test_config_validator_unused_args_raises() -> None:
-    with pytest.raises(ValueError, match="Invalid argument found: \n\t\t- config_file"):
+    with pytest.raises(
+        ValueError, match=re.escape("Invalid argument found: config_file")
+    ):
         _validate_config_file(
             DummyConfig,
             Path(__file__).parent / "resources/invalid_config.yml",

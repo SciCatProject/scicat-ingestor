@@ -9,6 +9,7 @@ import yaml
 
 from fallback_metadata_schema import get_fallback_schema
 from scicat_configuration import OfflineIngestorConfig
+from scicat_devtools import validate_schema
 from scicat_metadata import (
     MetadataSchema,
     MetadataVariableValueSpec,
@@ -16,7 +17,6 @@ from scicat_metadata import (
     collect_schemas,
     list_schema_file_names,
     select_applicable_schema,
-    validate_schema,
 )
 
 ALL_SCHEMA_EXAMPLES = list_schema_file_names(
@@ -192,7 +192,7 @@ def test_metadata_schema_selection_contains_no_match_log_error(
         "No applicable metadata schema found based on the selectors. "
         "Fallback schema will be used..."
     )
-    assert fake_logger._error_list[-1].msg == err_msg_match
+    assert fake_logger._warning_list[-1].msg == err_msg_match
 
 
 def test_metadata_schema_selection_contains_no_match_fallback(
@@ -235,7 +235,7 @@ def test_metadata_schema_selection_wrong_selector_target_log_error(
     # The wrong target name error message should be the second last one.
     # It is not to enforce the order of logging so feel free to change
     # how it is tested if it becomes too brittle.
-    assert fake_logger._error_list[-2].msg.startswith(err_msg_match)
+    assert fake_logger._warning_list[-2].msg.startswith(err_msg_match)
 
 
 def test_metadata_schema_selection_wrong_selector_function_log_error(
@@ -265,7 +265,7 @@ def test_metadata_schema_selection_wrong_selector_function_log_error(
     # The wrong target name error message should be the second last one.
     # It is not to enforce the order of logging so feel free to change
     # how it is tested if it becomes too brittle.
-    assert fake_logger._error_list[-2].msg.startswith(err_msg_match)
+    assert fake_logger._warning_list[-2].msg.startswith(err_msg_match)
 
 
 def test_metadata_variable_default_variables(

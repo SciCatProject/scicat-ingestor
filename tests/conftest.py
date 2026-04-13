@@ -68,7 +68,7 @@ def example_schema() -> MetadataSchema:
 
     import yaml
 
-    from scicat_metadata import _validate_file
+    from scicat_devtools import _validate_file
 
     # Turn this yaml string into a stream
     _example_schema = (

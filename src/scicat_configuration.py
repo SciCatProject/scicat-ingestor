@@ -261,6 +261,25 @@ class KafkaOptions:
     auto_offset_reset: str = "earliest"
     """Kafka auto offset reset."""
 
+    def __str__(self):
+        # Normally ``asdict`` is preferred,
+        # But since the kafka option may contain password,
+        # we do not want to accidentally print them, i.e. logging.
+        # Therefore we build the string representation
+        # explicitly without user credentials.
+        dict_option = {
+            'topics': self.topics,
+            'group_id': self.group_id,
+            'bootstrap_servers': self.bootstrap_servers,
+            'security_protocol': self.security_protocol,
+            'sasl_mechanism': self.sasl_mechanism,
+            'ssl_ca_location': self.ssl_ca_location,
+            'individual_message_commit': self.individual_message_commit,
+            'enable_auto_commit': self.enable_auto_commit,
+            'auto_offset_reset': self.auto_offset_reset,
+        }
+        return json.dumps(dict_option)
+
 
 @dataclass(kw_only=True)
 class FileHandlingOptions:
@@ -429,7 +448,7 @@ class OfflineIngestorConfig:
 T = TypeVar("T")
 
 
-def build_dataclass(
+def build_dataclass[T](
     *,
     tp: type[T],
     data: dict,
@@ -441,10 +460,10 @@ def build_dataclass(
     unused_keys = set(data.keys()) - set(type_hints.keys())
     if unused_keys:
         # If ``data`` contains unnecessary fields.
-        unused_keys_repr = "\n\t\t- ".join(
+        unused_keys_repr = ", ".join(
             ".".join((*prefixes, unused_key)) for unused_key in unused_keys
         )
-        error_message = f"Invalid argument found: \n\t\t- {unused_keys_repr}"
+        error_message = f"Invalid argument found: {unused_keys_repr}"
         if logger is not None:
             logger.warning(error_message)
         if strict:
@@ -489,7 +508,7 @@ def merge_config_and_input_args(
     )
 
 
-def _validate_config_file(target_type: type[T], config_file: Path) -> T:
+def _validate_config_file[T](target_type: type[T], config_file: Path) -> T:
     config = {**_load_config(config_file), "config_file": config_file.as_posix()}
     return build_dataclass(tp=target_type, data=config, strict=True)
 
