@@ -250,7 +250,7 @@ class KafkaOptions:
     """Kafka SASL mechanism."""
     sasl_username: str = "USERNAME"
     """Kafka SASL username."""
-    sasl_password: str = "PASSWORD"
+    sasl_password: str = ""
     """Kafka SASL password."""
     ssl_ca_location: str = "FULL_PATH_TO_CERTIFICATE_FILE"
     """Kafka SSL CA location."""
@@ -363,7 +363,8 @@ class ScicatEndpoints:
 @dataclass(kw_only=True)
 class SciCatOptions:
     host: str = "https://scicat.host"
-    token: str = "JWT_TOKEN"
+    token: str = ""
+    """JWT TOKEN"""
     additional_headers: dict = field(default_factory=dict)
     timeout: int = 0
     stream: bool = True

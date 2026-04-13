@@ -1,10 +1,11 @@
 version: 2
 updates:
-  # Note: We are not listing package-ecosystem: "github-actions". This causes
-  # noise in all template instances. Instead dependabot.yml in scipp/copier_template
-  # triggers updates of github-actions in the *template*. We then use `copier update`
-  # in template instances.
-  - package-ecosystem: "pip"
-    directory: "/requirements"
+  - package-ecosystem: "github-actions"
+    directory: "/"
     schedule:
-      interval: "quarterly"  # We manually lock dependencies in requirements/*.txt files so we do not need so frequent updates
+      # Check for updates to GitHub Actions every 3 months.
+      interval: "quarterly"
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "quarterly"  # We manually lock dependencies in the pixi.lock file so we do not need so frequent updates

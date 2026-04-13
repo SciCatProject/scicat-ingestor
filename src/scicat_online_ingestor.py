@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 Scicatproject contributors (https://github.com/ScicatProject)
-# ruff: noqa: E402, F401
+# ruff: noqa: E402
 
 import importlib.metadata
 import logging
