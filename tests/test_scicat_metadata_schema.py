@@ -1,14 +1,15 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 from collections import OrderedDict
-from collections.abc import Generator
 from pathlib import Path
 
 import h5py
 import pytest
 import yaml
 
+from fallback_metadata_schema import get_fallback_schema
 from scicat_configuration import OfflineIngestorConfig
+from scicat_devtools import validate_schema
 from scicat_metadata import (
     MetadataSchema,
     MetadataVariableValueSpec,
@@ -21,6 +22,13 @@ from scicat_metadata import (
 ALL_SCHEMA_EXAMPLES = list_schema_file_names(
     Path(__file__).parent.parent / Path("resources")
 )
+
+
+@pytest.fixture
+def ess_fallback_schema() -> MetadataSchema:
+    ess_fallback_schema = get_fallback_schema('ess-fallback')
+    assert ess_fallback_schema is not None
+    return ess_fallback_schema
 
 
 @pytest.fixture
@@ -77,7 +85,9 @@ def test_collect_metadata_schema() -> None:
     )
 
 
-def test_metadata_schema_selection() -> None:
+def test_metadata_schema_selection(
+    fake_logger, ess_fallback_schema: MetadataSchema
+) -> None:
     schemas = OrderedDict(
         {
             "schema1": MetadataSchema(
@@ -110,11 +120,19 @@ def test_metadata_schema_selection() -> None:
         }
     )
     assert (
-        select_applicable_schema(Path("right_name.nxs"), schemas) == schemas["schema2"]
+        select_applicable_schema(
+            Path("right_name.nxs"),
+            schemas,
+            logger=fake_logger,
+            fall_back_schema=ess_fallback_schema,
+        )
+        == schemas["schema2"]
     )
 
 
-def test_metadata_schema_selection_contains() -> None:
+def test_metadata_schema_selection_contains(
+    fake_logger, ess_fallback_schema: MetadataSchema
+) -> None:
     schemas = OrderedDict(
         {
             "schema1": MetadataSchema(
@@ -138,12 +156,19 @@ def test_metadata_schema_selection_contains() -> None:
         }
     )
     assert (
-        select_applicable_schema(Path("some_right_part_in_name.nxs"), schemas)
+        select_applicable_schema(
+            Path("some_right_part_in_name.nxs"),
+            schemas,
+            logger=fake_logger,
+            fall_back_schema=ess_fallback_schema,
+        )
         == schemas["schema2"]
     )
 
 
-def test_metadata_schema_selection_contains_no_match() -> None:
+def test_metadata_schema_selection_contains_no_match_log_error(
+    fake_logger, ess_fallback_schema
+) -> None:
     schemas = OrderedDict(
         {
             "schema1": MetadataSchema(
@@ -157,124 +182,94 @@ def test_metadata_schema_selection_contains_no_match() -> None:
             ),
         }
     )
-    with pytest.raises(
-        Exception, match="No applicable metadata schema configuration found!!"
-    ):
-        select_applicable_schema(Path("some_file.nxs"), schemas)
+    select_applicable_schema(
+        Path("some_file.nxs"),
+        schemas,
+        logger=fake_logger,
+        fall_back_schema=ess_fallback_schema,
+    )
+    err_msg_match = (
+        "No applicable metadata schema found based on the selectors. "
+        "Fallback schema will be used..."
+    )
+    assert fake_logger._warning_list[-1].msg == err_msg_match
 
 
-def test_metadata_schema_selection_wrong_selector_target_name_raises() -> None:
-    with pytest.raises(ValueError, match="Invalid target name"):
-        select_applicable_schema(
-            Path("right_name.nxs"),
-            OrderedDict(
-                {
-                    "schema1": MetadataSchema(
-                        order=1,
-                        id="schema1",
-                        name="Schema 1",
-                        instrument="",
-                        selector="data_file:starts_with:wrong_name",
-                        variables={},
-                        schema={},
-                    )
-                }
-            ),
-        )
+def test_metadata_schema_selection_contains_no_match_fallback(
+    fake_logger, ess_fallback_schema
+) -> None:
+    selected = select_applicable_schema(
+        Path("some_file.nxs"),
+        {},
+        logger=fake_logger,
+        fall_back_schema=ess_fallback_schema,
+    )
+    assert selected == ess_fallback_schema
 
 
-def test_metadata_schema_selection_wrong_selector_function_name_raises() -> None:
-    with pytest.raises(ValueError, match="Invalid function name"):
-        select_applicable_schema(
-            Path("right_name.nxs"),
-            OrderedDict(
-                {
-                    "schema1": MetadataSchema(
-                        order=1,
-                        id="schema1",
-                        name="Schema 1",
-                        instrument="",
-                        selector="filename:start_with:wrong_name",
-                        variables={},
-                        schema={},
-                    )
-                }
-            ),
-        )
-
-
-@pytest.fixture(scope="module")
-def example_nexus_file_for_schema_test(tmp_path_factory: pytest.TempdirFactory) -> Path:
-    tmp_path = Path(tmp_path_factory.mktemp("example_nexus_file_for_schema_tests"))
-    example_file = tmp_path / "nexus_for_testing.h5"
-    with h5py.File(example_file, "w") as f:
-        entry_gr = f.create_group("/entry")
-        entry_gr.create_dataset("entry_identifier_uuid", data=["supposedly-long-uuid"])
-        entry_gr.create_dataset("experiment_identifier", data=["123456"])
-        instrument_gr = entry_gr.create_group("instrument")
-        instrument_gr.create_dataset("name", data=["Test Instrument"])
-        detectors = instrument_gr.create_group("detectors")
-        det_1 = detectors.create_group('detector_1')
-        det_2 = detectors.create_group('detector_2')
-        det_3 = detectors.create_group('zdet_3')  # Purposely not matching pattern
-        for i, det in enumerate((det_1, det_2, det_3)):
-            det.create_dataset("name", data=[f"Detector Name {i + 1}"])
-
-        sample_gr = entry_gr.create_group("sample")
-        temperature = sample_gr.create_dataset("temperature", data=[300.0])
-        temperature.attrs["units"] = "K"
-
-    return example_file
-
-
-@pytest.fixture(scope="module")
-def nexus_file(
-    example_nexus_file_for_schema_test: Path,
-) -> Generator[h5py.File, None, None]:
-    with h5py.File(example_nexus_file_for_schema_test, "r") as f:
-        yield f
-
-
-@pytest.fixture(scope="module")
-def example_schema() -> MetadataSchema:
-    import logging
-    from typing import cast
-
-    import yaml
-
-    from scicat_metadata import _validate_file
-
-    # Turn this yaml string into a stream
-    _example_schema = Path(__file__).parent / "resources/example_schema.imsc.yml"
-    # Check if the example schema is valid first
-    if not _validate_file(_example_schema, logger=logging.getLogger(__name__)):
-        raise ValueError(
-            "Invalid example schema. "
-            "Use ``scicat_validate_metadata_schema`` to validate it first."
-        )
-
-    return MetadataSchema.from_dict(
-        cast(dict, yaml.safe_load(_example_schema.read_text()))
+def test_metadata_schema_selection_wrong_selector_target_log_error(
+    fake_logger, ess_fallback_schema
+) -> None:
+    select_applicable_schema(
+        Path("right_name.nxs"),
+        OrderedDict(
+            {
+                "schema1": MetadataSchema(
+                    order=1,
+                    id="schema1",
+                    name="Schema 1",
+                    instrument="",
+                    selector="data_file:starts_with:wrong_name",
+                    variables={},
+                    schema={},
+                )
+            }
+        ),
+        logger=fake_logger,
+        fall_back_schema=ess_fallback_schema,
     )
 
+    err_msg_match = "Invalid target name"
+    # The last message is expected to be
+    # `No applicable metadata schema found...` error message.
+    # The wrong target name error message should be the second last one.
+    # It is not to enforce the order of logging so feel free to change
+    # how it is tested if it becomes too brittle.
+    assert fake_logger._warning_list[-2].msg.startswith(err_msg_match)
 
-@pytest.fixture(scope="module")
-def offline_config(example_nexus_file_for_schema_test: Path) -> OfflineIngestorConfig:
-    config = OfflineIngestorConfig(
-        nexus_file=example_nexus_file_for_schema_test.as_posix(),
-        done_writing_message_file="",
-        config_file="",
-        id="",
+
+def test_metadata_schema_selection_wrong_selector_function_log_error(
+    fake_logger, ess_fallback_schema
+) -> None:
+    select_applicable_schema(
+        Path("right_name.nxs"),
+        OrderedDict(
+            {
+                "schema1": MetadataSchema(
+                    order=1,
+                    id="schema1",
+                    name="Schema 1",
+                    instrument="",
+                    selector="filename:start_with:wrong_name",
+                    variables={},
+                    schema={},
+                )
+            }
+        ),
+        fall_back_schema=ess_fallback_schema,
+        logger=fake_logger,
     )
-    config.ingestion.file_handling.ingestor_files_directory = (
-        example_nexus_file_for_schema_test.parent.as_posix()
-    )
-    return config
+    err_msg_match = "Invalid function name"
+    # The last message is expected to be
+    # `No applicable metadata schema found...` error message.
+    # The wrong target name error message should be the second last one.
+    # It is not to enforce the order of logging so feel free to change
+    # how it is tested if it becomes too brittle.
+    assert fake_logger._warning_list[-2].msg.startswith(err_msg_match)
 
 
 def test_metadata_variable_default_variables(
-    nexus_file: h5py.File,
-    offline_config: OfflineIngestorConfig,
+    nexus_file: h5py.File, offline_config: OfflineIngestorConfig, fake_logger
 ) -> None:
     import datetime
     import uuid
@@ -287,6 +282,7 @@ def test_metadata_variable_default_variables(
         h5file=nexus_file,
         schema_id=example_id,
         config=offline_config,
+        logger=fake_logger,
     )
     nexus_file_path = Path(offline_config.nexus_file)
     assert isinstance(variable_values['ingestor_run_id'].value, str)
@@ -309,6 +305,7 @@ def test_metadata_variable_nexus(
     nexus_file: h5py.File,
     example_schema: MetadataSchema,
     offline_config: OfflineIngestorConfig,
+    fake_logger,
 ) -> None:
     from scicat_dataset import extract_variables_values
 
@@ -317,6 +314,7 @@ def test_metadata_variable_nexus(
         h5file=nexus_file,
         schema_id=example_schema.id,
         config=offline_config,
+        logger=fake_logger,
     )
     assert variable_values['pid'] == MetadataVariableValueSpec(
         value='supposedly-long-uuid'
@@ -340,6 +338,7 @@ def test_metadata_variable_raw_values(
     nexus_file: h5py.File,
     example_schema: MetadataSchema,
     offline_config: OfflineIngestorConfig,
+    fake_logger,
 ) -> None:
     from scicat_dataset import extract_variables_values
 
@@ -348,6 +347,7 @@ def test_metadata_variable_raw_values(
         h5file=nexus_file,
         schema_id=example_schema.id,
         config=offline_config,
+        logger=fake_logger,
     )
     assert variable_values['detector_names'] == MetadataVariableValueSpec(
         value="Detector Name 1, Detector Name 2"
@@ -361,6 +361,7 @@ def test_metadata_schema_items(
     nexus_file: h5py.File,
     example_schema: MetadataSchema,
     offline_config: OfflineIngestorConfig,
+    fake_logger,
 ) -> None:
     """This test is techniqually about creating ScicatDataset instance
     but currently we do not build schema items separately before
@@ -378,6 +379,7 @@ def test_metadata_schema_items(
         h5file=nexus_file,
         schema_id=example_schema.id,
         config=offline_config,
+        logger=fake_logger,
     )
     dataset = create_scicat_dataset_instance(
         metadata_schema=example_schema.schema,
@@ -389,3 +391,21 @@ def test_metadata_schema_items(
     assert dataset.pid == 'supposedly-long-uuid'
     assert dataset.scientificMetadata['sample_temperature']['value'] == '300.0'
     assert dataset.scientificMetadata['sample_temperature']['unit'] == 'K'
+
+
+def test_metadata_schema_validator_invalid_field_type(
+    example_schema: MetadataSchema, tmp_path: Path, fake_logger
+) -> None:
+    from copy import deepcopy
+
+    invalid_schema_path = tmp_path / "invalid_field_type.imsc.yml"
+
+    invalid_schema = deepcopy(example_schema)
+    first_field_key = next(iter(invalid_schema.schema.keys()))
+    invalid_schema.schema[
+        first_field_key
+    ].field_type = 'high-five-level'  # Random invalid type
+    invalid_schema.save_file(invalid_schema_path)
+
+    with pytest.raises(ValueError, match='One or more schema files are invalid'):
+        validate_schema(schema_path=invalid_schema_path, logger=fake_logger)

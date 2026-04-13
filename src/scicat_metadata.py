@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
 
-import argparse
 import json
 import logging
 import pathlib
@@ -201,8 +200,30 @@ class MetadataSchema:
         )
 
     @classmethod
-    def from_file(cls, schema_file_name: pathlib.Path) -> "MetadataSchema":
-        return cls.from_dict(_load_schema_file(schema_file_name))
+    def from_file(cls, schema_file_path: pathlib.Path) -> "MetadataSchema":
+        return cls.from_dict(_load_schema_file(schema_file_path))
+
+    def save_file(
+        self, schema_file_path: pathlib.Path, *, exist_ok: bool = False
+    ) -> None:
+        from dataclasses import asdict
+        from itertools import chain
+
+        schema_dict = {k: v for k, v in asdict(self).items() if v is not None}
+        for _config in chain(
+            schema_dict['variables'].values(), schema_dict['schema'].values()
+        ):
+            null_keys = [vc_k for vc_k, vc_v in _config.items() if vc_v is None]
+            for null_key in null_keys:
+                _config.pop(null_key)
+
+        if schema_file_path.exists() and (not exist_ok):
+            raise FileExistsError(
+                schema_file_path,
+                'File already exist at the path. Set exist_ok=True to overwrite.',
+            )
+        with schema_file_path.open(mode='w') as file:
+            yaml.safe_dump(schema_dict, file, sort_keys=False)
 
 
 def _maybe_single_variable(val: str) -> bool:
@@ -262,18 +283,35 @@ def collect_schemas(dir_path: pathlib.Path) -> OrderedDict[str, MetadataSchema]:
     return schemas
 
 
+_AVAILABLE_SELECTION_TARGET_NAMES = ('filename',)
+_AVAILBALE_SELECTION_FUNCTION_NAMES = ('starts_with', 'contains')
+_AVAILABLE_OPERATOR_NAMES = ('and', 'or')
+
+
 def _select_applicable_schema(
-    selector: str | dict, filename: str | None = None
+    selector: str | dict,
+    filename: str | None = None,
+    *,
+    logger: logging.Logger,
 ) -> bool:
     if isinstance(selector, str):
-        # filename:starts_with:/ess/data/coda
+        if selector == '*':
+            # Global selector. Should be applicable to any ingestions.
+            return True
+
+        # Regular selectors. i.e. filename:starts_with:/ess/data/coda
         if len(selector_args := selector.split(":")) != 3:
             return False
         select_target_name, select_function_name, select_argument = selector_args
         if select_target_name in ["filename"]:
             select_target_value = filename
         else:
-            raise ValueError(f"Invalid target name {select_target_name}")
+            logger.warning(
+                "Invalid target name %s. Use one of (%s)",
+                select_target_name,
+                ', '.join(_AVAILABLE_SELECTION_TARGET_NAMES),
+            )
+            return False
 
         if select_target_value is None:
             return False
@@ -283,29 +321,45 @@ def _select_applicable_schema(
         elif select_function_name == "contains":
             return select_argument in select_target_value
         else:
-            raise ValueError(f"Invalid function name {select_function_name}")
+            logger.warning(
+                "Invalid function name %s. Use one of (%s)",
+                select_function_name,
+                ', '.join(_AVAILBALE_SELECTION_FUNCTION_NAMES),
+            )
+            return False
 
     elif isinstance(selector, dict):
         output = True
         for key, conditions in selector.items():
             if key == "or":
                 output = output and any(
-                    _select_applicable_schema(item, filename) for item in conditions
+                    _select_applicable_schema(item, filename, logger=logger)
+                    for item in conditions
                 )
             elif key == "and":
                 output = output and all(
-                    _select_applicable_schema(item, filename) for item in conditions
+                    _select_applicable_schema(item, filename, logger=logger)
+                    for item in conditions
                 )
             else:
-                raise NotImplementedError("Invalid operator")
+                logger.warning(
+                    "Invalid condition operator name: %s. Use one of (%s)",
+                    key,
+                    ', '.join(_AVAILABLE_OPERATOR_NAMES),
+                )
         return output
     else:
-        raise Exception(f"Invalid type for schema selector {type(selector)}")
+        logger.warning("Invalid type for schema selector %s.", type(selector))
+
+    return False
 
 
 def select_applicable_schema(
     nexus_file: pathlib.Path,
     schemas: OrderedDict[str, MetadataSchema],
+    *,
+    fall_back_schema: MetadataSchema | None = None,
+    logger: logging.Logger,
 ) -> MetadataSchema:
     """
     Evaluates which metadata schema configuration is applicable to ``nexus_file``.
@@ -313,141 +367,18 @@ def select_applicable_schema(
     Order of the schemas matters and first schema that is suitable is selected.
     """
     for schema in schemas.values():
-        if _select_applicable_schema(schema.selector, str(nexus_file)):
+        if _select_applicable_schema(schema.selector, str(nexus_file), logger=logger):
             return schema
 
-    raise Exception("No applicable metadata schema configuration found!!")
-
-
-def _parse_args() -> argparse.Namespace:
-    arg_parser = argparse.ArgumentParser(
-        description="Validate the metadata schema files."
-    )
-    arg_parser.add_argument(
-        type=str,
-        help="Schema file/directory path (imsc) to validate. If a directory is passed, "
-        "all schema files in the directory will be validated.",
-        dest="schema_file",
-    )
-    return arg_parser.parse_args()
-
-
-def _collect_target_files(
-    schema_file: pathlib.Path, logger: logging.Logger
-) -> list[pathlib.Path]:
-    if not schema_file.exists():
-        raise FileNotFoundError(f"Schema file(location) {schema_file} does not exist.")
-    elif schema_file.is_dir():
-        logger.info("Collecting schema files from the directory `%s`...", schema_file)
-        schema_files = list_schema_file_names(schema_file)
-        if not schema_files:
-            raise FileNotFoundError(
-                f"No schema files found in the directory {schema_file}."
-            )
-        file_list = '\n - '.join([file_path.name for file_path in schema_files])
-        logger.info("Found %d schema files.\n - %s", len(schema_files), file_list)
-    else:
-        schema_files = [schema_file]
-
-    return schema_files
-
-
-def _validate_mandatory_machine_names(
-    schema: MetadataSchema, file_name: str, logger: logging.Logger
-) -> bool:
-    MANDATORY_MACHINE_NAMES = {
-        'datasetName',
-        'principalInvestigator',
-        'creationLocation',
-        'owner',
-        'ownerEmail',
-        'sourceFolder',
-        'contactEmail',
-        'creationTime',
-    }
-    machine_names = {field.machine_name for field in schema.schema.values()}
-    if not MANDATORY_MACHINE_NAMES.issubset(machine_names):
-        missing = MANDATORY_MACHINE_NAMES - machine_names
-        logger.error(
-            "Schema file [red]%s[/red] is missing mandatory fields: [yellow]%s[/yellow]",
-            file_name,
-            '[/yellow], [yellow]'.join(missing),
+    if fall_back_schema is None:
+        raise ValueError(
+            "No applicable metadata schema is found and "
+            "no fallback schema is given. Cannot determine the schema..."
         )
-        return False
-    return True
 
+    logger.warning(
+        "No applicable metadata schema found based on the selectors. "
+        "Fallback schema will be used..."
+    )
 
-def _validate_schema_selector(selector: str | dict, logger: logging.Logger) -> bool:
-    if isinstance(selector, str):
-        if len(selector.split(":")) != 3:
-            logger.error(
-                "Invalid selector format: '[yellow]%s[/yellow]' "
-                "Selector should be <bold>field:fiter_type:value</bold>",
-                selector,
-            )
-            return False
-    elif isinstance(selector, dict):
-        for conditions in selector.values():
-            return all(_validate_schema_selector(item, logger) for item in conditions)
-
-    return True
-
-
-def _validate_file(schema_file: pathlib.Path, logger: logging.Logger) -> bool:
-    # Check if it is a json file
-    if _is_json_file(schema_file.read_text()):
-        logger.warning(
-            "Schema file [yellow]%s[/yellow] is in "
-            "[bold yellow]JSON[/bold yellow] format. "
-            "It is recommended to use [bold yellow]YAML[/bold yellow] format for new schema files.",
-            schema_file,
-        )
-        return False
-    # Try building the `MetadataSchema` from the file.
-    try:
-        schema = MetadataSchema.from_file(schema_file)
-        msg = "Schema file [green]%s[/ green] is [bold green]VALID[/bold green]."
-        logger.info(msg, schema_file)
-    except Exception as e:
-        msg = "Schema file [red]%s[/red] is [bold red]INVALID[/bold red]: %s"
-        logger.error(msg, schema_file.name, e)
-        return False
-
-    # Validate schema
-    # Manually check mandatory machine names
-    # They are part of fields of `scicat_dataset.ScicatDataset` dataclass.
-    # Some of the mandatory arguments are not filled by schema definition.
-    if not _validate_mandatory_machine_names(schema, schema_file.name, logger):
-        return False
-    if not _validate_schema_selector(schema.selector, logger):
-        return False
-
-    return True
-
-
-def validate_schema() -> None:
-    """Validate the schema file."""
-    from pathlib import Path
-
-    from scicat_logging import build_devtool_logger
-
-    # Parse command line arguments
-    args = _parse_args()
-    # Build a logger
-    logger = build_devtool_logger("validate-schema-file")
-    logger.info("Scicat ingestor metadata schema files validation test.")
-    logger.info("It only validates if the schema file has a valid structure.")
-
-    # Collect schema files
-    schema_files = _collect_target_files(Path(args.schema_file), logger)
-    logger.info("Validating %d schema files...", len(schema_files))
-
-    # Collect validities of all files first
-    # to avoid stopping on the first invalid file.
-    validities = [_validate_file(schema_file, logger) for schema_file in schema_files]
-    if all(validities):
-        logger.info("All schema files are valid.")
-    else:
-        error_msg = "One or more schema files are invalid. Please check the logs."
-        logger.error(error_msg)
-        raise ValueError(error_msg)
+    return fall_back_schema

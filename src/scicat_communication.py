@@ -66,7 +66,7 @@ def create_scicat_dataset(
     result: dict = response.json()
     if not response.ok:
         logger.error(
-            "Failed to create new dataset. \nData file %s. \nError message from scicat backend: \n%s",
+            "Failed to create new dataset with data file %s. Error message from scicat backend: %s",
             data_file_path,
             result.get("error", {}),
         )
@@ -75,7 +75,7 @@ def create_scicat_dataset(
         )
 
     logger.info(
-        "Dataset created successfully. \nData file: %s. \nDataset pid: %s",
+        "Dataset created successfully with data file: %s, Dataset pid: %s",
         data_file_path,
         result.get("pid"),
     )
@@ -106,7 +106,7 @@ def create_scicat_origdatablock(
     result: dict = response.json()
     if not response.ok:
         logger.error(
-            "Failed to create new origdatablock. \nData file %s. \nError message from scicat backend: \n%s",
+            "Failed to create new origdatablock with data file %s. Error message from scicat backend: %s",
             data_file_path,
             result.get("error", {}),
         )
@@ -115,7 +115,7 @@ def create_scicat_origdatablock(
         )
 
     logger.info(
-        "Origdatablock created successfully. \nData file: %s. \nOrigdatablock pid: %s",
+        "Origdatablock created successfully with data file: %s, Origdatablock pid: %s",
         data_file_path,
         result['_id'],
     )
@@ -144,7 +144,7 @@ def check_dataset_by_pid(
     dataset_exists = response.ok
     # Log the result
     if response.ok:
-        logger.info("Retrieved %s dataset(s) from SciCat", len(response.json()))
+        logger.info("Retrieved %s dataset(s) from SciCat.", len(response.json()))
         logger.info("Dataset with pid %s exists.", pid)
     # Filter 404 error code.
     # Scicat returns 404 error code when the file does not exist.
@@ -153,10 +153,10 @@ def check_dataset_by_pid(
     elif response.status_code == 404:
         logger.info("Dataset with pid %s does not exist.", pid)
     else:
-        logger.error(
-            "Failed to check dataset existence by pid %s\n"
-            "with status code: %s. \n"
-            "Error message from scicat backend: \n%s\n"
+        logger.warning(
+            "Failed to check dataset existence by pid %s "
+            "with status code: %s. "
+            "Error message from scicat backend: %s. "
             "Assuming the dataset does not exist.",
             pid,
             response.status_code,
@@ -187,7 +187,7 @@ def check_dataset_by_metadata(
 
     # Log the response
     if response.ok:
-        logger.info("Retrieved %s dataset(s) from SciCat", len(response.json()))
+        logger.info("Retrieved %s dataset(s) from SciCat.", len(response.json()))
         logger.info("Dataset with metadata %s exists.", metadata_dict)
     # Filter 404 error code.
     # Scicat returns 404 error code when the file does not exist.
@@ -196,10 +196,10 @@ def check_dataset_by_metadata(
     elif response.status_code == 404:
         logger.info("Dataset with metadata %s does not exist.", metadata_dict)
     else:
-        logger.error(
-            "Failed to check dataset existence by metadata key %s \n"
-            "with status code: %s \n"
-            "Error message from scicat backend: \n%s\n"
+        logger.warning(
+            "Failed to check dataset existence by metadata key %s "
+            "with status code: %s. "
+            "Error message from scicat backend: %s. "
             "Assuming the dataset does not exist.",
             metadata_key,
             response.status_code,

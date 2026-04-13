@@ -100,6 +100,9 @@ _HELP_TEXT = {
         "ingestion.file-handling." + key: value
         for key, value in file_handling_help.items()
     },
+    "ingestion.fallback-schema-file-path": "Path to the fallback imsc file. "
+    "If it is not empty string, it will check if it is valid. "
+    "An empty string will be ignored. ",
 }
 
 
@@ -258,6 +261,25 @@ class KafkaOptions:
     auto_offset_reset: str = "earliest"
     """Kafka auto offset reset."""
 
+    def __str__(self):
+        # Normally ``asdict`` is preferred,
+        # But since the kafka option may contain password,
+        # we do not want to accidentally print them, i.e. logging.
+        # Therefore we build the string representation
+        # explicitly without user credentials.
+        dict_option = {
+            'topics': self.topics,
+            'group_id': self.group_id,
+            'bootstrap_servers': self.bootstrap_servers,
+            'security_protocol': self.security_protocol,
+            'sasl_mechanism': self.sasl_mechanism,
+            'ssl_ca_location': self.ssl_ca_location,
+            'individual_message_commit': self.individual_message_commit,
+            'enable_auto_commit': self.enable_auto_commit,
+            'auto_offset_reset': self.auto_offset_reset,
+        }
+        return json.dumps(dict_option)
+
 
 @dataclass(kw_only=True)
 class FileHandlingOptions:
@@ -300,6 +322,7 @@ class IngestionOptions:
     max_offline_ingestors: int = 10
     offline_ingestors_wait_time: int = 10
     schemas_directory: str = "schemas"
+    fallback_schema_file_path: str = ''
     check_if_dataset_exists_by_pid: bool = True
     check_if_dataset_exists_by_metadata: bool = True
     check_if_dataset_exists_by_metadata_key: str = "job_id"
@@ -438,10 +461,10 @@ def build_dataclass[T](
     unused_keys = set(data.keys()) - set(type_hints.keys())
     if unused_keys:
         # If ``data`` contains unnecessary fields.
-        unused_keys_repr = "\n\t\t- ".join(
+        unused_keys_repr = ", ".join(
             ".".join((*prefixes, unused_key)) for unused_key in unused_keys
         )
-        error_message = f"Invalid argument found: \n\t\t- {unused_keys_repr}"
+        error_message = f"Invalid argument found: {unused_keys_repr}"
         if logger is not None:
             logger.warning(error_message)
         if strict:

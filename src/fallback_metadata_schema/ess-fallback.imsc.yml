@@ -1,0 +1,98 @@
+# Written by: fallback_metadata_schema.dump
+id: scicat-ingestor-fallback-schema
+name: Fall Back Metadata Schema
+instrument: '*'
+selector: '*'
+order: 9999999999
+variables:
+  job_id:
+    source: NXS
+    value_type: string
+    unit: ''
+    path: /entry/entry_identifier_uuid
+  pid:
+    source: VALUE
+    value_type: string
+    unit: ''
+    operator: ''
+    value: 20.500.12269/<job_id>
+  proposal_id:
+    source: NXS
+    value_type: string
+    unit: ''
+    path: /entry/experiment_identifier
+  pi_firstname:
+    source: SC
+    value_type: string
+    unit: ''
+    url: proposals/<proposal_id>
+    field: pi_firstname
+  pi_lastname:
+    source: SC
+    value_type: string
+    unit: ''
+    url: proposals/<proposal_id>
+    field: pi_lastname
+  pi_email:
+    source: SC
+    value_type: string
+    unit: ''
+    url: proposals/<proposal_id>
+    field: pi_email
+  dataset_name:
+    source: NXS
+    value_type: string
+    unit: ''
+    path: entry/title
+  source_folder:
+    source: VALUE
+    value_type: string
+    unit: ''
+    operator: dirname-2
+    value: <data_file_path>
+schema:
+  pid:
+    machine_name: pid
+    field_type: high_level
+    value: <pid>
+    type: string
+  dataset_name:
+    machine_name: datasetName
+    field_type: high_level
+    value: <dataset_name>
+    type: string
+  principal_investigator:
+    machine_name: principalInvestigator
+    field_type: high_level
+    value: <pi_firstname> <pi_lastname>
+    type: string
+  creation_location:
+    machine_name: creationLocation
+    field_type: high_level
+    value: ESS
+    type: string
+  owner:
+    machine_name: owner
+    field_type: high_level
+    value: <pi_firstname> <pi_lastname>
+    type: string
+  owner_email:
+    machine_name: ownerEmail
+    field_type: high_level
+    value: <pi_email>
+    type: string
+  source_folder:
+    machine_name: sourceFolder
+    field_type: high_level
+    value: <source_folder>
+    type: string
+  contact_email:
+    machine_name: contactEmail
+    field_type: high_level
+    value: <pi_email>
+    type: string
+  creation_time:
+    machine_name: creationTime
+    field_type: high_level
+    value: <now>
+    type: date

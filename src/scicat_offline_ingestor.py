@@ -8,6 +8,7 @@ from pathlib import Path
 
 import h5py
 
+from fallback_metadata_schema import get_fallback_schema
 from scicat_communication import (
     check_dataset_by_metadata,
     check_dataset_by_pid,
@@ -219,15 +220,15 @@ def main() -> None:
     config = build_offline_config(logger=logger)
     fh_options = config.ingestion.file_handling
 
-    # Log the configuration as dictionary so that it is easier to read from the logs
-    logger.info(
-        'Starting the Scicat background Ingestor with the following configuration: %s',
-        config.to_dict(),
-    )
+    logger.info('Starting the Scicat background Ingestor.')
 
     # Collect all metadata schema configurations
     schemas = collect_schemas(config.ingestion.schemas_directory)
+    fallback_schema = get_fallback_schema(config.ingestion.fallback_schema_file_path)
+
     logger.info("Found %s schemas", len(schemas))
+    if fallback_schema:
+        logger.debug("Found fallback schema: %s.", fallback_schema.name)
 
     with handle_exceptions(logger):
         nexus_file_path = Path(config.nexus_file)
@@ -243,7 +244,9 @@ def main() -> None:
             logger=logger,
         ) as h5file:
             # load instrument metadata configuration
-            metadata_schema = select_applicable_schema(nexus_file_path, schemas)
+            metadata_schema = select_applicable_schema(
+                nexus_file_path, schemas, logger=logger
+            )
             logger.info(
                 "Metadata Schema selected : %s (Id: %s)",
                 metadata_schema.name,
@@ -252,7 +255,11 @@ def main() -> None:
 
             # define variables values
             variable_map = extract_variables_values(
-                metadata_schema.variables, h5file, config, metadata_schema.id
+                variables=metadata_schema.variables,
+                h5file=h5file,
+                config=config,
+                schema_id=metadata_schema.id,
+                logger=logger,
             )
 
         data_file_list = create_data_file_list(
@@ -265,7 +272,7 @@ def main() -> None:
         )
 
         # Prepare scicat dataset instance(entry)
-        logger.info("Preparing scicat dataset instance ...")
+        logger.info("Preparing scicat dataset instance.")
         local_dataset_instance = create_scicat_dataset_instance(
             metadata_schema=metadata_schema.schema,
             variable_map=variable_map,
@@ -273,6 +280,7 @@ def main() -> None:
             config=config.dataset,
             logger=logger,
         )
+
         # Check if dataset already exists in SciCat
         if _check_if_dataset_exists_by_pid(
             local_dataset_instance, config.ingestion, config.scicat, logger
@@ -325,8 +333,8 @@ def main() -> None:
             # check one more time if we successfully created the entries in scicat
             if not ((len(scicat_dataset) > 0) and (len(scicat_origdatablock) > 0)):
                 logger.error(
-                    "Failed to create dataset or origdatablock in scicat for file %s.\n"
-                    "SciCat dataset: %s\nSciCat origdatablock: %s",
+                    "Failed to create dataset or origdatablock in scicat for file %s. "
+                    "SciCat dataset: %s, SciCat origdatablock: %s",
                     nexus_file_path,
                     scicat_dataset,
                     scicat_origdatablock,
@@ -337,10 +345,10 @@ def main() -> None:
 
             # if we get here, both dataset and origdatablock have been created successfully
             logger.info(
-                "Dataset ingestion successful. \n"
-                "Data file: %s. \n"
-                "Scicat dataset pid: %s. \n"
-                "SciCat origdatablock id: %s",
+                "Dataset ingestion successful. "
+                "Data file: %s, "
+                "Scicat dataset pid: %s, "
+                "SciCat origdatablock id: .",
                 nexus_file_path,
                 scicat_dataset.get('pid'),
                 scicat_origdatablock.get('_id'),

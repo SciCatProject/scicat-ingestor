@@ -9,7 +9,7 @@ def exit(logger: logging.Logger, unexpected: bool = True) -> None:
     """Log the message and exit the program."""
     import sys
 
-    logger.info("Exiting ingestor")
+    logger.info("Exiting ingestor.")
     sys.exit(1 if unexpected else 0)
 
 
@@ -56,9 +56,9 @@ def handle_daemon_loop_exceptions(
         logger.info("Received keyboard interrupt.")
         exit(logger, unexpected=False)
     except ignored_exceptions as ignored_err:
-        logger.error(
+        logger.warning(
             "An exception occurred, "
-            "but it is in the ignored list: %s \n. Ignored exception is: %s",
+            "but it is in the ignored list: %s . Ignored exception is: %s",
             ignored_exceptions,
             ignored_err,
         )

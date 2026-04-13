@@ -82,7 +82,7 @@ scicat_ingestor = "scicat_online_ingestor:main"
 scicat_background_ingestor = "scicat_offline_ingestor:main"
 # Dev Tools
 scicat_validate_ingestor_config = "scicat_configuration:validate_config_file"
-scicat_validate_metadata_schema = "scicat_metadata:validate_schema"
+scicat_validate_metadata_schema = "scicat_devtools:validate_schema"
 scicat_synchronize_config = "scicat_configuration:synchronize_config_file"
 scicat_json_to_yaml = "scicat_configuration:json_to_yaml"
     # We don't have to test this json to yaml script because we always check if
@@ -93,6 +93,9 @@ scicat_json_to_yaml = "scicat_configuration:json_to_yaml"
 max = "numpy:max"
 min = "numpy:min"
 mean = "numpy:mean"
+
+[tool.setuptools]
+include-package-data = true  # For fallback metadata file.
 
 [tool.setuptools_scm]
 

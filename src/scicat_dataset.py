@@ -3,6 +3,7 @@
 import ast
 import copy
 import datetime
+import json
 import logging
 import os.path
 import pathlib
@@ -10,7 +11,8 @@ import re
 import urllib
 import uuid
 from collections.abc import Callable, Iterable
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
+from inspect import signature
 from types import MappingProxyType
 from typing import Any
 
@@ -95,6 +97,13 @@ def to_list(value: Any) -> list:
         raise TypeError()
 
 
+def return_none(value: Any) -> None:
+    if value is not None:
+        raise TypeError('`None` type value should be `None`.')
+
+    return None
+
+
 _DtypeConvertingMap = MappingProxyType(
     {
         "string": to_string,
@@ -106,6 +115,7 @@ _DtypeConvertingMap = MappingProxyType(
         "list": to_list,
         "email": to_string,
         "link": to_string,
+        "none": return_none,
         # TODO: Add email converter
     }
 )
@@ -115,7 +125,7 @@ def convert_to_type(input_value: Any, dtype_desc: str) -> Any:
     if (converter := _DtypeConvertingMap.get(dtype_desc)) is None:
         raise ValueError(
             "Invalid dtype description. Must be one of: ",
-            "string, string[], integer, float, date.",
+            ','.join(_DtypeConvertingMap.keys()),
             f"Got: {dtype_desc}",
         )
     return converter(input_value)
@@ -312,49 +322,85 @@ def _build_default_variable_map(
     }
 
 
+@dataclass
+class _VariableMapFailure:
+    name: str
+    recipe: MetadataVariableConfig
+    error: Exception
+
+    def __str__(self):
+        failure_dict = {
+            'name': self.name,
+            'recipe': asdict(self.recipe),
+            'error': str(self.error.__class__.__name__) + "('" + str(self.error) + "')",
+        }
+        return json.dumps(failure_dict)
+
+
+def _report_variable_map_construction_failures(
+    *, logger: logging.Logger, failures: list[_VariableMapFailure]
+) -> None:
+    if failures:
+        descs = ', '.join(str(failure) for failure in failures)
+        logger.warning(
+            "%d variables failed to be constructed and ignored: [%s].",
+            len(failures),
+            descs,
+        )
+
+
 def extract_variables_values(
+    *,
     variables: dict[str, MetadataVariableConfig],
     h5file: h5py.File,
     config: OfflineIngestorConfig,
     schema_id: str,
+    logger: logging.Logger,
 ) -> dict[str, MetadataVariableValueSpec]:
     variable_map: dict[str, MetadataVariableValueSpec] = _build_default_variable_map(
         nexus_file_path=pathlib.Path(config.nexus_file),
         ingestor_file_dir=config.ingestion.file_handling.ingestor_files_directory,
         schema_id=schema_id,
     )
+    failure_list: list[_VariableMapFailure] = []
     for variable_name, variable_recipe in variables.items():
-        if isinstance(variable_recipe, VariableConfigNexusFile):
-            value = _retrieve_values_from_file(variable_recipe, h5file)
-        elif isinstance(variable_recipe, VariableConfigScicat):
-            url_template = render_variable_value(
-                variable_recipe.url, variable_map
-            ).value
-            if not isinstance(url_template, str):
-                raise ValueError(f"Invalid URL template: {url_template}")
+        try:
+            if isinstance(variable_recipe, VariableConfigNexusFile):
+                value = _retrieve_values_from_file(variable_recipe, h5file)
+            elif isinstance(variable_recipe, VariableConfigScicat):
+                url_template = render_variable_value(
+                    variable_recipe.url, variable_map
+                ).value
+                if not isinstance(url_template, str):
+                    raise ValueError(f"Invalid URL template: {url_template}")
 
-            full_endpoint_url = render_full_url(url_template, config.scicat)
-            _value = retrieve_value_from_scicat(
-                config=config.scicat,
-                scicat_endpoint_url=full_endpoint_url,
-                field_name=variable_recipe.field,
+                full_endpoint_url = render_full_url(url_template, config.scicat)
+                _value = retrieve_value_from_scicat(
+                    config=config.scicat,
+                    scicat_endpoint_url=full_endpoint_url,
+                    field_name=variable_recipe.field,
+                )
+                # Unit is not retrieved from scicat
+                value = MetadataVariableValueSpec(value=_value)
+            elif isinstance(variable_recipe, VariableConfigValue):
+                value = render_variable_value(variable_recipe.value, variable_map)
+                _operator = _get_operator(variable_recipe.operator)
+                value = _operator(value, variable_recipe)
+
+            else:
+                raise Exception("Invalid variable source: ", variable_recipe.source)
+
+            # Convert dtype to match the target value_type.
+            converted_value = convert_to_type(value.value, variable_recipe.value_type)
+            variable_map[variable_name] = MetadataVariableValueSpec(
+                value=converted_value, unit=value.unit
             )
-            # Unit is not retrieved from scicat
-            value = MetadataVariableValueSpec(value=_value)
-        elif isinstance(variable_recipe, VariableConfigValue):
-            value = render_variable_value(variable_recipe.value, variable_map)
-            _operator = _get_operator(variable_recipe.operator)
-            value = _operator(value, variable_recipe)
+        except Exception as err:
+            failure_list.append(
+                _VariableMapFailure(variable_name, variable_recipe, err)
+            )
 
-        else:
-            raise Exception("Invalid variable source: ", variable_recipe.source)
-
-        # Convert dtype to match the target value_type.
-        variable_map[variable_name] = MetadataVariableValueSpec(
-            value=convert_to_type(value.value, variable_recipe.value_type),
-            unit=value.unit,
-        )
-
+    _report_variable_map_construction_failures(logger=logger, failures=failure_list)
     return variable_map
 
 
@@ -424,6 +470,17 @@ class ScicatDataset:
     endTime: str | None = None
     runNumber: str | None = None
     keywords: list[str] | None = None
+
+    @classmethod
+    def mandatory_fields(cls) -> tuple[str, ...]:
+        """Return all arguments without default or default factory."""
+        scicat_dataset_sig = signature(cls)
+
+        return [
+            param.name
+            for param in scicat_dataset_sig.parameters.values()
+            if param.default is param.empty
+        ]
 
 
 @dataclass(kw_only=True)
@@ -646,10 +703,27 @@ class MetadataItemValueSpec:
         )
 
 
-def _create_scientific_metadata(
+@dataclass
+class _HighlevelMetadataFailure:
+    target_config: MetadataItemConfig
+    error: Exception
+
+    def __str__(self) -> str:
+        failure_dict = {
+            'human_name': self.target_config.human_name,
+            'machine_name': self.target_config.machine_name,
+            'error': str(self.error.__class__.__name__) + "('" + str(self.error) + "')",
+        }
+        return json.dumps(failure_dict)
+
+
+def _create_highlevel_metadata_dict(
     *,
-    sm_schemas: list[MetadataItemConfig],
+    metadata_schema: dict[str, MetadataItemConfig],
     variable_map: dict[str, MetadataVariableValueSpec],
+    dataset_options: DatasetOptions,
+    failure_container: list[_HighlevelMetadataFailure],
+    logger: logging.Logger,
 ) -> dict:
     """Create scientific metadata from the metadata schema configuration.
 
@@ -661,32 +735,85 @@ def _create_scientific_metadata(
         The scientific metadata schema configuration.
     variable_map:
         The variable map to render the scientific metadata values.
+    failure_container:
+        Append failure report into.
 
     """
-    metadatas = {
-        item_config.machine_name: MetadataItemValueSpec.from_metadata_item_config(
-            item_config, variable_map
+    result = {}
+    hl_field_configs = _filter_by_field_type(
+        metadata_schema.values(), HIGH_LEVEL_METADATA_TYPE
+    )
+    for hl_field in hl_field_configs:
+        try:
+            result[hl_field.machine_name] = _render_variable_as_type(
+                hl_field.value, variable_map, hl_field.type
+            )
+        except Exception as err:
+            failure_container.append(_HighlevelMetadataFailure(hl_field, err))
+
+    # Auto generate or assign ``pid`` if needed
+    # It has to be done before constructing `ScicatDataset` because
+    # ``pid`` is a mandatory argument.
+    if not dataset_options.allow_dataset_pid and ('pid' in result):
+        logger.info(
+            "PID is not allowed in the dataset by configuration. "
+            "Setting it to `None` in the dataset."
         )
-        for item_config in sm_schemas
-    }
-    return {name: asdict(meta) for name, meta in metadatas.items()}
+        result['pid'] = None
+    elif dataset_options.generate_dataset_pid:
+        logger.info("Auto generating PID for the dataset based on the configuration.")
+        result['pid'] = uuid.uuid4().hex
+
+    return result
 
 
-def _validate_metadata_schemas(
+def _create_scientific_metadata(
+    *,
     metadata_schema: dict[str, MetadataItemConfig],
-) -> None:
-    invalid_types = [
-        field.field_type
-        for field in metadata_schema.values()
-        if field.field_type not in VALID_METADATA_TYPES
-    ]
+    variable_map: dict[str, MetadataVariableValueSpec],
+    failure_container: list[_HighlevelMetadataFailure],
+) -> dict:
+    """Create scientific metadata from the metadata schema configuration.
 
-    if any(invalid_types):
-        raise ValueError(
-            "Invalid metadata schema types found. Valid types are: ",
-            VALID_METADATA_TYPES,
-            "Got: ",
-            invalid_types,
+    Params
+    ------
+    metadata_schema_id:
+        The ID of the metadata schema configuration.
+    sm_schemas:
+        The scientific metadata schema configuration.
+    variable_map:
+        The variable map to render the scientific metadata values.
+    failure_container:
+        Append failure report into.
+
+    """
+    result = {}
+    sm_schemas = _filter_by_field_type(
+        metadata_schema.values(), SCIENTIFIC_METADATA_TYPE
+    )
+    for item_config in sm_schemas:
+        try:
+            name = item_config.machine_name
+            value_spec = MetadataItemValueSpec.from_metadata_item_config(
+                item_config, variable_map
+            )
+            value_dict = asdict(value_spec)
+            result[name] = value_dict
+        except Exception as err:
+            failure_container.append(_HighlevelMetadataFailure(item_config, err))
+
+    return result
+
+
+def _report_highlevel_metadata_build_failures(
+    *, logger: logging.Logger, failures: list[_HighlevelMetadataFailure]
+) -> None:
+    if failures:
+        names = ', '.join(str(failure) for failure in failures)
+        logger.warning(
+            "%d metadata fields failed to be constructed and ignored: [%s].",
+            len(failures),
+            names,
         )
 
 
@@ -715,36 +842,90 @@ def create_scicat_dataset_instance(
         Logger instance.
 
     """
-    _validate_metadata_schemas(metadata_schema)
+    # Check metadata item configurations
+    # Avoid failing even if the metadata schema is invalid.
+    invalid_types = [
+        field.field_type
+        for field in metadata_schema.values()
+        if field.field_type not in VALID_METADATA_TYPES
+    ]
+
+    if any(invalid_types):
+        logger.warning(
+            "Invalid metadata schema types found: %s. Valid types are: %s. "
+            "Metadata items with invalid types will be ignored.",
+            VALID_METADATA_TYPES,
+            invalid_types,
+        )
+
+    # Container to collect all failures.
+    failure_list: list[_HighlevelMetadataFailure] = []
+
+    # High Level Schema Fields
+    high_level_fields = _create_highlevel_metadata_dict(
+        metadata_schema=metadata_schema,
+        variable_map=variable_map,
+        dataset_options=config,
+        failure_container=failure_list,
+        logger=logger,
+    )
+
+    # Scientific Metadata Schema Fields
+    scientific_metadata = _create_scientific_metadata(
+        metadata_schema=metadata_schema,
+        variable_map=variable_map,
+        failure_container=failure_list,
+    )
+
+    _report_highlevel_metadata_build_failures(logger=logger, failures=failure_list)
+    high_level_fields['size'] = sum(
+        [file.size for file in data_file_list if file.size is not None]
+    )
+    high_level_fields['numberOfFiles'] = len(data_file_list)
+
+    mandatory_fields = ScicatDataset.mandatory_fields()
+    missing_mandatory_fields = [
+        field_name
+        for field_name in mandatory_fields
+        if field_name not in high_level_fields
+        # scientific metadata is directly set to the constructor.
+        and field_name != 'scientificMetadata'
+    ]
+    if missing_mandatory_fields:
+        # Since the fallback schema definitions should have all mandatory fields,
+        # this condition should never reach.
+        # Therefore despite of the no-raising policy,
+        # it should raise if this condition is met.
+        err_msg = "Missing mandatory fields for scicat dataset: %s."
+        missing_fields_str = ', '.join(missing_mandatory_fields)
+        logger.error(err_msg, missing_fields_str)
+        raise ValueError(err_msg % missing_fields_str)
+
+    expected_fields_name = [field_spec.name for field_spec in fields(ScicatDataset)]
+    unexpected_fields = [
+        field_name
+        for field_name in high_level_fields
+        if field_name not in expected_fields_name
+    ]
+    if unexpected_fields:
+        # Unexpected fields imply broken metadata schema.
+        # scicat-ingestor reports them but do not raise and ignore the unexpected fields.
+        logger.warning(
+            "Found unexpected metadata fields for scicat dataset: %s. "
+            "Unexpected metadata fields will be ignored.",
+            ', '.join(unexpected_fields),
+        )
+    for unused_field_name in unexpected_fields:
+        high_level_fields.pop(unused_field_name)
+
     # Create the dataset instance
     scicat_dataset = ScicatDataset(
-        size=sum([file.size for file in data_file_list if file.size is not None]),
-        numberOfFiles=len(data_file_list),
         isPublished=False,
-        scientificMetadata=_create_scientific_metadata(
-            sm_schemas=_filter_by_field_type(
-                metadata_schema.values(), SCIENTIFIC_METADATA_TYPE
-            ),  # Scientific metadata schemas
-            variable_map=variable_map,
-        ),
-        **{
-            field.machine_name: _render_variable_as_type(
-                field.value, variable_map, field.type
-            )
-            for field in _filter_by_field_type(
-                metadata_schema.values(), HIGH_LEVEL_METADATA_TYPE
-            )
-            # High level schemas
-        },
+        scientificMetadata=scientific_metadata,
+        **high_level_fields,
     )
 
     # Auto generate or assign default values if needed
-    if not config.allow_dataset_pid and scicat_dataset.pid:
-        logger.info("PID is not allowed in the dataset by configuration.")
-        scicat_dataset.pid = None
-    elif config.generate_dataset_pid:
-        logger.info("Auto generating PID for the dataset based on the configuration.")
-        scicat_dataset.pid = uuid.uuid4().hex
     if scicat_dataset.instrumentId is None:
         scicat_dataset.instrumentId = config.default_instrument_id
         logger.info(
