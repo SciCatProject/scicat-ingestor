@@ -1,0 +1,91 @@
+name: Build and Push Docker Image
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'PEP 440 version to embed in the image (e.g. 1.2.3). Defaults to 0.0.0.'
+        required: false
+        default: '0.0.0'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  test:
+    name: Tests
+    uses: ./.github/workflows/test.yml
+    with:
+      os-variant: 'ubuntu-24.04'
+
+  build-and-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-24.04
+    needs: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          # Full history is required so that setuptools_scm can derive the version
+          # from the git tag. The SETUPTOOLS_SCM_PRETEND_VERSION build-arg is used
+          # as an explicit fallback so the build never fails due to missing tags.
+          fetch-depth: 0
+
+      - name: Derive PEP 440 version from release tag
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            FULL_VERSION="${{ github.event.release.tag_name }}"
+          else
+            FULL_VERSION="v${{ inputs.version }}"
+          fi
+          # Strip the leading 'v' so the version is PEP 440 compatible (e.g. 1.2.3).
+          PEP440="${FULL_VERSION#v}"
+          echo "full=${FULL_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "pep440=${PEP440}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU (for cross-platform builds)
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata (tags and labels)
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/scicatproject/scicat-ingestor
+          tags: |
+            # e.g. 1.2.3
+            type=semver,pattern={{version}}
+            # e.g. 1.2
+            type=semver,pattern={{major}}.{{minor}}
+            # e.g. 1
+            type=semver,pattern={{major}}
+            # 'latest' only for non-pre-releases
+            type=raw,value=latest,enable=${{ github.event.release.prerelease == false }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ steps.version.outputs.pep440 }}
+          # GitHub Actions cache keeps subsequent builds fast.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

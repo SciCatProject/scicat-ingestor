@@ -8,8 +8,10 @@ import pathlib
 import subprocess
 from time import sleep
 
+PACKAGE_NAME = "scicat-ingestor"
+
 try:
-    __version__ = importlib.metadata.version(__package__ or __name__)
+    __version__ = importlib.metadata.version(PACKAGE_NAME)
 except importlib.metadata.PackageNotFoundError:
     __version__ = "0.0.0"
 
@@ -119,7 +121,7 @@ def main() -> None:
     logger = build_logger(tmp_config)
     config = build_online_config(logger=logger)
 
-    logger.info('Starting the Scicat online Ingestor.')
+    logger.info('Starting the Scicat online Ingestor. Version: %s', __version__)
 
     with handle_daemon_loop_exceptions(logger=logger):
         # Kafka consumer

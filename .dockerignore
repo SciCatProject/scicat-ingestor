@@ -1,0 +1,32 @@
+# Version control
+.git/
+.gitignore
+.gitattributes
+
+# Development tools
+.venv/
+.pixi/
+.pre-commit-config.yaml
+pixi.toml
+pixi.lock
+
+# Build artifacts
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+**/*.egg-info/
+dist/
+build/
+*.egg
+
+# Tests and test data
+tests/
+test-data/
+
+# Documentation
+documentation/
+
+# Config samples (runtime config must be mounted, not baked in)
+resources/
