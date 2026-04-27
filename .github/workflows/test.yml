@@ -33,7 +33,7 @@ jobs:
     runs-on: ${{ inputs.os-variant }}
     steps:
       - uses: actions/checkout@v6
-      - uses: prefix-dev/setup-pixi@v0.9.4
+      - uses: prefix-dev/setup-pixi@v0.9.5
         with:
           pixi-version: v0.65.0
           frozen: true
