@@ -169,3 +169,41 @@ scicat_json_to_yaml --input-file PATH/TO/THE/JSON/FILE
 
 It can be used for any configuration or schema files.
 
+## ADR-003: Separate ``Sample Ingestor`` service.
+
+Each scicat dataset needs to know what sample it is associated with.<br>
+Ingestor only knows about the `Sample Name` in the nexus file and it has to query the `Sample Instance` ID from scicat.<br>
+
+However, it is not guaranteed that `Sample Instance` already exists in scicat,<br>
+if users want to use a new `Sample Instance` that was not registered in advance.<br>
+
+Type of the sample should have been registered and reviewed,<br>
+but `Sample Instance` does not necessarily go through the whole process.<br>
+Therefore NICOS should allow users to write a sample name in a free form instead of selecting one from the list.
+
+In that case, `Sample Instance` is not in the scicat and ingestor only knows about the `Sample Name` that users typed in,<br>
+therefore the filewriter writes it in the nexus file.
+
+Therefore the `Sample Instance` creation should be handled somewhere once there is an unrecognized sample name in a new nexus file.
+
+### Concurrency Issue of Sample Creation
+We discussed about creating the `Sample Instance` while ingestor creating a `Dataset` for a nexus file.<br>
+Then there is a risk that 2 offline-ingestor processes try to create new `Sample Instance`s for the same name(concurrency issue).<br>
+
+It is allowed that two different `Sample Instance` datasets have same names if users specifically name them such way.
+
+However, ingestor shouldn't accidentally create multiple `Sample Instance`(multiple IDs) for the same sample.
+
+### Conclusion
+
+The sample creation(sample ingestion) should be a separate process and it should strictly avoid multi-process ingestion.
+
+## ADR-004: Job dataset creation after dataset creation.
+
+Scicat has a job dataset that can be routed to the 3rd agents/services by scicat backend.<br>
+Instead of ingestor taking care of complicated post-processing, such as computing a plot or computing scientific metadata,<br>
+ingestor will create a job at scicat that is associated with the dataset it ingests.
+
+The configuration should be a separate section in the `imsc` schema file.<br>
+We should keep the job creation logic very simple and it should not block the dataset creation itself.<br>
+
