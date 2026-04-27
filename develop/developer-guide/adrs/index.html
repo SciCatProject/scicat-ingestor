@@ -565,6 +565,46 @@
 </ul>
 </nav>
 </li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#adr-003-separate-sample-ingestor-service">
+<span class="md-ellipsis">
+      
+        ADR-003: Separate Sample Ingestor service.
+      
+    </span>
+</a>
+<nav aria-label="ADR-003: Separate Sample Ingestor service." class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#concurrency-issue-of-sample-creation">
+<span class="md-ellipsis">
+      
+        Concurrency Issue of Sample Creation
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#conclusion">
+<span class="md-ellipsis">
+      
+        Conclusion
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#adr-004-job-dataset-creation-after-dataset-creation">
+<span class="md-ellipsis">
+      
+        ADR-004: Job dataset creation after dataset creation.
+      
+    </span>
+</a>
+</li>
 </ul>
 </nav>
 </li>
@@ -797,6 +837,46 @@
 </ul>
 </nav>
 </li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#adr-003-separate-sample-ingestor-service">
+<span class="md-ellipsis">
+      
+        ADR-003: Separate Sample Ingestor service.
+      
+    </span>
+</a>
+<nav aria-label="ADR-003: Separate Sample Ingestor service." class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#concurrency-issue-of-sample-creation">
+<span class="md-ellipsis">
+      
+        Concurrency Issue of Sample Creation
+      
+    </span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#conclusion">
+<span class="md-ellipsis">
+      
+        Conclusion
+      
+    </span>
+</a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#adr-004-job-dataset-creation-after-dataset-creation">
+<span class="md-ellipsis">
+      
+        ADR-004: Job dataset creation after dataset creation.
+      
+    </span>
+</a>
+</li>
 </ul>
 </nav>
 </div>
@@ -967,6 +1047,30 @@ we implemented a tool that can translate <code>json</code> to <code>yaml</code> 
 <div class="highlight"><pre><span></span><code>scicat_json_to_yaml<span class="w"> </span>--input-file<span class="w"> </span>PATH/TO/THE/JSON/FILE
 </code></pre></div>
 <p>It can be used for any configuration or schema files.</p>
+<h2 id="adr-003-separate-sample-ingestor-service">ADR-003: Separate <code>Sample Ingestor</code> service.</h2>
+<p>Each scicat dataset needs to know what sample it is associated with.<br/>
+Ingestor only knows about the <code>Sample Name</code> in the nexus file and it has to query the <code>Sample Instance</code> ID from scicat.<br/></p>
+<p>However, it is not guaranteed that <code>Sample Instance</code> already exists in scicat,<br/>
+if users want to use a new <code>Sample Instance</code> that was not registered in advance.<br/></p>
+<p>Type of the sample should have been registered and reviewed,<br/>
+but <code>Sample Instance</code> does not necessarily go through the whole process.<br/>
+Therefore NICOS should allow users to write a sample name in a free form instead of selecting one from the list.</p>
+<p>In that case, <code>Sample Instance</code> is not in the scicat and ingestor only knows about the <code>Sample Name</code> that users typed in,<br/>
+therefore the filewriter writes it in the nexus file.</p>
+<p>Therefore the <code>Sample Instance</code> creation should be handled somewhere once there is an unrecognized sample name in a new nexus file.</p>
+<h3 id="concurrency-issue-of-sample-creation">Concurrency Issue of Sample Creation</h3>
+<p>We discussed about creating the <code>Sample Instance</code> while ingestor creating a <code>Dataset</code> for a nexus file.<br/>
+Then there is a risk that 2 offline-ingestor processes try to create new <code>Sample Instance</code>s for the same name(concurrency issue).<br/></p>
+<p>It is allowed that two different <code>Sample Instance</code> datasets have same names if users specifically name them such way.</p>
+<p>However, ingestor shouldn't accidentally create multiple <code>Sample Instance</code>(multiple IDs) for the same sample.</p>
+<h3 id="conclusion">Conclusion</h3>
+<p>The sample creation(sample ingestion) should be a separate process and it should strictly avoid multi-process ingestion.</p>
+<h2 id="adr-004-job-dataset-creation-after-dataset-creation">ADR-004: Job dataset creation after dataset creation.</h2>
+<p>Scicat has a job dataset that can be routed to the 3rd agents/services by scicat backend.<br/>
+Instead of ingestor taking care of complicated post-processing, such as computing a plot or computing scientific metadata,<br/>
+ingestor will create a job at scicat that is associated with the dataset it ingests.</p>
+<p>The configuration should be a separate section in the <code>imsc</code> schema file.<br/>
+We should keep the job creation logic very simple and it should not block the dataset creation itself.<br/></p>
 </article>
 </div>
 <script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
