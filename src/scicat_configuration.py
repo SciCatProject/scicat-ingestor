@@ -406,6 +406,25 @@ class SciCatOptions:
 
 
 @dataclass(kw_only=True)
+class SampleIngestorConfig:
+    nexus_file: str = ""
+    run_start_message_file: str = ""
+    config_file: str
+    id: str = ""
+    dataset: DatasetOptions = field(default_factory=DatasetOptions)
+    ingestion: IngestionOptions = field(default_factory=IngestionOptions)
+    kafka: KafkaOptions = field(default_factory=KafkaOptions)
+    logging: LoggingOptions = field(default_factory=LoggingOptions)
+    scicat: SciCatOptions = field(default_factory=SciCatOptions)
+    health_check: HealthCheckOptions = field(default_factory=HealthCheckOptions)
+
+    def to_dict(self) -> dict:
+        """Return the configuration as a dictionary."""
+
+        return asdict(self)
+
+
+@dataclass(kw_only=True)
 class OnlineIngestorConfig:
     # original_dict: Mapping
     """Original configuration dictionary in the json file."""
