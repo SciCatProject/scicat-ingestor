@@ -5,14 +5,15 @@ import pathlib
 from collections.abc import Generator
 
 from confluent_kafka import Consumer
-from streaming_data_types import deserialise_wrdn
-from streaming_data_types import deserialise_pl72
+from streaming_data_types import deserialise_pl72, deserialise_wrdn
 from streaming_data_types.finished_writing_wrdn import (
     FILE_IDENTIFIER as WRDN_FILE_IDENTIFIER,
 )
 from streaming_data_types.finished_writing_wrdn import WritingFinished
+from streaming_data_types.run_start_pl72 import (
+    FILE_IDENTIFIER as RUNSTART_FILE_IDENTIFIER,
+)
 from streaming_data_types.run_start_pl72 import RunStartInfo
-from streaming_data_types.run_start_pl72 import FILE_IDENTIFIER as RUNSTART_FILE_IDENTIFIER
 
 from scicat_configuration import KafkaOptions
 
@@ -156,7 +157,6 @@ def wrdn_messages(
             yield _deserialise_wrdn(message_value, logger)
 
 
-
 def _validate_pl72_message_type(message_content: bytes, logger: logging.Logger) -> bool:
     logger.info("Message type: %s", (message_type := message_content[4:8]))
     if message_type == RUNSTART_FILE_IDENTIFIER:
@@ -179,7 +179,9 @@ def _deserialise_run_start(
             deserialized_message.job_id,
             deserialized_message.filename,
         )
-        logger.debug("Deserialised PL72(RunStart) message: %.5000s", deserialized_message)
+        logger.debug(
+            "Deserialised PL72(RunStart) message: %.5000s", deserialized_message
+        )
 
     return deserialized_message
 
