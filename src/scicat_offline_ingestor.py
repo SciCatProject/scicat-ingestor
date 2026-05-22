@@ -10,6 +10,7 @@ from scicat_communication import (
     check_dataset_by_pid,
     create_scicat_dataset,
     create_scicat_origdatablock,
+    query_sample,
 )
 from scicat_configuration import (
     IngestionOptions,
@@ -168,6 +169,21 @@ def main() -> None:
                 metadata_schema.name,
                 metadata_schema.id,
             )
+            try:
+                sample_name = h5file['/entry/sample/name'][...].item().decode("utf-8")
+                proposal_id = (
+                    h5file['/entry/experiment_identifier'][...].item().decode("utf-8")
+                )
+            except Exception:
+                # Ignore invalid sample name and proposal ID.
+                sample_id = None
+            else:
+                sample_id = query_sample(
+                    config=config.scicat,
+                    sample_name=sample_name,
+                    proposal_id=proposal_id,
+                    logger=logger,
+                )
 
             # define variables values
             variable_map = extract_variables_values(
@@ -194,6 +210,7 @@ def main() -> None:
             variable_map=variable_map,
             data_file_list=data_file_list,
             config=config.dataset,
+            sample_id=sample_id,
             logger=logger,
         )
 
