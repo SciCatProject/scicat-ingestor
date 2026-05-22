@@ -3664,8 +3664,8 @@ packages:
   requires_python: '>=3.7'
 - pypi: ./
   name: scicat-ingestor
-  version: 0.1.dev1+g1ff6fc6cb
-  sha256: b486ba86608537344e9c24f6ff5157153e3f100cb7aaedc45015c9489b608c5d
+  version: 0.1.dev1+gc7eaf55fb
+  sha256: 9810e5f37c46f5b19d11c56a4748de0c2f315d8b20556a291978469394b2b310
   requires_dist:
   - confluent-kafka>=2.13.2
   - ess-streaming-data-types>=0.27.0
