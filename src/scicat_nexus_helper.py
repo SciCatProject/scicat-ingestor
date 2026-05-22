@@ -16,6 +16,7 @@ def _open_h5file(
     file_path: Path,
     retry_delays: tuple[int, ...],
     logger: logging.Logger,
+    accepted_exceptions: tuple[type[Exception], ...] = (OSError, BlockingIOError),
     _retried: int = 0,
 ) -> Generator[h5py.File, None, None]:
     import time
@@ -28,7 +29,7 @@ def _open_h5file(
         # that can result non-stopped generator error.
         # It happens when it doesn't fail opening the file but fails after.
         opened_file = h5py.File(file_path, 'r')
-    except (OSError, BlockingIOError) as e:
+    except accepted_exceptions as e:
         if len(retry_delays) > 0:
             cur_retry = retry_delays[0]
             logger.info(
@@ -63,6 +64,7 @@ def open_h5file(
     file_path: Path,
     *,
     file_handling_config: FileHandlingOptions,
+    accepted_exceptions: tuple[type[Exception], ...] = (OSError, BlockingIOError),
     logger: logging.Logger,
 ) -> Generator[h5py.File, None, None]:
     _MAX_RETRY_DELAYS = 120
@@ -85,6 +87,9 @@ def open_h5file(
         retry_delays = retry_delays + (retry_delays[-1],) * missing_length
 
     with _open_h5file(
-        file_path=file_path, retry_delays=retry_delays, logger=logger
+        file_path=file_path,
+        retry_delays=retry_delays,
+        accepted_exceptions=accepted_exceptions,
+        logger=logger,
     ) as h5file:
         yield h5file
