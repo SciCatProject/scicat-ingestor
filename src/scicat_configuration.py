@@ -350,6 +350,7 @@ class _ScicatAPIURLs:
     proposals: str
     origdatablocks: str
     instruments: str
+    samples: str
 
 
 @dataclass(kw_only=True)
@@ -358,6 +359,7 @@ class ScicatEndpoints:
     proposals: str = "proposals"
     origdatablocks: str = "origdatablocks"
     instruments: str = "instruments"
+    samples: str = "samples"
 
 
 @dataclass(kw_only=True)
@@ -381,6 +383,7 @@ class SciCatOptions:
                 self.host_address, self.api_endpoints.origdatablocks
             ),
             instruments=urljoin(self.host_address, self.api_endpoints.instruments),
+            samples=urljoin(self.host_address, self.api_endpoints.samples),
         )
 
     @property
@@ -405,6 +408,12 @@ class SciCatOptions:
         return urljoin(self.host_address, endpoint.lstrip("/"))
 
 
+def default_sample_ingestion_option() -> IngestionOptions:
+    return IngestionOptions(
+        offline_ingestor_executable=["scicat_sample_ingestor_manual"],
+    )
+
+
 @dataclass(kw_only=True)
 class SampleIngestorConfig:
     nexus_file: str = ""
@@ -412,7 +421,7 @@ class SampleIngestorConfig:
     config_file: str
     id: str = ""
     dataset: DatasetOptions = field(default_factory=DatasetOptions)
-    ingestion: IngestionOptions = field(default_factory=IngestionOptions)
+    ingestion: IngestionOptions = field(default_factory=default_sample_ingestion_option)
     kafka: KafkaOptions = field(default_factory=KafkaOptions)
     logging: LoggingOptions = field(default_factory=LoggingOptions)
     scicat: SciCatOptions = field(default_factory=SciCatOptions)

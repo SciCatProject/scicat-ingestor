@@ -180,7 +180,7 @@ def _deserialise_run_start(
             deserialized_message.filename,
         )
         logger.debug(
-            "Deserialised PL72(RunStart) message: %.5000s", deserialized_message
+            "Deserialised PL72(RunStart) message: %.150s", deserialized_message
         )
 
     return deserialized_message
