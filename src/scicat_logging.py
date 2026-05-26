@@ -6,7 +6,11 @@ import logging.handlers
 
 import graypy
 
-from scicat_configuration import OfflineIngestorConfig, OnlineIngestorConfig
+from scicat_configuration import (
+    OfflineIngestorConfig,
+    OnlineIngestorConfig,
+    SampleIngestorConfig,
+)
 
 
 def build_devtool_logger(tool_name: str) -> logging.Logger:
@@ -21,7 +25,7 @@ def build_devtool_logger(tool_name: str) -> logging.Logger:
 
 
 def build_logger(
-    config: OnlineIngestorConfig | OfflineIngestorConfig,
+    config: OnlineIngestorConfig | OfflineIngestorConfig | SampleIngestorConfig,
 ) -> logging.Logger:
     """Build a logger and configure it according to the ``config``."""
     logging_options = config.logging

@@ -5,11 +5,15 @@ import pathlib
 from collections.abc import Generator
 
 from confluent_kafka import Consumer
-from streaming_data_types import deserialise_wrdn
+from streaming_data_types import deserialise_pl72, deserialise_wrdn
 from streaming_data_types.finished_writing_wrdn import (
     FILE_IDENTIFIER as WRDN_FILE_IDENTIFIER,
 )
 from streaming_data_types.finished_writing_wrdn import WritingFinished
+from streaming_data_types.run_start_pl72 import (
+    FILE_IDENTIFIER as RUNSTART_FILE_IDENTIFIER,
+)
+from streaming_data_types.run_start_pl72 import RunStartInfo
 
 from scicat_configuration import KafkaOptions
 
@@ -153,9 +157,63 @@ def wrdn_messages(
             yield _deserialise_wrdn(message_value, logger)
 
 
+def _validate_pl72_message_type(message_content: bytes, logger: logging.Logger) -> bool:
+    logger.info("Message type: %s", (message_type := message_content[4:8]))
+    if message_type == RUNSTART_FILE_IDENTIFIER:
+        logger.info("RunStart message received.")
+        return True
+    else:
+        logger.info("Message of type %s ignored.", message_type)
+        return False
+
+
+def _deserialise_run_start(
+    message_content: bytes, logger: logging.Logger
+) -> RunStartInfo | None:
+    deserialized_message: RunStartInfo | None = None
+    if _validate_pl72_message_type(message_content, logger):
+        logger.info("Deserialising PL72(RunStart) message")
+        deserialized_message = deserialise_pl72(message_content)
+        logger.info(
+            "Deserialised PL72(RunStart) message with job id, %s for file %s.",
+            deserialized_message.job_id,
+            deserialized_message.filename,
+        )
+        logger.debug(
+            "Deserialised PL72(RunStart) message: %.150s", deserialized_message
+        )
+
+    return deserialized_message
+
+
+def run_start_messages(
+    consumer: Consumer, logger: logging.Logger
+) -> Generator[RunStartInfo | None, None, None]:
+    """Wait for a PL72(RunStart) message and yield it.
+
+    Yield ``None`` if no message is received or an error is encountered.
+    """
+    num_skipped = 1
+    while True:
+        # The decision to proceed or stop will be done by the caller.
+        timeout = 1.0
+        message = consumer.poll(timeout=timeout)
+        if message is None:
+            num_skipped += 1
+            logger.info("Received no messages, %d [s].", timeout * num_skipped)
+            yield None
+        elif message.error():
+            num_skipped = 1  # Reset
+            logger.error("Consumer error: %s", message.error())
+            yield None
+        else:
+            num_skipped = 1  # Reset
+            yield _deserialise_run_start(message.value(), logger)
+
+
 def save_message_to_file(
     *,
-    message: WritingFinished,
+    message: WritingFinished | RunStartInfo,
     message_file_path: pathlib.Path,
 ) -> None:
     """Dump the ``message`` into ``message_file_path``."""
