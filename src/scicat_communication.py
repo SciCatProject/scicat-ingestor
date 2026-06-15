@@ -133,7 +133,7 @@ def render_full_url(url: str, config: SciCatOptions) -> str:
 
 def query_sample(
     *, config: SciCatOptions, sample_name: str, proposal_id: str, logger: logging.Logger
-) -> str | None:
+) -> list[str]:
     query = quote_plus(
         string=json.dumps(
             {"where": {"description": sample_name, "proposalId": proposal_id}}
@@ -148,8 +148,14 @@ def query_sample(
     )
     matching_samples = response.json()
     logger.debug("Matching Samples: %s", matching_samples)
-    if response.ok and matching_samples:
-        return matching_samples[0]['sampleId']
+    if response.ok and isinstance(matching_samples, list):
+        return [
+            sample_id
+            for sam in matching_samples
+            if isinstance(sam, dict) and (sample_id := sam.get('sampleId'))
+        ]
+    else:
+        return []
 
 
 def check_dataset_by_pid(

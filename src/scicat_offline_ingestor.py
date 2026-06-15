@@ -4,6 +4,8 @@
 import logging
 from pathlib import Path
 
+import h5py
+
 from fallback_metadata_schema import get_fallback_schema
 from scicat_communication import (
     check_dataset_by_metadata,
@@ -32,6 +34,7 @@ from scicat_dataset import (
 from scicat_logging import build_logger
 from scicat_metadata import (
     MetadataVariableValueSpec,
+    SampleAttachmentConfig,
     collect_schemas,
     select_applicable_schema,
 )
@@ -130,6 +133,64 @@ def _retrieve_source_folder(
     return value.value if isinstance(value, MetadataVariableValueSpec) else None
 
 
+def read_sample_name(
+    *,
+    sample_attch_config: SampleAttachmentConfig,
+    file: h5py.File,
+    logger: logging.Logger | None = None,
+) -> str | None:
+    try:
+        return file[sample_attch_config.sample_name_path][...].item().decode("utf-8")
+    except Exception as err:
+        if logger:
+            logger.warning("Could not find sample name with error: %.2000s", err)
+    return None
+
+
+def read_proposal_id(
+    *,
+    sample_attch_config: SampleAttachmentConfig,
+    file: h5py.File,
+    logger: logging.Logger | None = None,
+) -> str | None:
+    try:
+        return file[sample_attch_config.proposal_id_path][...].item().decode("utf-8")
+    except Exception as err:
+        if logger:
+            logger.warning("Could not find proposal ID with error: %.2000s", err)
+    return None
+
+
+def maybe_sample_dataset_pid(
+    *,
+    sample_attch_config: SampleAttachmentConfig,
+    file: h5py.File,
+    scicat_config: SciCatOptions,
+    logger: logging.Logger,
+) -> list[str]:
+    sample_dataset_pid = []
+    if sample_attch_config.query_sample_name:
+        sample_name = read_sample_name(
+            sample_attch_config=sample_attch_config, file=file, logger=logger
+        )
+        proposal_id = read_proposal_id(
+            sample_attch_config=sample_attch_config, file=file, logger=logger
+        )
+        if sample_name is None or proposal_id is None:
+            if logger:
+                logger.warning(
+                    "Sample name or/and proposal ID not found. Cannot query the sample dataset PID."
+                )
+        else:
+            sample_dataset_pid = query_sample(
+                config=scicat_config,
+                sample_name=sample_name,
+                proposal_id=proposal_id,
+                logger=logger,
+            )
+    return sample_dataset_pid
+
+
 def main() -> None:
     """Main entry point of the app."""
     tmp_config = build_offline_config()
@@ -169,21 +230,12 @@ def main() -> None:
                 metadata_schema.name,
                 metadata_schema.id,
             )
-            try:
-                sample_name = h5file['/entry/sample/name'][...].item().decode("utf-8")
-                proposal_id = (
-                    h5file['/entry/experiment_identifier'][...].item().decode("utf-8")
-                )
-            except Exception:
-                # Ignore invalid sample name and proposal ID.
-                sample_id = None
-            else:
-                sample_id = query_sample(
-                    config=config.scicat,
-                    sample_name=sample_name,
-                    proposal_id=proposal_id,
-                    logger=logger,
-                )
+            sample_dataset_pid_list = maybe_sample_dataset_pid(
+                sample_attch_config=metadata_schema.sample_attachment,
+                file=h5file,
+                scicat_config=config.scicat,
+                logger=logger,
+            )
 
             # define variables values
             variable_map = extract_variables_values(
@@ -210,7 +262,7 @@ def main() -> None:
             variable_map=variable_map,
             data_file_list=data_file_list,
             config=config.dataset,
-            sample_id=sample_id,
+            sample_dataset_pid_list=sample_dataset_pid_list,
             logger=logger,
         )
 
