@@ -11,7 +11,11 @@ from scicat_dataset import (
     create_scicat_dataset_instance,
     extract_variables_values,
 )
-from scicat_metadata import MetadataSchema, MetadataVariableValueSpec
+from scicat_metadata import (
+    MetadataItemConfig,
+    MetadataSchema,
+    MetadataVariableValueSpec,
+)
 
 
 def test_dtype_string_converter() -> None:
@@ -108,18 +112,25 @@ def test_create_scicat_extract_variables_values_failure_okay(
     assert fake_logger._warning_list
 
 
-def test_create_scicat_dataset_instance(
-    example_schema: MetadataSchema, fake_logger
-) -> None:
-    variable_map: dict[str, MetadataVariableValueSpec] = {
+@pytest.fixture
+def example_variable_map() -> dict[str, MetadataVariableValueSpec]:
+    """Matching variable map with the `example_schema`."""
+    return {
         'pid': MetadataVariableValueSpec(value='some-random-pid'),
         'proposal_id': MetadataVariableValueSpec(value='proposal-id'),
         'detector_names': MetadataVariableValueSpec(value='ingetsor'),
         'sample_temperature': MetadataVariableValueSpec(value=300.0, unit='K'),
     }
+
+
+def test_create_scicat_dataset_instance(
+    example_schema: MetadataSchema,
+    example_variable_map: dict[str, MetadataVariableValueSpec],
+    fake_logger,
+) -> None:
     scicat_dataset = create_scicat_dataset_instance(
         metadata_schema=example_schema.schema,
-        variable_map=variable_map,
+        variable_map=example_variable_map,
         data_file_list=[],
         config=DatasetOptions(),
         logger=fake_logger,
@@ -135,6 +146,96 @@ def test_create_scicat_dataset_instance(
         'unit': 'K',
         'type': 'string',
     }
+
+
+def test_create_scicat_dataset_instance_with_sample_pid_list(
+    example_schema: MetadataSchema,
+    example_variable_map: dict[str, MetadataVariableValueSpec],
+    fake_logger,
+) -> None:
+    scicat_dataset = create_scicat_dataset_instance(
+        metadata_schema=example_schema.schema,
+        variable_map=example_variable_map,
+        data_file_list=[],
+        config=DatasetOptions(),
+        sample_dataset_pid_list=['sample-pid-1', 'sample-pid-2'],
+        logger=fake_logger,
+    )
+    # Should not fail anything
+    assert not fake_logger._warning_list
+    # Check some of the fields
+    assert isinstance(scicat_dataset.sampleId, list)
+    assert sorted(scicat_dataset.sampleId) == ['sample-pid-1', 'sample-pid-2']
+
+
+def test_create_scicat_dataset_instance_with_sample_pid_list_merged(
+    example_schema: MetadataSchema,
+    example_variable_map: dict[str, MetadataVariableValueSpec],
+    fake_logger,
+) -> None:
+    variable_map = {
+        **example_variable_map,
+        'sample_pid': MetadataVariableValueSpec(value='hardcoded-sample-pid'),
+    }
+    example_schema.schema['sampleId'] = MetadataItemConfig(
+        machine_name='sampleId',
+        field_type='high_level',
+        value='<sample_pid>',
+        type='string',
+    )
+    scicat_dataset = create_scicat_dataset_instance(
+        metadata_schema=example_schema.schema,
+        variable_map=variable_map,
+        data_file_list=[],
+        config=DatasetOptions(),
+        sample_dataset_pid_list=['sample-pid-1', 'sample-pid-2'],
+        logger=fake_logger,
+    )
+    # Should not fail anything
+    assert not fake_logger._warning_list
+    # Check some of the fields
+    assert isinstance(scicat_dataset.sampleId, list)
+    assert sorted(scicat_dataset.sampleId) == [
+        'hardcoded-sample-pid',
+        'sample-pid-1',
+        'sample-pid-2',
+    ]
+
+
+def test_create_scicat_dataset_instance_with_sample_pid_list_merge_unique(
+    example_schema: MetadataSchema,
+    example_variable_map: dict[str, MetadataVariableValueSpec],
+    fake_logger,
+) -> None:
+    variable_map = {
+        **example_variable_map,
+        'sample_pid': MetadataVariableValueSpec(
+            value=['hardcoded-sample-pid', 'sample-pid-1']
+        ),
+    }
+    example_schema.schema['sampleId'] = MetadataItemConfig(
+        machine_name='sampleId',
+        field_type='high_level',
+        value='<sample_pid>',
+        type='list',
+    )
+    scicat_dataset = create_scicat_dataset_instance(
+        metadata_schema=example_schema.schema,
+        variable_map=variable_map,
+        data_file_list=[],
+        config=DatasetOptions(),
+        sample_dataset_pid_list=['sample-pid-1', 'sample-pid-2'],
+        logger=fake_logger,
+    )
+    # Should not fail anything
+    assert not fake_logger._warning_list
+    # Check some of the fields
+    assert isinstance(scicat_dataset.sampleId, list)
+    assert sorted(scicat_dataset.sampleId) == [
+        'hardcoded-sample-pid',
+        'sample-pid-1',
+        'sample-pid-2',
+    ]
 
 
 def test_create_scicat_dataset_instance_failure_okay(
