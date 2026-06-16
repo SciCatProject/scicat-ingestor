@@ -822,9 +822,9 @@ def create_scicat_dataset_instance(
     metadata_schema: dict[str, MetadataItemConfig],  # metadata-schema["schema"]
     variable_map: dict[str, MetadataVariableValueSpec],
     data_file_list: list[DataFileListItem],
-    sample_dataset_pid_list: list[str],
     config: DatasetOptions,
     logger: logging.Logger,
+    sample_dataset_pid_list: Iterable[str] = (),
 ) -> ScicatDataset:
     """
     Prepare the ``ScicatDataset`` instance.
