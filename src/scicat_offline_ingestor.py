@@ -264,7 +264,7 @@ def main() -> None:
                 "Dataset ingestion successful. "
                 "Data file: %s, "
                 "Scicat dataset pid: %s, "
-                "SciCat origdatablock id: .",
+                "SciCat origdatablock id: %s",
                 nexus_file_path,
                 scicat_dataset.get('pid'),
                 scicat_origdatablock.get('_id'),
