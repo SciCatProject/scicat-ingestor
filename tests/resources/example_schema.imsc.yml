@@ -70,6 +70,13 @@ variables:
     operator: sum
     value: <detector_12_numbers>
     value_type: float
+  detector_12_numbers_sum_direct:
+    source: VALUE
+    operator: sum
+    value:
+    - <detector_1_number>
+    - <detector_2_number>
+    value_type: float
 schema:
   pid:
     field_type: high_level
