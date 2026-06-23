@@ -117,6 +117,8 @@ def test_create_scicat_extract_variables_values(
     # if the referred values have different units
     assert variable_map['nonsense_numbers'] == Spec(value=[10.5, 300.0])
 
+    assert variable_map['detector_12_numbers_sum'] == Spec(value=23.0, unit='m')
+
 
 def test_create_scicat_extract_variables_values_failure_okay(
     nexus_file: h5py.File,

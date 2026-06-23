@@ -234,6 +234,14 @@ def _to_upper(
     return MetadataVariableValueSpec(value=str(value.value).upper())
 
 
+def _sum(
+    value: MetadataVariableValueSpec, recipe: VariableConfigValue
+) -> MetadataVariableValueSpec:
+    _ = recipe
+    # Sum can forward units as it is
+    return MetadataVariableValueSpec(value=sum(value.value), unit=value.unit)
+
+
 _OPERATOR_REGISTRY = MappingProxyType(
     {
         "DO_NOTHING": _do_nothing,
@@ -254,6 +262,7 @@ _OPERATOR_REGISTRY = MappingProxyType(
         "urlsafe": _url_safe,
         "to-lower": _to_lower,
         "to-upper": _to_upper,
+        "sum": _sum,
     }
 )
 """Operator should accept ``MetadataVariableValueSpec`` and ``VariableConfigValue`` as arguments.
