@@ -108,6 +108,14 @@ def test_create_scicat_extract_variables_values(
     assert variable_map['detector_names_list'].value == [
         f"Detector Name {i + 1}" for i in range(2)
     ]
+    Spec = MetadataVariableValueSpec
+    assert variable_map['detector_1_number'] == Spec(value=10.5, unit='m')
+    assert variable_map['detector_2_number'] == Spec(value=12.5, unit='m')
+    # combined list of multiple values should have same unit if possible.
+    assert variable_map['detector_12_numbers'] == Spec(value=[10.5, 12.5], unit='m')
+    # combined list of multipel values should not have any units
+    # if the referred values have different units
+    assert variable_map['nonsense_numbers'] == Spec(value=[10.5, 300.0])
 
 
 def test_create_scicat_extract_variables_values_failure_okay(
