@@ -460,7 +460,7 @@ class ScicatDataset:
     contactEmail: str
     creationTime: str
     type: str = "raw"
-    sampleId: str | None = None
+    sampleId: str | list[str] | None = None
     techniques: list[TechniqueDesc] = field(default_factory=list)
     instrumentId: str | None = None
     proposalId: str | None = None
@@ -824,6 +824,7 @@ def create_scicat_dataset_instance(
     data_file_list: list[DataFileListItem],
     config: DatasetOptions,
     logger: logging.Logger,
+    sample_dataset_pid_list: Iterable[str] = (),
 ) -> ScicatDataset:
     """
     Prepare the ``ScicatDataset`` instance.
@@ -836,6 +837,8 @@ def create_scicat_dataset_instance(
         Variables values.
     data_file_list:
         List of the data files.
+    sample_pid_lst:
+        List of the sample dataset PIDs related to the dataset.
     config:
         Configuration related to scicat dataset instance.
     logger:
@@ -950,6 +953,19 @@ def create_scicat_dataset_instance(
             "Access group is not provided. Setting to default value. %s",
             scicat_dataset.accessGroups,
         )
+
+    sample_dataset_pid_list = sample_dataset_pid_list
+    if sample_dataset_pid_list:
+        # Check if there is an existing sampelId list (high level schema)
+        # and merge them with the specified sample_pid_list (argument)
+        if isinstance(scicat_dataset.sampleId, list):
+            existing = scicat_dataset.sampleId
+        elif isinstance(scicat_dataset.sampleId, str):
+            existing = [scicat_dataset.sampleId]
+        else:
+            existing = []
+
+        scicat_dataset.sampleId = list(set(existing) | set(sample_dataset_pid_list))
 
     logger.info("Dataset instance is created successfully. %s", scicat_dataset)
     return scicat_dataset

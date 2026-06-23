@@ -3,6 +3,8 @@ id: c5bed39a-4379-11ef-ba5a-ffbc783163b6
 name: Generic metadata schema
 instrument: ''
 selector: filename:starts_with:/ess/data
+sample_attachment:
+  query_sample_name: false  # Set it to true if sample PID should be attached as a result of query.
 variables:
   pid:
     source: NXS

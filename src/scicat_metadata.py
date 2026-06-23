@@ -6,10 +6,11 @@ import logging
 import pathlib
 from collections import OrderedDict
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from importlib.metadata import entry_points
 from typing import Any
 
+import h5py
 import yaml
 
 SCIENTIFIC_METADATA_TYPE = "scientific_metadata"
@@ -171,12 +172,61 @@ def build_metadata_variables(
 
 
 @dataclass(kw_only=True)
+class SampleAttachmentConfig:
+    query_sample_name: bool = field(
+        default=False,
+        metadata={
+            "description": "If true, automatically find sample dataset PID from Scicat "
+            "by querying the matching sample name found in the nexus file. "
+            "Sample name and proposal ID must be present in the nexus file to complete the query"
+        },
+    )
+    sample_name_path: str = field(
+        default="/entry/sample/name",
+        metadata={
+            "description": "Path to the name of the sample encoded in the nexus file."
+        },
+    )
+    proposal_id_path: str = field(
+        default="/entry/experiment_identifier",
+        metadata={"description": "Path to the proposal id encoded in the nexus file."},
+    )
+
+    def read_sample_name(
+        self, *, file: h5py.File, logger: logging.Logger | None = None
+    ) -> str | None:
+        try:
+            return file[self.sample_name_path][...].item().decode("utf-8")
+        except Exception as err:
+            if logger:
+                logger.warning("Could not find sample name with error: %.2000s", err)
+        return None
+
+    def read_proposal_id(
+        self, *, file: h5py.File, logger: logging.Logger | None = None
+    ) -> str | None:
+        try:
+            return file[self.proposal_id_path][...].item().decode("utf-8")
+        except Exception as err:
+            if logger:
+                logger.warning("Could not find proposal ID with error: %.2000s", err)
+        return None
+
+    def query_sample(
+        self, *, file: h5py.File, scicat_config, logger: logging.Logger | None = None
+    ) -> str | None: ...
+
+
+@dataclass(kw_only=True)
 class MetadataSchema:
     id: str
     name: str
     instrument: str
     selector: str | dict
     order: int
+    sample_attachment: SampleAttachmentConfig = field(
+        default_factory=SampleAttachmentConfig
+    )
     variables: dict[str, MetadataVariableConfig]
     schema: dict[str, MetadataItemConfig]
 
