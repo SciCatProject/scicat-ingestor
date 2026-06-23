@@ -32,6 +32,26 @@ def test_dtype_string_array_converter() -> None:
     assert convert_to_type([1.1, 2.2, 3.3], "string[]") == ["1.1", "2.2", "3.3"]
 
 
+def test_dtype_integer_array_converter() -> None:
+    type_name = "integer[]"
+    assert convert_to_type("['1']", type_name) == [1]
+    assert convert_to_type("['1', '2']", type_name) == [1, 2]
+    assert convert_to_type([1, 2, 3], type_name) == [1, 2, 3]
+    assert convert_to_type([1.1, 2.2, 3.3], type_name) == [1, 2, 3]
+
+    with pytest.raises(ValueError, match="invalid literal for int"):
+        convert_to_type("['1.2', '2.5']", type_name)
+
+
+def test_dtype_float_array_converter() -> None:
+    type_name = "float[]"
+    assert convert_to_type("['1']", type_name) == [1]
+    assert convert_to_type("['1', '2']", type_name) == [1, 2]
+    assert convert_to_type("['1.2', '2.5']", type_name) == [1.2, 2.5]
+    assert convert_to_type([1, 2, 3], type_name) == [1, 2, 3]
+    assert convert_to_type([1.1, 2.2, 3.3], type_name) == [1.1, 2.2, 3.3]
+
+
 def test_dtype_integer_converter() -> None:
     assert convert_to_type("123", "integer") == 123
     assert convert_to_type(123, "integer") == 123
@@ -73,6 +93,8 @@ def test_create_scicat_extract_variables_values(
         logger=fake_logger,
     )
     variable_recipes = example_schema.variables
+    # Should not fail at all
+    assert not fake_logger._warning_list
     for nexus_str_variable in ('pid', 'proposal_id', 'instrument_name'):
         assert (
             variable_map[nexus_str_variable].value
@@ -86,8 +108,16 @@ def test_create_scicat_extract_variables_values(
     assert variable_map['detector_names_list'].value == [
         f"Detector Name {i + 1}" for i in range(2)
     ]
-    # Should not fail at all
-    assert not fake_logger._warning_list
+    Spec = MetadataVariableValueSpec
+    assert variable_map['detector_1_number'] == Spec(value=10.5, unit='m')
+    assert variable_map['detector_2_number'] == Spec(value=12.5, unit='m')
+    # combined list of multiple values should have same unit if possible.
+    assert variable_map['detector_12_numbers'] == Spec(value=[10.5, 12.5], unit='m')
+    # combined list of multipel values should not have any units
+    # if the referred values have different units
+    assert variable_map['nonsense_numbers'] == Spec(value=[10.5, 300.0])
+
+    assert variable_map['detector_12_numbers_sum'] == Spec(value=23.0, unit='m')
 
 
 def test_create_scicat_extract_variables_values_failure_okay(

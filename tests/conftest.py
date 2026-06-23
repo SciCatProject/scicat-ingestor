@@ -25,11 +25,16 @@ def example_nexus_file_for_schema_test(
         instrument_gr = entry_gr.create_group("instrument")
         instrument_gr.create_dataset("name", data=["Test Instrument"])
         detectors = instrument_gr.create_group("detectors")
+        instrument_gr.create_dataset("some_numbers", data=[100, 200, 300])
         det_1 = detectors.create_group('detector_1')
         det_2 = detectors.create_group('detector_2')
         det_3 = detectors.create_group('zdet_3')  # Purposely not matching pattern
         for i, det in enumerate((det_1, det_2, det_3)):
             det.create_dataset("name", data=[f"Detector Name {i + 1}"])
+        det_1_number = det_1.create_dataset("number", data=[10.5])
+        det_1_number.attrs['units'] = 'm'
+        det_2_number = det_2.create_dataset("number", data=[12.5])
+        det_2_number.attrs['units'] = 'm'
 
         sample_gr = entry_gr.create_group("sample")
         temperature = sample_gr.create_dataset("temperature", data=[300.0])

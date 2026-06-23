@@ -5,7 +5,7 @@ import json
 import logging
 import pathlib
 from collections import OrderedDict
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from importlib.metadata import entry_points
 from typing import Any
@@ -284,32 +284,45 @@ def render_variable_value(
     var_value: str | dict | float,
     variable_registry: dict[str, MetadataVariableValueSpec],
 ) -> MetadataVariableValueSpec:
-    # if input is not a string it converts it to string
-    output_value = var_value if isinstance(var_value, str) else json.dumps(var_value)
+    def _render_item(_value) -> MetadataVariableValueSpec:
+        # If it is only one variable, then it is a simple replacement
+        if (
+            _maybe_single_variable(_value)
+            and (var_key := _value.removesuffix(">").removeprefix("<"))
+            in variable_registry
+        ):
+            return variable_registry[var_key]
 
-    # If it is only one variable, then it is a simple replacement
-    if (
-        _maybe_single_variable(output_value)
-        and (var_key := output_value.removesuffix(">").removeprefix("<"))
-        in variable_registry
-    ):
-        return variable_registry[var_key]
+        # If it is a complex variable, then it is a combination of variables
+        # similar to f-string in python
+        # In this case, we do not forward unit.
+        for reg_var_name, reg_var_value in variable_registry.items():
+            _value = _value.replace("<" + reg_var_name + ">", str(reg_var_value.value))
 
-    # If it is a complex variable, then it is a combination of variables
-    # similar to f-string in python
-    # In this case, we do not forward unit
-    for reg_var_name, reg_var_value in variable_registry.items():
-        output_value = output_value.replace(
-            "<" + reg_var_name + ">", str(reg_var_value.value)
+        if "<" in _value and ">" in _value:
+            raise Exception(f"Unresolved variable: {var_value}")
+
+        return MetadataVariableValueSpec(value=_value)
+
+    if isinstance(var_value, str):
+        return _render_item(var_value)
+    elif isinstance(var_value, dict):
+        values = {
+            _render_item(key).value: _render_item(value)
+            for key, value in var_value.items()
+        }
+        units = {val.unit for val in values.values()}
+        unit = next(iter(units)) if len(units) == 1 else ''
+        return MetadataVariableValueSpec(
+            value={key: value.value for key, value in values.items()}, unit=unit
         )
-
-    if "<" in output_value and ">" in output_value:
-        raise Exception(f"Unresolved variable: {var_value}")
-
-    output_value = (
-        output_value if isinstance(var_value, str) else json.loads(output_value)
-    )
-    return MetadataVariableValueSpec(value=output_value)
+    elif isinstance(var_value, Iterable):
+        values = [_render_item(value) for value in var_value]
+        units = {val.unit for val in values}
+        unit = next(iter(units)) if len(units) == 1 else ''
+        return MetadataVariableValueSpec(value=[val.value for val in values], unit=unit)
+    else:
+        return _render_item(json.dumps(var_value))
 
 
 def collect_schemas(dir_path: pathlib.Path) -> OrderedDict[str, MetadataSchema]:

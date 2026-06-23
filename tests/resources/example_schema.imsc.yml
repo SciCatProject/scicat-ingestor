@@ -29,6 +29,18 @@ variables:
     source: NXS
     path: /entry/sample/temperature
     value_type: float
+  some_instrument_numbers:
+    source: NXS
+    path: /entry/instrument/some_numbers
+    value_type: integer[]
+  detector_1_number:
+    source: NXS
+    path: /entry/instrument/detectors/detector_1/number
+    value_type: float
+  detector_2_number:
+    source: NXS
+    path: /entry/instrument/detectors/detector_2/number
+    value_type: float
   # VALUE type variables
   detector_names:
     source: VALUE
@@ -41,6 +53,30 @@ variables:
     - dmsc-staff
     - ess_proposal_<proposal_id>
     value_type: string[]
+  detector_12_numbers:
+    source: VALUE
+    value:
+    - <detector_1_number>
+    - <detector_2_number>
+    value_type: float[]
+  nonsense_numbers:
+    source: VALUE
+    value:
+    - <detector_1_number>
+    - <sample_temperature>
+    value_type: float[]
+  detector_12_numbers_sum:
+    source: VALUE
+    operator: sum
+    value: <detector_12_numbers>
+    value_type: float
+  detector_12_numbers_sum_direct:
+    source: VALUE
+    operator: sum
+    value:
+    - <detector_1_number>
+    - <detector_2_number>
+    value_type: float
 schema:
   pid:
     field_type: high_level
