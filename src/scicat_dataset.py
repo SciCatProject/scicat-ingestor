@@ -49,6 +49,18 @@ def to_string_array(value: list[Any]) -> list[str]:
     ]
 
 
+def to_integer_array(value: list[Any]) -> list[int]:
+    return [
+        int(v) for v in (ast.literal_eval(value) if isinstance(value, str) else value)
+    ]
+
+
+def to_float_array(value: list[Any]) -> list[float]:
+    return [
+        float(v) for v in (ast.literal_eval(value) if isinstance(value, str) else value)
+    ]
+
+
 def to_integer(value: Any) -> int:
     return int(value)
 
@@ -109,7 +121,9 @@ _DtypeConvertingMap = MappingProxyType(
         "string": to_string,
         "string[]": to_string_array,
         "integer": to_integer,
+        "integer[]": to_integer_array,
         "float": to_float,
+        "float[]": to_float_array,
         "date": to_date,
         "dict": to_dict,
         "list": to_list,
