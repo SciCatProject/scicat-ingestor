@@ -11,11 +11,11 @@ jobs:
     name: Integration Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: docker/setup-compose-action@v2
-      - uses: actions/checkout@v6
-      - uses: prefix-dev/setup-pixi@v0.9.5
+      - uses: docker/setup-compose-action@v2.2.0
+      - uses: actions/checkout@v7.0.0
+      - uses: prefix-dev/setup-pixi@v0.10.0
         with:
-          pixi-version: v0.65.0
+          pixi-version: v0.71.2
           frozen: true
           cache: true
           environments: test

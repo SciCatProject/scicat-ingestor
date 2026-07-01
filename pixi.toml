@@ -2,6 +2,8 @@
 name = "scicat-ingestor"
 channels = ["conda-forge"]
 platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
+exclude-newer = "14d"
+requires-pixi = ">=0.71.0"
 
 [dependencies]
 python = "3.12.*"
