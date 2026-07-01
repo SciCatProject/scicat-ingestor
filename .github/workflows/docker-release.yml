@@ -28,7 +28,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           # Full history is required so that setuptools_scm can derive the version
           # from the git tag. The SETUPTOOLS_SCM_PRETEND_VERSION build-arg is used
