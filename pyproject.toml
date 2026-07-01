@@ -62,7 +62,7 @@ docs = [
 # If you update the environment, pixi `dev` environment
 # will get updated with these dependencies but not the `default` ones.
 app = [
-  "confluent-kafka==2.13.2",
+  "confluent-kafka==2.15.0",
   "ess-streaming-data-types==0.27.0",
   "graypy==2.1.0",
   "h5py==3.16.0",
