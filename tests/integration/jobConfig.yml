@@ -1,0 +1,21 @@
+# Job configuration for integration test.
+configVersion: dev
+jobs:
+  - jobType: embargo_period
+    create:
+      auth: "ingestor"
+      actions:
+        - actionType: validate
+          datasets:
+            isPublished:
+              const: false
+        - actionType: url
+          url: http://localhost:3000/api/v3/health
+          method: GET
+          headers:
+            accept: application/json
+            Authorization: "Bearer: {{{env.ARCHIVER_AUTH_TOKEN}}}"
+          # body: ""
+    update:
+      auth: "ingestor"
+
