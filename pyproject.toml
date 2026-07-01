@@ -27,14 +27,14 @@ requires-python = ">=3.12"
 # IMPORTANT:
 # Make sure to list one dependency per line.
 dependencies = [
-  "confluent-kafka>=2.14.2",
+  "confluent-kafka>=2.13.2",
   "ess-streaming-data-types>=0.27.0",
   "graypy>=2.1.0",
   "h5py>=3.16.0",
-  "kafka-python>=3.0.0",
-  "requests>=2.34.2",  # Extract zip path no-validation bug fixed.
+  "kafka-python>=2.3.0",
+  "requests>=2.33.0",  # Extract zip path no-validation bug fixed.
   "pyyaml>=6.0.2",
-  "rich>=15.0.0"
+  "rich>=14.3.3"
 ]
 
 dynamic = ["version"]
