@@ -218,6 +218,35 @@ class SampleAttachmentConfig:
 
 
 @dataclass(kw_only=True)
+class JobItemConfig:
+    type: str
+    job_params: dict[str, Any]
+    owner_user: str
+    owner_group: str
+    contact_email: str
+
+    def __post_init__(self) -> None:
+        # validate job_params
+        if not isinstance(self.job_params, dict) or any(
+            isinstance(val, dict) for val in self.job_params.values()
+        ):
+            raise TypeError("job_params must be a single depth dictionary")
+
+    def payload(self, variable_registry: dict) -> dict:
+        rendered_job_params = {
+            name: render_variable_value(val, variable_registry)
+            for name, val in self.job_params.items()
+        }
+        return {
+            "type": self.type,
+            "jobParams": rendered_job_params,
+            "ownerUser": self.owner_user,
+            "ownerGroup": self.owner_group,
+            "contactEmail": self.contact_email,
+        }
+
+
+@dataclass(kw_only=True)
 class MetadataSchema:
     id: str
     name: str
@@ -229,6 +258,7 @@ class MetadataSchema:
     )
     variables: dict[str, MetadataVariableConfig]
     schema: dict[str, MetadataItemConfig]
+    jobs: dict[str, JobItemConfig]
 
     @classmethod
     def from_dict(cls, schema: dict) -> "MetadataSchema":
