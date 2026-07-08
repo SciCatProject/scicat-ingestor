@@ -248,6 +248,8 @@ class JobItemConfig:
 
 @dataclass(kw_only=True)
 class MetadataSchema:
+    """Dataclass representation of IMSC(*.imsc.yml files) recipes."""
+
     id: str
     name: str
     instrument: str
