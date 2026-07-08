@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
-
+# --pyright: reportUnreachable=false
 import json
 import logging
 import pathlib
@@ -278,6 +278,10 @@ class MetadataSchema:
                     )
                     for item_name, item in schema["schema"].items()
                 },
+                "jobs": {
+                    item_name: JobItemConfig(**item)
+                    for item_name, item in schema.get("jobs", {}).items()
+                },
             },
         )
 
@@ -446,7 +450,7 @@ def _select_applicable_schema(
     else:
         logger.warning("Invalid type for schema selector %s.", type(selector))
 
-    return False
+    return False  # pyright: ignore[reportUnreachable]
 
 
 def select_applicable_schema(

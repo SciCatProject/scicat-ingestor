@@ -11,6 +11,7 @@ from fallback_metadata_schema import get_fallback_schema
 from scicat_configuration import OfflineIngestorConfig
 from scicat_devtools import validate_schema
 from scicat_metadata import (
+    JobItemConfig,
     MetadataSchema,
     MetadataVariableValueSpec,
     build_metadata_variables,
@@ -54,6 +55,25 @@ def test_build_metadata_variables_invalid_source_name(base_metadata_schema_dict:
     base_metadata_schema_dict["variables"]["pid"]["source"] = "invalid_source_name"
     with pytest.raises(ValueError, match="Invalid source name"):
         build_metadata_variables(base_metadata_schema_dict["variables"])
+
+
+def test_build_metadata_schema_job_recipes(base_metadata_schema_dict: dict):
+    metadata = MetadataSchema.from_dict(base_metadata_schema_dict)
+    assert metadata.jobs["embargo_period"] == JobItemConfig(
+        type="embargo_period",
+        job_params={"dataset": "<pid>"},
+        owner_user="pit_manager",
+        owner_group="pit_management",
+        contact_email="pit[@]mail.eu",
+    )
+
+
+def test_build_metadata_schema_job_recipes_invalid_field_raises(
+    base_metadata_schema_dict: dict,
+):
+    base_metadata_schema_dict["jobs"]["embargo_period"]["WrongField"] = "WrongValue"
+    with pytest.raises(TypeError, match="WrongField"):
+        MetadataSchema.from_dict(base_metadata_schema_dict)
 
 
 @pytest.mark.parametrize("schema_file", ALL_SCHEMA_EXAMPLES)
