@@ -256,9 +256,9 @@ class MetadataSchema:
     sample_attachment: SampleAttachmentConfig = field(
         default_factory=SampleAttachmentConfig
     )
-    variables: dict[str, MetadataVariableConfig]
-    schema: dict[str, MetadataItemConfig]
-    jobs: dict[str, JobItemConfig]
+    variables: dict[str, MetadataVariableConfig] = field(default_factory=dict)
+    schema: dict[str, MetadataItemConfig] = field(default_factory=dict)
+    jobs: dict[str, JobItemConfig] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, schema: dict) -> "MetadataSchema":
