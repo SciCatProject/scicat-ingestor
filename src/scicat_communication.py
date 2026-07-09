@@ -256,7 +256,7 @@ def create_scicat_job(
     if not response.ok:
         logger.error(
             "Failed to create a job. Error message from scicat backend: %s",
-            result.get("error", {}),
+            result,
         )
 
     logger.info("Job created successfully with job pid: %s", result['_id'])
