@@ -75,7 +75,7 @@ scicat:
   verify: false
   api_endpoints:
     datasets: v3/datasets
-    proposals: v4/proposals
+    proposals: v3/proposals
     origdatablocks: v3/origdatablocks
     instruments: v3/instruments
     samples: v3/samples
