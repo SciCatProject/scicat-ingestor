@@ -69,11 +69,12 @@ scicat:
   verify: false
   health_endpoint: health
   api_endpoints:
-    datasets: datasets
-    proposals: proposals
-    origdatablocks: origdatablocks
-    instruments: instruments
-    samples: samples
+    datasets: v4/datasets
+    proposals: v4/proposals
+    origdatablocks: v4/origdatablocks
+    instruments: v3/instruments
+    samples: v3/samples
+    jobs: v4/jobs
 health_check:
   host: 0.0.0.0
   port: 8080
