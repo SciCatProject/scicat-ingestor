@@ -78,6 +78,6 @@ scicat:
     proposals: v4/proposals
     origdatablocks: v4/origdatablocks
     instruments: v3/instruments
-	samples: v3/samples
-	jobs: v4/jobs
+    samples: v3/samples
+    jobs: v4/jobs
 
