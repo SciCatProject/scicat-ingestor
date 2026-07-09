@@ -345,6 +345,9 @@ def main() -> None:
             scicat_origdatablock.get('_id'),
         )
         # Post jobs according to the configuration.
+        logger.debug(
+            "%d Jobs found in the schema config file.", len(metadata_schema.jobs)
+        )
         for job_name, job_recipe in metadata_schema.jobs.items():
             logger.debug(
                 "Preparing a job %s for dataset %s",
