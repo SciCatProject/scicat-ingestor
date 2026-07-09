@@ -74,9 +74,9 @@ scicat:
   stream: true
   verify: false
   api_endpoints:
-    datasets: v4/datasets
+    datasets: v3/datasets
     proposals: v4/proposals
-    origdatablocks: v4/origdatablocks
+    origdatablocks: v3/origdatablocks
     instruments: v3/instruments
     samples: v3/samples
     jobs: v4/jobs
