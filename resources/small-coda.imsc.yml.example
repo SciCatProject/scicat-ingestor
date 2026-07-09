@@ -192,3 +192,11 @@ schema:
     machine_name: creationTime
     value: <now>
     type: date
+jobs:
+  embargo_period:
+    type: embargo_period
+    job_params:
+      dataset: <pid>
+    owner_user: pit_manager
+    owner_group: pit_management
+    contact_email: pit[@]mail.eu
