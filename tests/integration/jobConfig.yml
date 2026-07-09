@@ -15,7 +15,6 @@ jobs:
           headers:
             accept: application/json
             Authorization: "Bearer: {{{env.ARCHIVER_AUTH_TOKEN}}}"
-          # body: ""
     update:
       auth: "ingestor"
 
