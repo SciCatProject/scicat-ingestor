@@ -16,7 +16,7 @@ import h5py
 import requests
 
 # Configuration
-BACKEND_URL = "http://localhost:3000/api/v3"
+BACKEND_URL = "http://localhost:3000/api"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 FUNCTIONAL_ACCOUNTS_FILE = os.path.join(SCRIPT_DIR, "functionalAccounts.json")
 CONFIG_TEMPLATE = os.path.join(SCRIPT_DIR, "ingestor.config.yml.template")
@@ -123,7 +123,7 @@ INGESTOR_USERNAME, INGESTOR_PASSWORD = _get_account_credentials("ingestor")
 
 def login_user(username: str, password: str) -> str | None:
     logging.info("Logging in as %s...", username)
-    url = f"{BACKEND_URL}/auth/login"
+    url = f"{BACKEND_URL}/v3/auth/login"
     payload = {"username": username, "password": password}
     try:
         response = requests.post(url, json=payload, timeout=10)
@@ -142,7 +142,7 @@ def login_user(username: str, password: str) -> str | None:
 
 def create_instrument(token: str, instrument_name: str) -> bool:
     logging.info("Ensuring instrument %s exists...", instrument_name)
-    url = f"{BACKEND_URL}/instruments"
+    url = f"{BACKEND_URL}/v3/instruments"
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
     payload = {
         "name": instrument_name,
@@ -174,7 +174,7 @@ def create_instrument(token: str, instrument_name: str) -> bool:
 
 def get_proposal(token, proposal_id):
     logging.info("Checking for existing proposal with ID %s...", proposal_id)
-    url = f"{BACKEND_URL}/proposals/{proposal_id}"
+    url = f"{BACKEND_URL}/v4/proposals/{proposal_id}"
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
@@ -199,7 +199,7 @@ def create_proposal(
     instrument_name: str,
 ) -> bool:
     logging.info("Creating proposal %s for instrument %s", proposal_id, instrument_name)
-    url = f"{BACKEND_URL}/proposals"
+    url = f"{BACKEND_URL}/v4/proposals"
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
 
     start_time = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z")
