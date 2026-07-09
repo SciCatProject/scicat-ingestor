@@ -282,3 +282,21 @@ def test_create_scicat_dataset_instance_failure_okay(
         logger=fake_logger,
     )
     assert fake_logger._warning_list
+
+
+def test_job_pyload(example_schema: MetadataSchema):
+    variable_map: dict[str, MetadataVariableValueSpec] = {
+        'pid': MetadataVariableValueSpec(value='some-long-pid-value'),
+        'owner': MetadataVariableValueSpec(value='some-unique-owner-name'),
+    }
+    example_schema.jobs["embargo_period"].owner_user = "<owner>"
+    payload = example_schema.jobs["embargo_period"].payload(
+        variable_registry=variable_map
+    )
+    assert payload == {
+        "type": "embargo_period",
+        "ownerUser": "some-unique-owner-name",
+        "ownerGroup": "pit_management",
+        "contactEmail": "pit[@]mail.eu",
+        "jobParams": {"dataset": "some-long-pid-value"},
+    }

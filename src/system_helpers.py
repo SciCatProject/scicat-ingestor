@@ -95,8 +95,14 @@ def handle_exceptions(
             # Manually extracting the file name and line number.
             # The formatter only shows the line number where the logger.exception
             # is called.
-            file_name = pathlib.Path(exc_traceback.tb_frame.f_code.co_filename).name
-            lineno = exc_traceback.tb_lasti
+            if isinstance(upper_level := exc_traceback.tb_next, TracebackType):
+                # First frame is the command line CLI.
+                frame = upper_level.tb_frame
+            else:
+                frame = exc_traceback.tb_frame
+
+            file_name = pathlib.Path(frame.f_code.co_filename).name
+            lineno = frame.f_lineno
             logger.exception(
                 "Unexpected error occurred: [%s:%s] %s",
                 file_name,

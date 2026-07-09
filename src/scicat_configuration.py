@@ -351,15 +351,17 @@ class _ScicatAPIURLs:
     origdatablocks: str
     instruments: str
     samples: str
+    jobs: str
 
 
 @dataclass(kw_only=True)
 class ScicatEndpoints:
-    datasets: str = "datasets"
-    proposals: str = "proposals"
-    origdatablocks: str = "origdatablocks"
-    instruments: str = "instruments"
-    samples: str = "samples"
+    datasets: str = "v4/datasets"
+    proposals: str = "v4/proposals"
+    origdatablocks: str = "v4/origdatablocks"
+    instruments: str = "v3/instruments"
+    samples: str = "v3/samples"
+    jobs: str = "v4/jobs"
 
 
 @dataclass(kw_only=True)
@@ -384,6 +386,7 @@ class SciCatOptions:
             ),
             instruments=urljoin(self.host_address, self.api_endpoints.instruments),
             samples=urljoin(self.host_address, self.api_endpoints.samples),
+            jobs=urljoin(self.host_address, self.api_endpoints.jobs),
         )
 
     @property

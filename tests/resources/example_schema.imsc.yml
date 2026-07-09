@@ -149,3 +149,11 @@ schema:
     human_name: Contact Email
     value: ''
     type: string
+jobs:
+  embargo_period:
+    type: embargo_period
+    job_params:
+      dataset: <pid>
+    owner_user: pit_manager
+    owner_group: pit_management
+    contact_email: pit[@]mail.eu

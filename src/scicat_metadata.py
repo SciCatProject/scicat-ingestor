@@ -233,16 +233,24 @@ class JobItemConfig:
             raise TypeError("job_params must be a single depth dictionary")
 
     def payload(self, variable_registry: dict) -> dict:
+        from typing import TypeVar
+
+        T = TypeVar("T", str, float)
+
+        def _render(val: T) -> T:
+            # Render the variable value and use value.
+            # Unit is ignored for job parameters.
+            return render_variable_value(val, variable_registry).value
+
         rendered_job_params = {
-            name: render_variable_value(val, variable_registry)
-            for name, val in self.job_params.items()
+            name: _render(val) for name, val in self.job_params.items()
         }
         return {
             "type": self.type,
             "jobParams": rendered_job_params,
-            "ownerUser": self.owner_user,
-            "ownerGroup": self.owner_group,
-            "contactEmail": self.contact_email,
+            "ownerUser": _render(self.owner_user),
+            "ownerGroup": _render(self.owner_group),
+            "contactEmail": _render(self.contact_email),
         }
 
 
@@ -267,6 +275,9 @@ class MetadataSchema:
         return cls(
             **{
                 **schema,
+                "sample_attachment": SampleAttachmentConfig(
+                    **schema.get("sample_attachment", {})
+                ),
                 "variables": build_metadata_variables(schema["variables"]),
                 "schema": {
                     item_name: MetadataItemConfig(

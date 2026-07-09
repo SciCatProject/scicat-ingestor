@@ -234,3 +234,30 @@ def check_dataset_by_metadata(
         )
 
     return dataset_exists
+
+
+def create_scicat_job(
+    *,
+    payload: dict,
+    config: SciCatOptions,
+    logger: logging.Logger,
+) -> dict:
+    """
+    Execute a POST request to scicat to create a new job instance.
+    """
+    logger.info("Sending POST request to create a new job instance.")
+    response = _post_to_scicat(
+        url=config.urls.jobs,
+        posting_obj=payload,
+        headers=config.headers,
+        timeout=config.timeout,
+    )
+    result: dict = response.json()
+    if not response.ok:
+        logger.error(
+            "Failed to create a job. Error message from scicat backend: %s",
+            result.get("error", {}),
+        )
+
+    logger.info("Job created successfully with job pid: %s", result['_id'])
+    return result
