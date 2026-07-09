@@ -48,6 +48,7 @@ documentation/.cache
 config.*.json
 config.*.yaml
 config.*.yml
+!tests/integration/config.test.yml
 
 # Log files
 *.log
