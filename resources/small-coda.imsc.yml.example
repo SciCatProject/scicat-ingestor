@@ -196,7 +196,7 @@ jobs:
   embargo_period:
     type: embargo_period
     job_params:
-      dataset: <pid>
+      datasetList: <pid>
     owner_user: pit_manager
     owner_group: pit_management
     contact_email: <pi_email>
