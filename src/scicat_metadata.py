@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
-# --pyright: reportUnreachable=false
 import json
 import logging
 import pathlib
@@ -461,7 +460,7 @@ def _select_applicable_schema(
     else:
         logger.warning("Invalid type for schema selector %s.", type(selector))
 
-    return False  # pyright: ignore[reportUnreachable]
+    return False
 
 
 def select_applicable_schema(
