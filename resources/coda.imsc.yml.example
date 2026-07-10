@@ -168,5 +168,5 @@ jobs:
       dataset: <pid>
     owner_user: pit_manager
     owner_group: pit_management
-    contact_email: pit.manager@ess.eu
+    contact_email: <pi_email>
 
