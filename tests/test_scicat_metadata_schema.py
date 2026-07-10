@@ -64,7 +64,7 @@ def test_build_metadata_schema_job_recipes(base_metadata_schema_dict: dict):
         job_params={"dataset": "<pid>"},
         owner_user="pit_manager",
         owner_group="pit_management",
-        contact_email="pit[@]mail.eu",
+        contact_email="<pi_email>",
     )
 
 
