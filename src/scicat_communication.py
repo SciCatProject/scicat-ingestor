@@ -21,6 +21,9 @@ def retrieve_value_from_scicat(
     response: dict = requests.get(
         scicat_endpoint_url, headers=config.headers, timeout=config.timeout
     ).json()
+    if field_name and field_name not in response:
+        raise KeyError(f"{field_name} does not exist in the response: {response}")
+
     return response[field_name] if field_name else response
 
 
