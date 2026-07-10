@@ -18,17 +18,17 @@ variables:
     value_type: string
   pi_firstname:
     source: SC
-    url: proposals/<proposal_id>
+    url: v3/proposals/<proposal_id>
     field: pi_firstname
     value_type: string
   pi_lastname:
     source: SC
-    url: proposals/<proposal_id>
+    url: v3/proposals/<proposal_id>
     field: pi_lastname
     value_type: string
   pi_email:
     source: SC
-    url: proposals/<proposal_id>
+    url: v3/proposals/<proposal_id>
     field: pi_email
     value_type: string
   dataset_name:
