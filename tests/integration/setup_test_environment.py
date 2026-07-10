@@ -174,7 +174,7 @@ def create_instrument(token: str, instrument_name: str) -> bool:
 
 def get_proposal(token, proposal_id):
     logging.info("Checking for existing proposal with ID %s...", proposal_id)
-    url = f"{BACKEND_URL}/v4/proposals/{proposal_id}"
+    url = f"{BACKEND_URL}/v3/proposals/{proposal_id}"
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
@@ -199,7 +199,7 @@ def create_proposal(
     instrument_name: str,
 ) -> bool:
     logging.info("Creating proposal %s for instrument %s", proposal_id, instrument_name)
-    url = f"{BACKEND_URL}/v4/proposals"
+    url = f"{BACKEND_URL}/v3/proposals"
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
 
     start_time = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z")
