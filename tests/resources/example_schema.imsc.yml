@@ -85,8 +85,9 @@ schema:
     type: string
   proposal_id:
     field_type: high_level
-    machine_name: proposalId
-    value: <proposal_id>
+    machine_name: proposalIds
+    value:
+    - <proposal_id>
     type: string
   detector_names:
     field_type: scientific_metadata
@@ -109,10 +110,11 @@ schema:
     type: string
   principal_investigator:
     field_type: high_level
-    machine_name: principalInvestigator
+    machine_name: principalInvestigators
     human_name: Principal Investigator
-    value: ''
-    type: string
+    value:
+    - ''
+    type: string[]
   owner:
     field_type: high_level
     machine_name: owner

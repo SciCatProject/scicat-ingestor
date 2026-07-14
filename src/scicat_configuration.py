@@ -356,12 +356,16 @@ class _ScicatAPIURLs:
 
 @dataclass(kw_only=True)
 class ScicatEndpoints:
-    datasets: str = "v4/datasets"
-    proposals: str = "v4/proposals"
+    proposals: str = "v3/proposals"
     origdatablocks: str = "v4/origdatablocks"
     instruments: str = "v3/instruments"
-    samples: str = "v3/samples"
+    samples: str = "v4/samples"
     jobs: str = "v4/jobs"
+
+    @property
+    def datasets(self) -> str:
+        """Only V4 datasets API is supported."""
+        return "v4/datasets"
 
 
 @dataclass(kw_only=True)

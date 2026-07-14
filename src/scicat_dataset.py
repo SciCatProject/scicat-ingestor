@@ -468,13 +468,16 @@ class TechniqueDesc:
 
 @dataclass(kw_only=True)
 class ScicatDataset:
+    ownerGroup: str | None = None
+    accessGroups: list[str] | None = None
+    instrumentGroup: list[str] | None = None
     pid: str | None
     size: int
     numberOfFiles: int
     isPublished: bool = False
     datasetName: str
     description: str | None = None
-    principalInvestigator: str
+    principalInvestigators: list[str]
     creationLocation: str
     scientificMetadata: dict
     owner: str
@@ -485,10 +488,8 @@ class ScicatDataset:
     type: str = "raw"
     sampleId: str | list[str] | None = None
     techniques: list[TechniqueDesc] = field(default_factory=list)
-    instrumentId: str | None = None
-    proposalId: str | None = None
-    ownerGroup: str | None = None
-    accessGroups: list[str] | None = None
+    instrumentIds: list[str] = field(default_factory=list)
+    proposalIds: list[str] = field(default_factory=list)
     startTime: str | None = None
     endTime: str | None = None
     runNumber: str | None = None
@@ -504,6 +505,33 @@ class ScicatDataset:
             for param in scicat_dataset_sig.parameters.values()
             if param.default is param.empty
         ]
+
+    def patch(self, config: DatasetOptions, logger: logging.Logger) -> None:
+        # Auto generate or assign default values if needed
+        if not self.instrumentIds:
+            self.instrumentIds = [config.default_instrument_id]
+            logger.info(
+                "Instrument IDs are not provided. Setting to default value. %s",
+                self.instrumentIds,
+            )
+        if not self.proposalIds:
+            self.proposalIds = [config.default_proposal_id]
+            logger.info(
+                "Proposal ID is not provided. Setting to default value. %s",
+                self.proposalIds,
+            )
+        if self.ownerGroup is None:
+            self.ownerGroup = config.default_owner_group
+            logger.info(
+                "Owner group is not provided. Setting to default value. %s",
+                self.ownerGroup,
+            )
+        if self.accessGroups is None:
+            self.accessGroups = config.default_access_groups
+            logger.info(
+                "Access group is not provided. Setting to default value. %s",
+                self.accessGroups,
+            )
 
 
 @dataclass(kw_only=True)
@@ -950,32 +978,7 @@ def create_scicat_dataset_instance(
         scientificMetadata=scientific_metadata,
         **high_level_fields,
     )
-
-    # Auto generate or assign default values if needed
-    if scicat_dataset.instrumentId is None:
-        scicat_dataset.instrumentId = config.default_instrument_id
-        logger.info(
-            "Instrument ID is not provided. Setting to default value. %s",
-            scicat_dataset.instrumentId,
-        )
-    if scicat_dataset.proposalId is None:
-        scicat_dataset.proposalId = config.default_proposal_id
-        logger.info(
-            "Proposal ID is not provided. Setting to default value. %s",
-            scicat_dataset.proposalId,
-        )
-    if scicat_dataset.ownerGroup is None:
-        scicat_dataset.ownerGroup = config.default_owner_group
-        logger.info(
-            "Owner group is not provided. Setting to default value. %s",
-            scicat_dataset.ownerGroup,
-        )
-    if scicat_dataset.accessGroups is None:
-        scicat_dataset.accessGroups = config.default_access_groups
-        logger.info(
-            "Access group is not provided. Setting to default value. %s",
-            scicat_dataset.accessGroups,
-        )
+    scicat_dataset.patch(config=config, logger=logger)
 
     sample_dataset_pid_list = sample_dataset_pid_list
     if sample_dataset_pid_list:
