@@ -8,6 +8,7 @@ from scicat_configuration import (
     IngestionOptions,
     OfflineIngestorConfig,
     OnlineIngestorConfig,
+    ScicatEndpoints,
     SciCatOptions,
     _load_config,
     _validate_config_file,
@@ -105,13 +106,16 @@ def test_arg_types_match_offline_ingestor_config(template_config_file: Path) -> 
 
 
 def test_scicat_health_url_relative_path() -> None:
-    options = SciCatOptions(host="https://example.org/api/v3", health_endpoint="health")
+    api_endpoints = ScicatEndpoints(health="health")
+    options = SciCatOptions(
+        host="https://example.org/api/v3", api_endpoints=api_endpoints
+    )
     assert options.health_url == "https://example.org/api/v3/health"
 
 
 def test_scicat_health_url_absolute_url() -> None:
+    api_endpoints = ScicatEndpoints(health="https://status.example.org/healthz")
     options = SciCatOptions(
-        host="https://example.org/api/v3",
-        health_endpoint="https://status.example.org/healthz",
+        host="https://example.org/api/v3", api_endpoints=api_endpoints
     )
     assert options.health_url == "https://status.example.org/healthz"

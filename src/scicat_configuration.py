@@ -361,6 +361,7 @@ class ScicatEndpoints:
     instruments: str = "v3/instruments"
     samples: str = "v4/samples"
     jobs: str = "v4/jobs"
+    health: str = "v3/health"
 
     @property
     def datasets(self) -> str:
@@ -377,7 +378,6 @@ class SciCatOptions:
     timeout: int = 0
     stream: bool = True
     verify: bool = False
-    health_endpoint: str = "health"
     api_endpoints: ScicatEndpoints = field(default_factory=ScicatEndpoints)
 
     @property
@@ -409,7 +409,7 @@ class SciCatOptions:
     def health_url(self) -> str:
         """Return the health-check URL, allowing either relative or absolute values."""
 
-        endpoint = self.health_endpoint
+        endpoint = self.api_endpoints.health
         if endpoint.startswith(("http://", "https://")):
             return endpoint
         return urljoin(self.host_address, endpoint.lstrip("/"))
