@@ -69,11 +69,10 @@ scicat:
   verify: false
   health_endpoint: health
   api_endpoints:
-    datasets: v4/datasets
-    proposals: v4/proposals
+    proposals: v3/proposals
     origdatablocks: v4/origdatablocks
     instruments: v3/instruments
-    samples: v3/samples
+    samples: v4/samples
     jobs: v4/jobs
 health_check:
   host: 0.0.0.0

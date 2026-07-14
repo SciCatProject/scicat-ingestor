@@ -52,7 +52,7 @@ def _validate_mandatory_machine_names(
 ) -> bool:
     MANDATORY_MACHINE_NAMES = {
         'datasetName',
-        'principalInvestigator',
+        'principalInvestigators',
         'creationLocation',
         'owner',
         'ownerEmail',

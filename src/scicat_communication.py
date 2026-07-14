@@ -68,10 +68,12 @@ def create_scicat_dataset(
     )
     result: dict = response.json()
     if not response.ok:
+        msg = f"{response.status_code} {response.reason}: {response.text}"
         logger.error(
             "Failed to create new dataset with data file %s. Error message from scicat backend: %s",
             data_file_path,
-            result.get("error", {}),
+            # result.get("error", {}),
+            msg,
         )
         raise ScicatDatasetAPIError(
             f"Error creating new dataset for file {data_file_path}: \n{dataset}"
@@ -261,6 +263,6 @@ def create_scicat_job(
             "Failed to create a job. Error message from scicat backend: %s",
             result,
         )
-
-    logger.info("Job created successfully with job pid: %s", result['_id'])
+    else:
+        logger.info("Job created successfully with job pid: %s", result['_id'])
     return result
