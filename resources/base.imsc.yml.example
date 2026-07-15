@@ -72,6 +72,11 @@ variables:
     value:
     - scientific information management systems group
     value_type: string[]
+  source_folder:
+    source: VALUE
+    operator: dirname-2
+    value: <data_file_path>
+    value_type: string
 schema:
   pid:
     field_type: high_level
@@ -92,11 +97,6 @@ schema:
     field_type: high_level
     machine_name: datasetName
     value: <dataset_name>
-    type: string
-  principal_investigator:
-    field_type: high_level
-    machine_name: principalInvestigator
-    value: <pi_firstname> <pi_lastname>
     type: string
   owner:
     field_type: high_level
@@ -163,11 +163,34 @@ schema:
     machine_name: accessGroups
     value: <access_groups>
     type: string[]
+  creation_time:
+    field_type: high_level
+    machine_name: creationTime
+    value: <now>
+    type: date
+  creation_location:
+    field_type: high_level
+    machine_name: creationLocation
+    value: ESS
+    type: string
+  principal_investigator:
+    field_type: high_level
+    machine_name: principalInvestigators
+    value:
+    - <pi_firstname> <pi_lastname>
+    type: string[]
+  source_folder:
+    field_type: high_level
+    machine_name: sourceFolder
+    value: <source_folder>
+    type: string
 jobs:
   embargo_period:
     type: embargo_period
     job_params:
-      dataset: <pid>
+      datasetList:
+      - pid: <pid>
+        files: []
     owner_user: pit_manager
     owner_group: pit_management
     contact_email: <pi_email>
