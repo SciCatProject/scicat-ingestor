@@ -348,13 +348,14 @@ def main() -> None:
         logger.debug(
             "%d Jobs found in the schema config file.", len(metadata_schema.jobs)
         )
+        updated_variable_map = {**variable_map, "pid": scicat_dataset.get("pid")}
         for job_name, job_recipe in metadata_schema.jobs.items():
             logger.debug(
                 "Preparing a job %s for dataset %s",
                 job_name,
                 scicat_dataset.get('pid'),
             )
-            job_payload = job_recipe.payload(variable_registry=variable_map)
+            job_payload = job_recipe.payload(variable_registry=updated_variable_map)
             logger.debug("Job %s payload: %s", job_name, job_payload)
             create_scicat_job(payload=job_payload, config=config.scicat, logger=logger)
 
