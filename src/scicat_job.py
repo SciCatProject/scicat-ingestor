@@ -35,7 +35,9 @@ def _post_scicat_job(
         pid = None
         msg = f"{response.status_code} {response.reason}: {response.text}"
         logger.error(
-            "Failed to create a job. Error message from scicat backend: %s", msg
+            "Failed to create a job. Error message from scicat backend: %s . Payload: %s",
+            msg,
+            payload,
         )
     else:
         pid = result['_id']
