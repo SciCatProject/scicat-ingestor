@@ -346,9 +346,16 @@ def main() -> None:
         )
         # Post jobs according to the configuration.
         logger.debug(
-            "%d Jobs found in the schema config file.", len(metadata_schema.jobs)
+            "%d Job(s) found in the schema config file.", len(metadata_schema.jobs)
         )
-        updated_variable_map = {**variable_map, "pid": scicat_dataset.get("pid")}
+        # Update existing variables with information of the final dataset.
+        updated_variable_map = {
+            **variable_map,
+            # PID may have been auto generated even though there is
+            # schema variable defined by the user.
+            # It depends on the configuration of scicat ingestor.
+            "pid": MetadataVariableValueSpec(value=scicat_dataset.get("pid")),
+        }
         for job_name, job_recipe in metadata_schema.jobs.items():
             logger.debug(
                 "Preparing a job %s for dataset %s",
