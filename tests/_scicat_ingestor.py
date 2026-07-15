@@ -170,7 +170,7 @@ def check_job_instance(config, dataset_pid):
     filter_dict = {
         "where": {
             "type": "embargo_period",
-            "jobParams": {"dtasetList": [{"pid": dataset_pid, "files": []}]},
+            "datasets": [{"pid": dataset_pid}],
         }
     }
     filter_str = json.dumps(filter_dict)
