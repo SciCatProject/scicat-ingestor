@@ -234,19 +234,22 @@ class JobItemConfig:
     def payload(self, variable_registry: dict) -> dict:
         from typing import TypeVar
 
-        T = TypeVar("T", str, float)
+        T = TypeVar("T", str, float, dict, list)
 
         def _render(val: T) -> T:
-            # Render the variable value and use value.
-            # Unit is ignored for job parameters.
-            return render_variable_value(val, variable_registry).value
+            # Recursive rendering for job config/parameters.
+            if isinstance(val, dict):
+                return {_render(key): _render(value) for key, value in val.items()}
+            elif isinstance(val, list):
+                return [_render(value) for value in val]
+            else:
+                # Render the variable value and use value.
+                # Unit is ignored for job parameters.
+                return render_variable_value(val, variable_registry).value
 
-        rendered_job_params = {
-            name: _render(val) for name, val in self.job_params.items()
-        }
         return {
             "type": self.type,
-            "jobParams": rendered_job_params,
+            "jobParams": _render(self.job_params),
             "ownerUser": _render(self.owner_user),
             "ownerGroup": _render(self.owner_group),
             "contactEmail": _render(self.contact_email),
