@@ -348,20 +348,17 @@ def main() -> None:
             "Data file: %s, "
             "Scicat dataset pid: %s, "
             "SciCat origdatablock id: %s, "
-            "Scicat Job instances: %s",
+            "Scicat Job instances(%s): %s",
             nexus_file_path,
             scicat_dataset.get('pid'),
             scicat_origdatablock.get('_id'),
+            "ok" if job_posting_result.ok else "x",
             job_posting_result.text,
         )
 
     exit(
         logger,
-        unexpected=not (
-            bool(scicat_dataset)
-            and bool(scicat_origdatablock)
-            and bool(job_posting_result.ok)
-        ),
+        unexpected=not (bool(scicat_dataset) and bool(scicat_origdatablock)),
     )
     raise RuntimeError(
         f"Error on existing offline ingestor for file {nexus_file_path}."
