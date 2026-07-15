@@ -10,7 +10,6 @@ from scicat_communication import (
     check_dataset_by_metadata,
     check_dataset_by_pid,
     create_scicat_dataset,
-    create_scicat_job,
     create_scicat_origdatablock,
     query_sample,
 )
@@ -31,6 +30,7 @@ from scicat_dataset import (
     origdatablock_to_dict,
     scicat_dataset_to_dict,
 )
+from scicat_job import create_scicat_job
 from scicat_logging import build_logger
 from scicat_metadata import (
     MetadataVariableValueSpec,
@@ -335,40 +335,33 @@ def main() -> None:
             )
 
             # if we get here, both dataset and origdatablock have been created successfully
+
+        job_posting_result = create_scicat_job(
+            metadata_schema=metadata_schema,
+            scicat_config=config.scicat,
+            scicat_dataset=scicat_dataset,
+            variable_map=variable_map,
+            logger=logger,
+        )
         logger.info(
             "Dataset ingestion successful. "
             "Data file: %s, "
             "Scicat dataset pid: %s, "
-            "SciCat origdatablock id: %s",
+            "SciCat origdatablock id: %s, ",
+            "Scicat Job instances: %s",
             nexus_file_path,
             scicat_dataset.get('pid'),
             scicat_origdatablock.get('_id'),
+            job_posting_result.text,
         )
-        # Post jobs according to the configuration.
-        logger.debug(
-            "%d Job(s) found in the schema config file.", len(metadata_schema.jobs)
-        )
-        # Update existing variables with information of the final dataset.
-        updated_variable_map = {
-            **variable_map,
-            # PID may have been auto generated even though there is
-            # schema variable defined by the user.
-            # It depends on the configuration of scicat ingestor.
-            "pid": MetadataVariableValueSpec(value=scicat_dataset.get("pid")),
-        }
-        for job_name, job_recipe in metadata_schema.jobs.items():
-            logger.debug(
-                "Preparing a job %s for dataset %s",
-                job_name,
-                scicat_dataset.get('pid'),
-            )
-            job_payload = job_recipe.payload(variable_registry=updated_variable_map)
-            logger.debug("Job %s payload: %s", job_name, job_payload)
-            create_scicat_job(payload=job_payload, config=config.scicat, logger=logger)
 
     exit(
         logger,
-        unexpected=not (bool(scicat_dataset) and bool(scicat_origdatablock)),
+        unexpected=not (
+            bool(scicat_dataset)
+            and bool(scicat_origdatablock)
+            and bool(job_posting_result.ok)
+        ),
     )
     raise RuntimeError(
         f"Error on existing offline ingestor for file {nexus_file_path}."
