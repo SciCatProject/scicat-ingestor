@@ -61,7 +61,7 @@ def test_build_metadata_schema_job_recipes(base_metadata_schema_dict: dict):
     metadata = MetadataSchema.from_dict(base_metadata_schema_dict)
     assert metadata.jobs["embargo_period"] == JobItemConfig(
         type="embargo_period",
-        job_params={"dataset": "<pid>"},
+        job_params={"datasetList": [{"pid": "<pid>", "files": []}]},
         owner_user="pit_manager",
         owner_group="pit_management",
         contact_email="<pi_email>",
@@ -95,10 +95,7 @@ def test_collect_metadata_schema() -> None:
     assert (
         list(schemas.keys())
         == [
-            "715ce7ba-3f91-11ef-932f-37a5c6fd60b1",  # Coda, 1, Coda Metadata Schema
-            "72a991ee-437a-11ef-8fd2-1f95660accb7",  # Dream, 1, dream Metadata Schema
             "c5bed39a-4379-11ef-ba5a-ffbc783163b6",  # Base, 1, Generic metadata schema
-            "891322f6-437a-11ef-980a-7bdc756bd0b3",  # Loki, 1, Loki Metadata Schema
             "bdb3dc66-9c2c-11ef-9ffb-532fdcfe4a31",  # Small-Ymir, 100, Ymir Metadata Schema
             "628b28d6-9c26-11ef-948d-0b2d405fc82f",  # Small-Coda, 110, Small-Coda Metadata Schema
         ]
