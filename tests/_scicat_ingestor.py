@@ -168,10 +168,7 @@ def check_job_instance(config, dataset_pid):
     headers = {"Authorization": f"Bearer {token}"}
 
     filter_dict = {
-        "where": {
-            "type": "embargo_period",
-            "datasets": [{"pid": dataset_pid}],
-        }
+        "where": {"type": "embargo_period", "jobParams.datasetList.pid": dataset_pid}
     }
     filter_str = json.dumps(filter_dict)
     url = f"{base_url}/v4/jobs?filter={filter_str}"
