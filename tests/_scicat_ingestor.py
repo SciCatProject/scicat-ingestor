@@ -161,6 +161,41 @@ def check_origdatablock(config, dataset_pid):
     return None
 
 
+def check_job_instance(config, dataset_pid):
+    scicat_config = config["scicat"]
+    base_url = scicat_config["host"]
+    token = scicat_config["token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    filter_dict = {
+        "where": {
+            "type": "embargo_period",
+            "jobParams": {"dtasetList": [{"pid": dataset_pid, "files": []}]},
+        }
+    }
+    filter_str = json.dumps(filter_dict)
+    url = f"{base_url}/v4/jobs?filter={filter_str}"
+
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.ok:
+            jobs = response.json()
+            if jobs:
+                all_ids = ", ".join([job["_id"] for job in jobs])
+                logging.info("✓ Jobs found: %s", all_ids)
+            return jobs
+    except Exception as e:
+        logging.error("Error checking Jobs : %s", e)
+
+    return {}
+
+
+def _error_and_exit(reason: str) -> None:
+    logging.error(reason)
+    logging.error("Integration test FAILED")
+    sys.exit(1)
+
+
 def main():
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -213,20 +248,20 @@ def main():
 
             logging.info("Waiting for dataset related to job_id %s...", file_job_id)
             dataset = check_scicat_dataset(config, job_id=file_job_id)
-
             if not dataset:
-                logging.error(
-                    "Dataset for job_id %s NOT found after timeout.", file_job_id
-                )
-                logging.error("Integration test FAILED")
-                sys.exit(1)
+                reason = f"Dataset for job_id {file_job_id} NOT found after timeout."
+                _error_and_exit(reason=reason)
 
             dataset_pid = dataset["pid"]
             block = check_origdatablock(config, dataset_pid)
             if not block:
-                logging.error("OrigDatablock for dataset %s NOT found.", dataset_pid)
-                logging.error("Integration test FAILED")
-                sys.exit(1)
+                reason = f"OrigDatablock for dataset {dataset_pid} NOT found."
+                _error_and_exit(reason=reason)
+
+            jobs = check_job_instance(config, dataset_pid)
+            if len(jobs) != 1:
+                reason = f"Job for dataset {dataset_pid} NOT found."
+                _error_and_exit(reason=reason)
 
             logging.info("Dataset %s ingested successfully.", dataset_pid)
 
