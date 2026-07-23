@@ -155,6 +155,7 @@ def _deserialise_wrdn(
 # Unable to set up consumer for source MISSING1 on topic freia_MISSING as this topic does not exist.
 # ...omitted...
 
+
 def wrdn_messages(
     consumer: Consumer, logger: logging.Logger
 ) -> Generator[WritingFinished | None, None, None]:
