@@ -137,16 +137,22 @@ def _deserialise_wrdn(
 # Structure of a successful writing_done message
 # filewriter0625.daq.esss.dk kafka-to-nexus[108152]:
 # Sending FinishedWriting message
-# (Result=Success JobId=99999901-3947-5a87-8377-a85c111f18ba File=/ess/raw/coda/999999/raw/coda_estia_999999_00013947.hdf)
+# (
+#   Result=Success
+#   JobId=99999901-3947-5a87-8377-a85c111f18ba
+#   File=/ess/raw/coda/999999/raw/coda_estia_999999_00013947.hdf
+# )
 #
 # Structure of a failed writing_done message
 # filewriter0625.daq.esss.dk kafka-to-nexus[108152]:
 # Sending FinishedWriting message
-# (Result=Failure JobId=99999901-3948-5de6-88ab-085c111f18ba File=/ess/raw/coda/999999/raw/coda_freia_999999_00013948.hdf):
+# (
+#   Result=Failure
+#   JobId=99999901-3948-5de6-88ab-085c111f18ba
+#   File=/ess/raw/coda/999999/raw/coda_freia_999999_00013948.hdf
+# ):
 # Unable to set up consumer for source MISSING1 on topic freia_MISSING as this topic does not exist.
 # ...omitted...
-
-
 
 def wrdn_messages(
     consumer: Consumer, logger: logging.Logger
