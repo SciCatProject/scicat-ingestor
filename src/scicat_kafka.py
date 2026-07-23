@@ -164,7 +164,6 @@ def wrdn_messages(
         elif message.error():
             num_skipped = 1  # Reset
             logger.error("Consumer error: %s", message.error())
-            consumer.commit(message=message, asynchronous=True)
             yield None
         elif (message_value := message.value()) is None:
             num_skipped = 1  # Reset
