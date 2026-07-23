@@ -121,7 +121,7 @@ def _deserialise_wrdn(
         if deserialised_message is None:
             logger.error(
                 "Errore deserialising WRDN message. Raw message: %s",
-                message_content.decode("utf-8",errors="replace")
+                message_content.decode("utf-8", errors="replace"),
             )
         else:
             logger.info(
@@ -132,6 +132,7 @@ def _deserialise_wrdn(
             logger.debug("Deserialized WRDN message: %.5000s", deserialised_message)
 
     return deserialised_message
+
 
 #
 # Structure of a successful writing_done message
@@ -187,7 +188,7 @@ def wrdn_messages(
                 logger.error(
                     "Error deserialising message. Error: %s. Raw message: %s",
                     e,
-                    message_value.decode("utf-8",errors="replace")
+                    message_value.decode("utf-8", errors="replace"),
                 )
                 yield None
             yield deserialised_message
