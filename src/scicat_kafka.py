@@ -121,7 +121,7 @@ def _deserialise_wrdn(
         if deserialised_message is None:
             logger.error(
                 "Errore deserialising WRDN message. Raw message: %s",
-                message_content.decode("utf-8",errors="replace")
+                message_content.decode("utf-8", errors="replace"),
             )
         else:
             logger.info(
@@ -132,6 +132,7 @@ def _deserialise_wrdn(
             logger.debug("Deserialized WRDN message: %.5000s", deserialised_message)
 
     return deserialised_message
+
 
 #
 # Structure of a successful writing_done message
@@ -145,7 +146,6 @@ def _deserialise_wrdn(
 # (Result=Failure JobId=99999901-3948-5de6-88ab-085c111f18ba File=/ess/raw/coda/999999/raw/coda_freia_999999_00013948.hdf):
 # Unable to set up consumer for source MISSING1 on topic freia_MISSING as this topic does not exist.
 # ...omitted...
-
 
 
 def wrdn_messages(
@@ -181,7 +181,7 @@ def wrdn_messages(
                 logger.error(
                     "Error deserialising message. Error: %s. Raw message: %s",
                     e,
-                    message_value.decode("utf-8",errors="replace")
+                    message_value.decode("utf-8", errors="replace"),
                 )
                 yield None
             yield deserialised_message
