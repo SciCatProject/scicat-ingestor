@@ -113,19 +113,47 @@ def _filter_error_encountered(
 def _deserialise_wrdn(
     message_content: bytes, logger: logging.Logger
 ) -> WritingFinished | None:
-    deserialized_message: WritingFinished | None = None
+    deserialised_message: WritingFinished | None = None
     if _validate_wrdn_message_type(message_content, logger):
         logger.info("Deserialising WRDN message")
-        deserialized_message: WritingFinished = deserialise_wrdn(message_content)
-        deserialized_message = _filter_error_encountered(deserialized_message, logger)
-        logger.info(
-            "Deserialised WRDN message with job id, %s for file %s.",
-            deserialized_message.job_id,
-            deserialized_message.file_name,
-        )
-        logger.debug("Deserialised WRDN message: %.5000s", deserialized_message)
+        deserialised_message: WritingFinished = deserialise_wrdn(message_content)
+        deserialised_message = _filter_error_encountered(deserialised_message, logger)
+        if deserialised_message is None:
+            logger.error(
+                "Errore deserialising WRDN message. Raw message: %s",
+                message_content.decode("utf-8", errors="replace"),
+            )
+        else:
+            logger.info(
+                "Deserialised WRDN message with job id, %s for file %s.",
+                deserialised_message.job_id,
+                deserialised_message.file_name,
+            )
+            logger.debug("Deserialized WRDN message: %.5000s", deserialised_message)
 
-    return deserialized_message
+    return deserialised_message
+
+
+#
+# Structure of a successful writing_done message
+# filewriter0625.daq.esss.dk kafka-to-nexus[108152]:
+# Sending FinishedWriting message
+# (
+#   Result=Success
+#   JobId=99999901-3947-5a87-8377-a85c111f18ba
+#   File=/ess/raw/coda/999999/raw/coda_estia_999999_00013947.hdf
+# )
+#
+# Structure of a failed writing_done message
+# filewriter0625.daq.esss.dk kafka-to-nexus[108152]:
+# Sending FinishedWriting message
+# (
+#   Result=Failure
+#   JobId=99999901-3948-5de6-88ab-085c111f18ba
+#   File=/ess/raw/coda/999999/raw/coda_freia_999999_00013948.hdf
+# ):
+# Unable to set up consumer for source MISSING1 on topic freia_MISSING as this topic does not exist.
+# ...omitted...
 
 
 def wrdn_messages(
@@ -154,7 +182,17 @@ def wrdn_messages(
             message_value = message.value()
             message_type = message_value[4:8]
             logger.info("Received message. Type : %s", message_type)
-            yield _deserialise_wrdn(message_value, logger)
+            deserialised_message = None
+            try:
+                deserialised_message = _deserialise_wrdn(message_value, logger)
+            except Exception as e:
+                logger.error(
+                    "Error deserialising message. Error: %s. Raw message: %s",
+                    e,
+                    message_value.decode("utf-8", errors="replace"),
+                )
+                yield None
+            yield deserialised_message
 
 
 def _validate_pl72_message_type(message_content: bytes, logger: logging.Logger) -> bool:
