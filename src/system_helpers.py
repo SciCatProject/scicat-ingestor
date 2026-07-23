@@ -1,8 +1,11 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 Scicatproject contributors (https://github.com/ScicatProject)
 import logging
+import pathlib
+import sys
 from collections.abc import Generator
 from contextlib import contextmanager
+from types import TracebackType
 
 
 def exit(logger: logging.Logger, unexpected: bool = True) -> None:
@@ -63,26 +66,52 @@ def handle_daemon_loop_exceptions(
             ignored_err,
         )
     except Exception as e:
-        logger.exception("An exception occurred: %s", e)
+        logger.exception("An exception occurred: %s", e, stacklevel=3)
         exit(logger, unexpected=True)
     else:
         logger.error("Loop finished unexpectedly.")
         exit(logger, unexpected=True)
 
 
-@contextmanager
 def handle_exceptions(
-    logger: logging.Logger,
-) -> Generator[None, None, None]:
-    """Exit the program if an exception is raised.
+    logger: logging.Logger | None = None,
+    stacklevel: int = 2,
+):
+    """Overwrite sys.excepthook to log exceptions.
 
-    If an exception is raised, the program logs the error and exits with status code 1.
-    If no exception is raised, the program exits with status code 0.
+    This function will overwrite `sys.excepthook` with custom logging function
+    that also logs the location of the last executed line.
+
+    If the logger is not provided or it does not have any handlers,
+    the default excepthook will be used to handle the exception.
+    It allows to handle global exceptions without try-except statement.
     """
-    try:
-        yield
-    except Exception as e:
-        logger.exception("An exception occurred: %s", e)
-        exit(logger, unexpected=True)
-    else:
-        exit(logger, unexpected=False)
+    original_excepthook = sys.excepthook
+
+    def _handle_exceptions(
+        exc_type: type[Exception], exc_value: Exception, exc_traceback: TracebackType
+    ):
+        if isinstance(logger, logging.Logger) and logger.handlers:
+            # Manually extracting the file name and line number.
+            # The formatter only shows the line number where the logger.exception
+            # is called.
+            if isinstance(upper_level := exc_traceback.tb_next, TracebackType):
+                # First frame is the command line CLI.
+                frame = upper_level.tb_frame
+            else:
+                frame = exc_traceback.tb_frame
+
+            file_name = pathlib.Path(frame.f_code.co_filename).name
+            lineno = frame.f_lineno
+            logger.exception(
+                "Unexpected error occurred: [%s:%s] %s",
+                file_name,
+                lineno,
+                exc_value,
+                exc_info=(exc_type, exc_value, exc_traceback),
+                stacklevel=stacklevel,
+            )
+        else:
+            original_excepthook(exc_type, exc_value, exc_traceback)
+
+    sys.excepthook = _handle_exceptions

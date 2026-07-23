@@ -351,15 +351,22 @@ class _ScicatAPIURLs:
     origdatablocks: str
     instruments: str
     samples: str
+    jobs: str
 
 
 @dataclass(kw_only=True)
 class ScicatEndpoints:
-    datasets: str = "datasets"
-    proposals: str = "proposals"
-    origdatablocks: str = "origdatablocks"
-    instruments: str = "instruments"
-    samples: str = "samples"
+    proposals: str = "v3/proposals"
+    origdatablocks: str = "v4/origdatablocks"
+    instruments: str = "v3/instruments"
+    samples: str = "v4/samples"
+    jobs: str = "v4/jobs"
+    health: str = "v3/health"
+
+    @property
+    def datasets(self) -> str:
+        """Only V4 datasets API is supported."""
+        return "v4/datasets"
 
 
 @dataclass(kw_only=True)
@@ -371,7 +378,6 @@ class SciCatOptions:
     timeout: int = 0
     stream: bool = True
     verify: bool = False
-    health_endpoint: str = "health"
     api_endpoints: ScicatEndpoints = field(default_factory=ScicatEndpoints)
 
     @property
@@ -384,6 +390,7 @@ class SciCatOptions:
             ),
             instruments=urljoin(self.host_address, self.api_endpoints.instruments),
             samples=urljoin(self.host_address, self.api_endpoints.samples),
+            jobs=urljoin(self.host_address, self.api_endpoints.jobs),
         )
 
     @property
@@ -402,7 +409,7 @@ class SciCatOptions:
     def health_url(self) -> str:
         """Return the health-check URL, allowing either relative or absolute values."""
 
-        endpoint = self.health_endpoint
+        endpoint = self.api_endpoints.health
         if endpoint.startswith(("http://", "https://")):
             return endpoint
         return urljoin(self.host_address, endpoint.lstrip("/"))

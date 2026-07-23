@@ -21,6 +21,9 @@ def retrieve_value_from_scicat(
     response: dict = requests.get(
         scicat_endpoint_url, headers=config.headers, timeout=config.timeout
     ).json()
+    if field_name and field_name not in response:
+        raise KeyError(f"{field_name} does not exist in the response: {response}")
+
     return response[field_name] if field_name else response
 
 
@@ -65,10 +68,12 @@ def create_scicat_dataset(
     )
     result: dict = response.json()
     if not response.ok:
+        msg = f"{response.status_code} {response.reason}: {response.text}"
         logger.error(
             "Failed to create new dataset with data file %s. Error message from scicat backend: %s",
             data_file_path,
-            result.get("error", {}),
+            # result.get("error", {}),
+            msg,
         )
         raise ScicatDatasetAPIError(
             f"Error creating new dataset for file {data_file_path}: \n{dataset}"
