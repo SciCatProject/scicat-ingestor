@@ -96,64 +96,33 @@ def _validate_wrdn_message_type(message_content: bytes, logger: logging.Logger) 
         return False
 
 
-def _filter_error_encountered(
-    deserialized_message: WritingFinished, logger: logging.Logger
-) -> WritingFinished | None:
-    """Filter out messages with the ``error_encountered`` flag set to True."""
-    if deserialized_message.error_encountered:
-        logger.info(
-            "Unable to deserialize message. `error_encountered` is true. Skipping the message."
-        )
-        return None
-    else:
-        logger.info("Message successfully deserialized.")
-        return deserialized_message
-
-
 def _deserialise_wrdn(
     message_content: bytes, logger: logging.Logger
 ) -> WritingFinished | None:
-    deserialised_message: WritingFinished | None = None
-    if _validate_wrdn_message_type(message_content, logger):
+    try:
+        if not _validate_wrdn_message_type(message_content, logger):
+            return
         logger.info("Deserialising WRDN message")
         deserialised_message: WritingFinished = deserialise_wrdn(message_content)
-        deserialised_message = _filter_error_encountered(deserialised_message, logger)
-        if deserialised_message is None:
-            logger.error(
-                "Errore deserialising WRDN message. Raw message: %s",
-                message_content.decode("utf-8", errors="replace"),
-            )
-        else:
+        logger.info(
+            "Deserialised WRDN message with job id, %s for file %s.",
+            deserialised_message.job_id,
+            deserialised_message.file_name,
+        )
+        logger.debug("Deserialized WRDN message: %.5000s", deserialised_message)
+        if deserialised_message.error_encountered:
             logger.info(
-                "Deserialised WRDN message with job id, %s for file %s.",
-                deserialised_message.job_id,
-                deserialised_message.file_name,
+                "`error_encountered` is true. Cannot use process the message. %s",
+                deserialised_message.message,
             )
-            logger.debug("Deserialized WRDN message: %.5000s", deserialised_message)
 
-    return deserialised_message
-
-
-#
-# Structure of a successful writing_done message
-# filewriter0625.daq.esss.dk kafka-to-nexus[108152]:
-# Sending FinishedWriting message
-# (
-#   Result=Success
-#   JobId=99999901-3947-5a87-8377-a85c111f18ba
-#   File=/ess/raw/coda/999999/raw/coda_estia_999999_00013947.hdf
-# )
-#
-# Structure of a failed writing_done message
-# filewriter0625.daq.esss.dk kafka-to-nexus[108152]:
-# Sending FinishedWriting message
-# (
-#   Result=Failure
-#   JobId=99999901-3948-5de6-88ab-085c111f18ba
-#   File=/ess/raw/coda/999999/raw/coda_freia_999999_00013948.hdf
-# ):
-# Unable to set up consumer for source MISSING1 on topic freia_MISSING as this topic does not exist.
-# ...omitted...
+        return deserialised_message
+    except Exception as e:
+        logger.error(
+            "Error deserialising message. Error: %s. Raw message: %s",
+            e,
+            message_content.decode("utf-8", errors="replace"),
+        )
 
 
 def wrdn_messages(
@@ -162,6 +131,26 @@ def wrdn_messages(
     """Wait for a WRDN message and yield it.
 
     Yield ``None`` if no message is received or an error is encountered.
+    If an error is encountered or fails to deserialise the message,
+    the consumer will commit the message
+    so that it won't consume the same message again.
+
+    Examples
+    --------
+    - Structure of a successful writing_done message
+        (
+          Result=Success
+          JobId=99999901-3947-5a87-8377-a85c111f18ba
+          File=/ess/raw/coda/999999/raw/coda_estia_999999_00013947.hdf
+        )
+
+    - Structure of a failed writing_done message
+        (
+          Result=Failure
+          JobId=99999901-3948-5de6-88ab-085c111f18ba
+          File=/ess/raw/coda/999999/raw/coda_freia_999999_00013948.hdf
+        ): Unable to set up consumer for source MISSING1 on topic
+           freia_MISSING as this topic does not exist.
     """
     num_skipped = 1
     while True:
@@ -175,24 +164,33 @@ def wrdn_messages(
         elif message.error():
             num_skipped = 1  # Reset
             logger.error("Consumer error: %s", message.error())
+            consumer.commit(message=message, asynchronous=True)
             yield None
-        else:
+        elif (message_value := message.value()) is None:
+            num_skipped = 1  # Reset
+            logger.warning(
+                "None value received in a message from consumer. "
+                "Skipping this message: %s",
+                message,
+            )
+            # It means the produced message has none value...
+            consumer.commit(message=message, asynchronous=True)
+            yield None
+        else:  # A message received without error and with non-None value.
             num_skipped = 1  # Reset
             # retrieve type of message
-            message_value = message.value()
             message_type = message_value[4:8]
             logger.info("Received message. Type : %s", message_type)
-            deserialised_message = None
-            try:
-                deserialised_message = _deserialise_wrdn(message_value, logger)
-            except Exception as e:
-                logger.error(
-                    "Error deserialising message. Error: %s. Raw message: %s",
-                    e,
-                    message_value.decode("utf-8", errors="replace"),
-                )
+
+            deserialised_message = _deserialise_wrdn(message_value, logger=logger)
+            # If it fails to deserialize the message and return None,
+            # or if the error_encountered is True, the message should be committed
+            # but should not be processed further.
+            if deserialised_message is None or deserialised_message.error_encountered:
+                consumer.commit(message=message, asynchronous=True)
                 yield None
-            yield deserialised_message
+            else:
+                yield deserialised_message
 
 
 def _validate_pl72_message_type(message_content: bytes, logger: logging.Logger) -> bool:
