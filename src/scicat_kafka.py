@@ -116,8 +116,7 @@ def _deserialise_wrdn(
             )
         else:
             logger.debug(
-                "Deserialized WRDN message: %.5000s",
-                deserialised_message.message
+                "Deserialized WRDN message: %.5000s", deserialised_message.message
             )
             logger.info(
                 "Deserialised WRDN message with job id, %s for file %s.",
@@ -197,7 +196,6 @@ def wrdn_messages(
             consumer.commit(message=message, asynchronous=True)
 
         yield None
-
 
 
 def _validate_pl72_message_type(message_content: bytes, logger: logging.Logger) -> bool:
