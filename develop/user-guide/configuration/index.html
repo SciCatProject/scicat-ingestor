@@ -1253,19 +1253,31 @@ It still contains some legacy options that are not in use anymore. They will be 
 <li>system_log_facility: <em>string</em>
   If running on *nix system, under which log system the messages are logged.
   Example: "mail",</li>
-<li>graylog: <em>boolean</em>
-  Enable logging to a graylog system through the SciCat graylog integration.</li>
-<li>graylog_host: <em>string</em>
-  Ip address or valid hostname of the graylog server where the ingestor should send the logs
-  Examples: "graylog.ess.eu"</li>
-<li>graylog_port: <em>integer as a string</em>
-  Port on which the graylog service is listening and accepting remote logs on the graylog server
-  Example: "12321",</li>
-<li>graylog_facility: <em>string</em>
-  Arbitrary string used in the facility field for the graylog messages.
-  It is suggested to pick a meaningful string that can be used when selecting entries in graylog interface and queries
-  Example: "scicat_ingestor"</li>
+<li>graylog_enabled: <em>boolean</em>
+  Enable logging to graylog system(s). When enabled, logs will be sent to all configured graylog servers.</li>
+<li>graylogs: <em>list of objects</em>
+  List of Graylog server configurations. Each entry supports the following fields:</li>
+<li>host: <em>string</em>
+    Ip address or valid hostname of the graylog server where the ingestor should send the logs
+    Example: "graylog.ess.eu"</li>
+<li>port: <em>integer as a string</em>
+    Port on which the graylog service is listening and accepting remote logs on the graylog server
+    Example: "12321"</li>
+<li>facility: <em>string</em>
+    Arbitrary string used in the facility field for the graylog messages.
+    It is suggested to pick a meaningful string that can be used when selecting entries in graylog interface and queries
+    Example: "scicat_ingestor"</li>
 </ul>
+<p>Example configuration for multiple Graylog servers:
+  <div class="highlight"><pre><span></span><code><span class="nt">graylog_enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="nt">graylogs</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">graylog1.example.com</span>
+<span class="w">    </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;12201&quot;</span>
+<span class="w">    </span><span class="nt">facility</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">scicat.ingestor.group1</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">graylog2.example.com</span>
+<span class="w">    </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;12201&quot;</span>
+<span class="w">    </span><span class="nt">facility</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">scicat.ingestor.group2</span>
+</code></pre></div></p>
 <h2 id="health-check-health_check">Health Check (health_check)</h2>
 <p>The online ingestor exposes a small HTTP endpoint that external monitors can query to verify Kafka, storage, and SciCat connectivity. This section controls where that endpoint listens.</p>
 <ul>
