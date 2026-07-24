@@ -128,9 +128,10 @@ schema:
     type: string
   proposal_id:
     field_type: high_level
-    machine_name: proposalId
-    value: <proposal_id>
-    type: string
+    machine_name: proposalIds
+    value:
+    - <proposal_id>
+    type: string[]
   dataset_name:
     field_type: high_level
     machine_name: datasetName
@@ -138,8 +139,9 @@ schema:
     type: string
   principal_investigator:
     field_type: high_level
-    machine_name: principalInvestigator
-    value: <pi_firstname> <pi_lastname>
+    machine_name: principalInvestigators
+    value:
+    - <pi_firstname> <pi_lastname>
     type: string
   owner:
     field_type: high_level
@@ -158,9 +160,10 @@ schema:
     type: email
   instrument_id:
     field_type: high_level
-    machine_name: instrumentId
-    value: <instrument_id>
-    type: string
+    machine_name: instrumentIds
+    value:
+    - <instrument_id>
+    type: string[]
   creation_location:
     field_type: high_level
     machine_name: creationLocation
@@ -242,3 +245,13 @@ schema:
     machine_name: keywords
     value: <keywords>
     type: string[]
+jobs:
+  embargo_period:
+    type: embargo_period
+    job_params:
+      datasetList:
+      - pid: <pid>
+        files: []
+    owner_user: pit_manager
+    owner_group: pit_management
+    contact_email: <pi_email>

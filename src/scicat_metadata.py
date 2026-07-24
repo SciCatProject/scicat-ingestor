@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2024 ScicatProject contributors (https://github.com/ScicatProject)
-
 import json
 import logging
 import pathlib
@@ -218,7 +217,49 @@ class SampleAttachmentConfig:
 
 
 @dataclass(kw_only=True)
+class JobItemConfig:
+    type: str
+    job_params: dict[str, Any]
+    owner_user: str
+    owner_group: str
+    contact_email: str
+
+    def __post_init__(self) -> None:
+        # validate job_params
+        if not isinstance(self.job_params, dict) or any(
+            isinstance(val, dict) for val in self.job_params.values()
+        ):
+            raise TypeError("job_params must be a single depth dictionary")
+
+    def payload(self, variable_registry: dict) -> dict:
+        from typing import TypeVar
+
+        T = TypeVar("T", str, float, dict, list)
+
+        def _render(val: T) -> T:
+            # Recursive rendering for job config/parameters.
+            if isinstance(val, dict):
+                return {_render(key): _render(value) for key, value in val.items()}
+            elif isinstance(val, list):
+                return [_render(value) for value in val]
+            else:
+                # Render the variable value and use value.
+                # Unit is ignored for job parameters.
+                return render_variable_value(val, variable_registry).value
+
+        return {
+            "type": self.type,
+            "jobParams": _render(self.job_params),
+            "ownerUser": _render(self.owner_user),
+            "ownerGroup": _render(self.owner_group),
+            "contactEmail": _render(self.contact_email),
+        }
+
+
+@dataclass(kw_only=True)
 class MetadataSchema:
+    """Dataclass representation of IMSC(*.imsc.yml files) recipes."""
+
     id: str
     name: str
     instrument: str
@@ -227,14 +268,18 @@ class MetadataSchema:
     sample_attachment: SampleAttachmentConfig = field(
         default_factory=SampleAttachmentConfig
     )
-    variables: dict[str, MetadataVariableConfig]
-    schema: dict[str, MetadataItemConfig]
+    variables: dict[str, MetadataVariableConfig] = field(default_factory=dict)
+    schema: dict[str, MetadataItemConfig] = field(default_factory=dict)
+    jobs: dict[str, JobItemConfig] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, schema: dict) -> "MetadataSchema":
         return cls(
             **{
                 **schema,
+                "sample_attachment": SampleAttachmentConfig(
+                    **schema.get("sample_attachment", {})
+                ),
                 "variables": build_metadata_variables(schema["variables"]),
                 "schema": {
                     item_name: MetadataItemConfig(
@@ -245,6 +290,10 @@ class MetadataSchema:
                         },
                     )
                     for item_name, item in schema["schema"].items()
+                },
+                "jobs": {
+                    item_name: JobItemConfig(**item)
+                    for item_name, item in schema.get("jobs", {}).items()
                 },
             },
         )

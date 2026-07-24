@@ -108,7 +108,7 @@ def _fetch_dataset_by_job_id(
         "limits": json.dumps(limits_payload),
         "fields": json.dumps(fields_payload),
     }
-    url = f"{base_url}/datasets/fullquery"
+    url = f"{base_url}/v3/datasets/fullquery"
     try:
         response = requests.get(url, headers=headers, params=params, timeout=10)
         if response.ok:
@@ -146,7 +146,7 @@ def check_origdatablock(config, dataset_pid):
 
     filter_dict = {"where": {"datasetId": dataset_pid}}
     filter_str = json.dumps(filter_dict)
-    url = f"{base_url}/origdatablocks?filter={filter_str}"
+    url = f"{base_url}/v3/origdatablocks?filter={filter_str}"
 
     try:
         response = requests.get(url, headers=headers, timeout=10)
@@ -159,6 +159,38 @@ def check_origdatablock(config, dataset_pid):
         logging.error("Error checking OrigDatablock: %s", e)
 
     return None
+
+
+def check_job_instance(config, dataset_pid):
+    scicat_config = config["scicat"]
+    base_url = scicat_config["host"]
+    token = scicat_config["token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    filter_dict = {
+        "where": {"type": "embargo_period", "jobParams.datasetList.pid": dataset_pid}
+    }
+    filter_str = json.dumps(filter_dict)
+    url = f"{base_url}/v4/jobs?filter={filter_str}"
+
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.ok:
+            jobs = response.json()
+            if jobs:
+                all_ids = ", ".join([job["_id"] for job in jobs])
+                logging.info("✓ Jobs found: %s", all_ids)
+            return jobs
+    except Exception as e:
+        logging.error("Error checking Jobs : %s", e)
+
+    return {}
+
+
+def _error_and_exit(reason: str) -> None:
+    logging.error(reason)
+    logging.error("Integration test FAILED")
+    sys.exit(1)
 
 
 def main():
@@ -213,20 +245,20 @@ def main():
 
             logging.info("Waiting for dataset related to job_id %s...", file_job_id)
             dataset = check_scicat_dataset(config, job_id=file_job_id)
-
             if not dataset:
-                logging.error(
-                    "Dataset for job_id %s NOT found after timeout.", file_job_id
-                )
-                logging.error("Integration test FAILED")
-                sys.exit(1)
+                reason = f"Dataset for job_id {file_job_id} NOT found after timeout."
+                _error_and_exit(reason=reason)
 
             dataset_pid = dataset["pid"]
             block = check_origdatablock(config, dataset_pid)
             if not block:
-                logging.error("OrigDatablock for dataset %s NOT found.", dataset_pid)
-                logging.error("Integration test FAILED")
-                sys.exit(1)
+                reason = f"OrigDatablock for dataset {dataset_pid} NOT found."
+                _error_and_exit(reason=reason)
+
+            jobs = check_job_instance(config, dataset_pid)
+            if len(jobs) != 1:
+                reason = f"Job for dataset {dataset_pid} NOT found."
+                _error_and_exit(reason=reason)
 
             logging.info("Dataset %s ingested successfully.", dataset_pid)
 

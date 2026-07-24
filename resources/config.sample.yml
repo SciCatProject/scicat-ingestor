@@ -67,13 +67,13 @@ scicat:
   timeout: 0
   stream: true
   verify: false
-  health_endpoint: health
   api_endpoints:
-    datasets: datasets
-    proposals: proposals
-    origdatablocks: origdatablocks
-    instruments: instruments
-    samples: samples
+    proposals: v3/proposals
+    origdatablocks: v4/origdatablocks
+    instruments: v3/instruments
+    samples: v4/samples
+    jobs: v4/jobs
+    health: v3/health
 health_check:
   host: 0.0.0.0
   port: 8080

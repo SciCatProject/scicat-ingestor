@@ -67,14 +67,16 @@ health_check:
   port: 8080
 
 scicat:
-  host: http://localhost:3000/api/v3
+  host: http://localhost:3000/api
   token: <VALID_TOKEN_HERE>
   additional_headers: {}
   timeout: 30
   stream: true
   verify: false
   api_endpoints:
-    datasets: datasets
-    proposals: proposals
-    origdatablocks: origdatablocks
-    instruments: instruments
+    proposals: v3/proposals
+    origdatablocks: v4/origdatablocks
+    instruments: v3/instruments
+    samples: v4/samples
+    jobs: v4/jobs
+

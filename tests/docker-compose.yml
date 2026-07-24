@@ -110,6 +110,8 @@ services:
       CREATE_DATASET_WITH_PID_GROUPS: admin,ingestor
       # Logging
       LOG_LEVEL: debug
+      # Job Configuration
+      JOB_CONFIGURATION_FILE: jobConfig.yml
     healthcheck:
       test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/explorer" ]
       interval: 10s
@@ -119,6 +121,8 @@ services:
     volumes:
       # Mount functional accounts configuration
       - ./integration/functionalAccounts.json:/home/node/app/functionalAccounts.json:ro
+      # Mount job configuration
+      - ./integration/jobConfig.yml:/home/node/app/jobConfig.yml:ro
 
 networks:
   scicat-network:
