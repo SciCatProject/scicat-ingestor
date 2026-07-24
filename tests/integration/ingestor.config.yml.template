@@ -60,7 +60,8 @@ logging:
   log_message_prefix: SCI-TEST
   system_log: false
   system_log_facility: mail
-  graylog: false
+  graylog_enabled: false
+  graylogs: []
 
 health_check:
   host: 0.0.0.0

@@ -59,10 +59,8 @@
     "log_message_prefix": "SFI",
     "system_log": false,
     "system_log_facility": "mail",
-    "graylog": false,
-    "graylog_host": "",
-    "graylog_port": "",
-    "graylog_facility": "scicat.ingestor"
+    "graylog_enabled": false,
+    "graylogs": []
   },
   "scicat": {
     "host": "https://scicat.host",

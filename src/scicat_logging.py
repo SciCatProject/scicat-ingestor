@@ -61,14 +61,16 @@ def build_logger(
     if logging_options.system_log:
         logger.addHandler(logging.handlers.SysLogHandler(address='/dev/log'))
 
-    # Add graylog handler
-    if logging_options.graylog:
-        graylog_handler = graypy.GELFUDPHandler(
-            logging_options.graylog_host,
-            int(logging_options.graylog_port),
-            facility=logging_options.graylog_facility,
-        )
-        logger.addHandler(graylog_handler)
+    # Add graylog handlers
+    if logging_options.graylog_enabled:
+        for graylog_config in logging_options.graylogs:
+            if graylog_config.host and graylog_config.port:
+                graylog_handler = graypy.GELFUDPHandler(
+                    graylog_config.host,
+                    int(graylog_config.port),
+                    facility=graylog_config.facility,
+                )
+                logger.addHandler(graylog_handler)
 
     # Set the level and formatter for all handlers
     logger.setLevel(logging_options.logging_level)

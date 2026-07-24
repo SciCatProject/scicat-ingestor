@@ -200,6 +200,15 @@ def _recursive_deepcopy(obj: Any) -> dict:
 
 
 @dataclass(kw_only=True)
+class GraylogConfig:
+    """Configuration for a single Graylog server."""
+
+    host: str = ""
+    port: str = ""
+    facility: str = "scicat.ingestor"
+
+
+@dataclass(kw_only=True)
 class LoggingOptions:
     """
     LoggingOptions dataclass to store the configuration options.
@@ -217,10 +226,8 @@ class LoggingOptions:
     log_message_prefix: str = "SFI"
     system_log: bool = False
     system_log_facility: str | None = "mail"
-    graylog: bool = False
-    graylog_host: str = ""
-    graylog_port: str = ""
-    graylog_facility: str = "scicat.ingestor"
+    graylog_enabled: bool = False
+    graylogs: list[GraylogConfig] = field(default_factory=list)
 
 
 @dataclass(kw_only=True)
