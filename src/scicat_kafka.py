@@ -202,8 +202,8 @@ def wrdn_messages(
             if deserialised_message is not None:
                 yield deserialised_message
             else:
-                yield None
                 consumer.commit(message=message, asynchronous=True)
+                yield None
 
 
 def _validate_pl72_message_type(message_content: bytes, logger: logging.Logger) -> bool:
