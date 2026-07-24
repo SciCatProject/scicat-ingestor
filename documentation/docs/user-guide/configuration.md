@@ -204,18 +204,32 @@ This section is used by both programs and it specify how and where to send the l
 - system_log_facility: _string_
   If running on *nix system, under which log system the messages are logged.
   Example: "mail",
-- graylog: _boolean_
-  Enable logging to a graylog system through the SciCat graylog integration.
-- graylog_host: _string_
-  Ip address or valid hostname of the graylog server where the ingestor should send the logs
-  Examples: "graylog.ess.eu"
-- graylog_port: _integer as a string_
-  Port on which the graylog service is listening and accepting remote logs on the graylog server
-  Example: "12321",
-- graylog_facility: _string_
-  Arbitrary string used in the facility field for the graylog messages.
-  It is suggested to pick a meaningful string that can be used when selecting entries in graylog interface and queries
-  Example: "scicat_ingestor"
+- graylog_enabled: _boolean_
+  Enable logging to graylog system(s). When enabled, logs will be sent to all configured graylog servers.
+- graylogs: _list of objects_
+  List of Graylog server configurations. Each entry supports the following fields:
+  - host: _string_
+    Ip address or valid hostname of the graylog server where the ingestor should send the logs
+    Example: "graylog.ess.eu"
+  - port: _integer as a string_
+    Port on which the graylog service is listening and accepting remote logs on the graylog server
+    Example: "12321"
+  - facility: _string_
+    Arbitrary string used in the facility field for the graylog messages.
+    It is suggested to pick a meaningful string that can be used when selecting entries in graylog interface and queries
+    Example: "scicat_ingestor"
+
+  Example configuration for multiple Graylog servers:
+  ```yaml
+  graylog_enabled: true
+  graylogs:
+    - host: graylog1.example.com
+      port: "12201"
+      facility: scicat.ingestor.group1
+    - host: graylog2.example.com
+      port: "12201"
+      facility: scicat.ingestor.group2
+  ```
 
 ## Health Check (health_check)
 
