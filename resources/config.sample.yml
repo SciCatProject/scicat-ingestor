@@ -56,10 +56,16 @@ logging:
   log_message_prefix: SFI
   system_log: false
   system_log_facility: mail
-  graylog: false
-  graylog_host: ''
-  graylog_port: ''
-  graylog_facility: scicat.ingestor
+  graylog_enabled: false
+  graylogs: []
+  # Example for multiple graylog servers:
+  # graylogs:
+  #   - host: graylog1.example.com
+  #     port: "12201"
+  #     facility: scicat.ingestor.group1
+  #   - host: graylog2.example.com
+  #     port: "12201"
+  #     facility: scicat.ingestor.group2
 scicat:
   host: https://scicat.host
   token: ''
