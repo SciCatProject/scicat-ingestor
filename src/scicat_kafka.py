@@ -172,8 +172,8 @@ def wrdn_messages(
         timeout = 1.0
         message = consumer.poll(timeout=timeout)
         if message is None:
-            num_skipped += 1
             logger.info("Received no messages, %d [s].", timeout * num_skipped)
+            num_skipped += 1
             yield None
         elif message.error():
             num_skipped = 1  # Reset
