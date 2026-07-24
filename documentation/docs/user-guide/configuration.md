@@ -218,7 +218,7 @@ This section is used by both programs and it specify how and where to send the l
     Arbitrary string used in the facility field for the graylog messages.
     It is suggested to pick a meaningful string that can be used when selecting entries in graylog interface and queries
     Example: "scicat_ingestor"
-  
+
   Example configuration for multiple Graylog servers:
   ```yaml
   graylog_enabled: true
