@@ -105,13 +105,19 @@ def _deserialise_wrdn(
         logger.info("Deserialising WRDN message")
         deserialised_message: WritingFinished = deserialise_wrdn(message_content)
         if deserialised_message is None:
+            # deserialise_wrdn CAN return `None`
+            # so ignore `code is unreachable` warning/error of linters.
             logger.error(
-                "`Deserialized message is None. Cannot use process the message. %s",
+                "Deserialized message is None. Cannot process the message. %s",
                 message_content.decode("utf-8", errors="replace"),
             )
         elif deserialised_message.error_encountered:
             logger.info(
-                "`Message decoded with error encountered true. Cannot use process the message. %s",
+                "Message decoded successfully but with the error_encountered true. "
+                "Cannot process the message with job id, %s for file %s, "
+                "with message, %s",
+                deserialised_message.job_id,
+                deserialised_message.file_name,
                 deserialised_message.message,
             )
         else:
@@ -168,9 +174,11 @@ def wrdn_messages(
         if message is None:
             num_skipped += 1
             logger.info("Received no messages, %d [s].", timeout * num_skipped)
+            yield None
         elif message.error():
             num_skipped = 1  # Reset
             logger.error("Consumer error: %s", message.error())
+            yield None
         elif (message_value := message.value()) is None:
             num_skipped = 1  # Reset
             logger.warning(
@@ -180,6 +188,7 @@ def wrdn_messages(
             )
             # It means the produced message has none value...
             consumer.commit(message=message, asynchronous=True)
+            yield None
         else:  # A message received without error and with non-None value.
             num_skipped = 1  # Reset
             # retrieve type of message
@@ -188,14 +197,13 @@ def wrdn_messages(
 
             deserialised_message = _deserialise_wrdn(message_value, logger=logger)
             # If it fails to deserialize the message and return None,
-            # or if the error_encountered is True, the message should be committed
-            # but should not be processed further.
+            # error is raised or if the error_encountered is True,
+            # the message should be committed and should not be processed further.
             if deserialised_message is not None:
                 yield deserialised_message
-
-            consumer.commit(message=message, asynchronous=True)
-
-        yield None
+            else:
+                yield None
+                consumer.commit(message=message, asynchronous=True)
 
 
 def _validate_pl72_message_type(message_content: bytes, logger: logging.Logger) -> bool:
