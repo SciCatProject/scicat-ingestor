@@ -196,8 +196,8 @@ def wrdn_messages(
             logger.info("Received message. Type : %s", message_type)
 
             deserialised_message = _deserialise_wrdn(message_value, logger=logger)
-            # If it fails to deserialize the message and return None,
-            # error is raised or if the error_encountered is True,
+            # If it fails to deserialize the message and return None
+            # (error is raised or the error_encountered is True),
             # the message should be committed and should not be processed further.
             if deserialised_message is not None:
                 yield deserialised_message
