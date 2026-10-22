@@ -17,13 +17,14 @@ The schema files are written in `yaml` format and all have `imsc.yml` extension.
 Each schema file has mandatory fields.
 
 ## Content Structure
-An `imsc` file has three main sections, *general*, *variables* and *schemas*.
+An `imsc` file has general information and three main configuration sections: *variables*, *schema*, and the optional *jobs* section.
 
 | Section | Description |
 | ------- | ----------- |
 | *general* | A group of fields including `unique id`, `name of the schema`, `which instrument` it's associated with<br>and the matching-criteria that tells which file is relevant to this schema. <br> See [schema definition (general information)](#schema-definition-general-information) for more information. |
 | *variables* | A set of `key-value` pairs retrieved from multiple sources.<br>They are later used in the schema section.<br>See [variable set instruction](#variable-set-instruction) for more information. |
 | *schema* | A set of instructions how to populate `SciCat` dataset fields using `variables`.<br>See [SciCat dataset population instruction](#scicat-dataset-population-instruction) for more information. |
+| *jobs* | Optional job definitions that are submitted to SciCat after the dataset and origdatablock are created. See the [SciCat Jobs](jobs.md) guide for more information. |
 
 ## Example
 
@@ -39,8 +40,11 @@ This is an example of schema file:
   "variables" : {
     "<VARIABLE_NAME>" : "<VARIABLE_DEFINITION>"
   },
-  "schemas" : {
+  "schema" : {
     "<MNEMONIC_ENTRY_NAME>" : "<SCHEMA_ENTRY_DEFINITION>"
+  },
+  "jobs" : {
+    "<JOB_NAME>" : "<JOB_DEFINITION>"
   }
 }
 ```

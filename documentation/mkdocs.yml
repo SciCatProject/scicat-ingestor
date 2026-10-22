@@ -49,6 +49,7 @@ nav:
       - OnlineIngestor: user-guide/online-ingestor.md
       - OfflineIngestor: user-guide/offline-ingestor.md
       - Metadata Schema: user-guide/metadata-schemas.md
+      - Jobs: user-guide/jobs.md
   - Developer Guide:
       - Getting Started: developer-guide/getting-started.md
       - Release and Deployment: developer-guide/release-deploy.md
